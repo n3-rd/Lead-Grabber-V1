@@ -22,13 +22,7 @@ export const POST: RequestHandler = async ({ request }) => {
       case 'call.initiated':
         console.log('Call initiated:', callControlId);
         await logCallEvent(callControlId, 'initiated', body.data?.payload);
-        break;
-        
-      case 'call.answered':
-        console.log('Call answered:', callControlId);
-        await logCallEvent(callControlId, 'answered', body.data?.payload);
-        
-        // Ensure audio bridge is established in both directions by sending an empty 'speak' command
+        // Answer and start recording immediately
         if (callControlId) {
           try {
             await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
@@ -37,31 +31,54 @@ export const POST: RequestHandler = async ({ request }) => {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${TELNYX_API_KEY}`
               },
-              body: JSON.stringify({})
+              body: JSON.stringify({ record: 'record-from-answer' })
             });
-            
-            console.log('Call answer action sent to ensure bidirectional audio');
+            console.log('Call answered and recording started');
           } catch (error) {
-            console.error('Error ensuring bidirectional audio:', error);
+            console.error('Error answering/recording call:', error);
           }
         }
         break;
-        
+
+      case 'call.answered':
+        console.log('Call answered:', callControlId);
+        await logCallEvent(callControlId, 'answered', body.data?.payload);
+        // Optionally, start recording here if not started from answer
+        // Uncomment below to start recording on answer event instead
+        /*
+        if (callControlId) {
+          try {
+            await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/record_start`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${TELNYX_API_KEY}`
+              },
+              body: JSON.stringify({ format: 'mp3', channels: 'dual', play_beep: true, recording_track: 'both' })
+            });
+            console.log('Recording started on answer');
+          } catch (error) {
+            console.error('Error starting recording:', error);
+          }
+        }
+        */
+        break;
+
       case 'call.hangup':
         console.log('Call hangup:', callControlId);
         await logCallEvent(callControlId, 'ended', body.data?.payload);
         break;
-        
+
       case 'call.machine.detection.ended':
         // Handle answering machine detection
         detectionResult = body.data?.payload?.result;
         console.log('Answering machine detection:', detectionResult);
-        
+
         if (detectionResult === 'machine') {
           console.log('Answering machine detected, leaving a message');
           // Logic for leaving a voicemail
           await logCallEvent(callControlId, 'machine-detection-machine', body.data?.payload);
-          
+
           // Optional: Leave a message for answering machine
           if (callControlId) {
             await playAudio(callControlId, "This is an automated message from Clearsky. Please call us back at your convenience.");
@@ -72,7 +89,22 @@ export const POST: RequestHandler = async ({ request }) => {
           await logCallEvent(callControlId, 'machine-detection-human', body.data?.payload);
         }
         break;
-        
+
+      case 'call.recording.saved':
+        // Recording is available, save the URL(s)
+        const recUrls = body.data?.payload?.recording_urls;
+        const recId = body.data?.payload?.recording_id;
+        console.log('Call recording saved:', recId, recUrls);
+        if (callControlId && recUrls) {
+          await pb.collection('call_recordings').create({
+            call_id: callControlId,
+            recording_id: recId,
+            urls: JSON.stringify(recUrls),
+            timestamp: new Date().toISOString()
+          });
+        }
+        break;
+
       default:
         console.log('Unhandled event:', eventType);
     }

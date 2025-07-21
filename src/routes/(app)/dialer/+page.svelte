@@ -1,7 +1,7 @@
 <script lang="ts">
+  import { Phone, Clock, Voicemail, ChevronDown, X, MicOff, Volume2, Delete } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button/index";
   import { toast } from "svelte-sonner";
-  import { Phone, X, MicOff, Volume2, Delete } from "lucide-svelte";
   
   let phoneNumber = $state('');
   let isDialing = $state(false);
@@ -88,86 +88,97 @@
   function deleteDigit() {
     phoneNumber = phoneNumber.slice(0, -1);
   }
+  
+  let contacts = [
+    { name: "Sarah Lee", phone: "705-4123-6346" },
+    { name: "Peter Griffin", phone: "705-6433-2564" },
+    { name: "Michael Scofield", phone: "705-9755-1953" },
+    { name: "Joe Swanson", phone: "705-9012-0124" },
+    { name: "Adam West", phone: "705-7812-3321" },
+    { name: "Cleveland Brown", phone: "705-0091-7542" },
+    { name: "Sarah Lee", phone: "705-4123-6346" },
+    { name: "Peter Griffin", phone: "705-6433-2564" },
+    { name: "Michael Scofield", phone: "705-9755-1953" },
+    { name: "Joe Swanson", phone: "705-9012-0124" }
+  ];
+
+  let dialInput = "";
+  let callerId = "(406) 555-1234";
+  function appendDialInput(d: string) { dialInput += d; }
+  function deleteDialInput() { dialInput = dialInput.slice(0, -1); }
+  function call() { /* implement call logic */ }
 </script>
 
-<div class="container mx-auto p-4">
-  <h1 class="text-2xl font-bold mb-6">Call Dialer</h1>
-  
-  <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-    <div class="mb-4">
-      <label class="block text-gray-700 font-medium mb-2" for="phoneNumber">
-        Phone Number
-      </label>
-      <input
-        id="phoneNumber"
-        bind:value={phoneNumber}
-        class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-        type="tel"
-        placeholder="+1 (555) 123-4567"
-      />
-    </div>
-    
-    <!-- Dialer Pad -->
-    <div class="mb-6">
-      <div class="grid grid-cols-3 gap-3 max-w-md mx-auto">
-        {#each [1, 2, 3, 4, 5, 6, 7, 8, 9, '*', 0, '#', '+'] as digit}
-          <button 
-            onclick={() => appendDigit(digit.toString())}
-            class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-4 px-6 rounded-lg text-xl"
-          >
-            {digit}
-          </button>
-        {/each}
-        <button 
-          onclick={deleteDigit}
-          class="bg-red-100 hover:bg-red-200 text-red-800 font-bold py-4 px-6 rounded-lg text-xl col-span-3 mt-2 flex items-center justify-center"
-        >
-          <Delete class="h-5 w-5 mr-2" />
-          Delete
-        </button>
-      </div>
-    </div>
-    
-    <div class="flex justify-center">
-      {#if !isCallActive}
-        <Button 
-          onclick={initiateCall}
-          disabled={isDialing}
-          class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-full"
-        >
-          <Phone class="h-5 w-5 mr-2" />
-          {isDialing ? 'Dialing...' : 'Call'}
-        </Button>
-      {:else}
-        <div class="flex gap-4">
-          <Button 
-            onclick={() => {}}
-            class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-full"
-          >
-            <MicOff class="h-5 w-5" />
-          </Button>
-          
-          <Button 
-            onclick={() => {}}
-            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full"
-          >
-            <Volume2 class="h-5 w-5" />
-          </Button>
-          
-          <Button 
-            onclick={hangup}
-            class="bg-red-500 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full"
-          >
-            <X class="h-5 w-5" />
-          </Button>
+<div class="bg-[#F5F7FF] min-h-screen p-0">
+  <div class="max-w-6xl mx-auto py-8">
+    <h1 class="text-2xl font-semibold text-gray-700 mb-6">Dialer</h1>
+    <div class="flex gap-6">
+      <!-- Contacts List -->
+      <div class="flex-1 max-w-md">
+        <div class="bg-white rounded-xl shadow p-0">
+          <div class="flex px-6 py-4 border-b font-semibold text-gray-600 text-lg">
+            <div class="flex-1">Name</div>
+            <div class="flex-1">Phone</div>
+          </div>
+          <div>
+            {#each contacts as c}
+              <div class="flex px-6 py-3 border-b last:border-b-0 items-center text-gray-700 text-base hover:bg-gray-50 transition">
+                <div class="flex-1">{c.name}</div>
+                <div class="flex-1">{c.phone}</div>
+              </div>
+            {/each}
+          </div>
         </div>
-      {/if}
-    </div>
-    
-    {#if callStatus}
-      <div class="mt-4 text-center">
-        <p class="text-gray-700">Call Status: <span class="font-medium">{callStatus}</span></p>
       </div>
-    {/if}
-  </div>
-</div> 
+
+      <!-- Dialer Section -->
+      <div class="flex-1 flex flex-col gap-6">
+        <!-- Tabs -->
+        <div class="bg-white rounded-xl shadow flex items-center px-6 py-3 gap-8">
+          <div class="flex items-center gap-2 text-[#6B7FC9] font-semibold">
+            <Phone class="w-5 h-5" /> Phone
+          </div>
+          <div class="flex items-center gap-2 text-gray-400 font-semibold">
+            <Clock class="w-5 h-5" /> Calls
+          </div>
+          <div class="flex items-center gap-2 text-gray-400 font-semibold">
+            <Voicemail class="w-5 h-5" /> Voicemail
+          </div>
+        </div>
+        <!-- Dialer Card -->
+        <div class="bg-white rounded-xl shadow flex flex-col items-center px-8 py-8">
+          <div class="flex items-center gap-2 mb-2 text-gray-600 font-medium">
+            My Caller ID: <span class="font-semibold text-gray-800">{callerId}</span>
+            <ChevronDown class="w-4 h-4" />
+          </div>
+          <input
+            class="w-full text-center text-gray-500 text-base mb-4 outline-none border-0 bg-transparent"
+            placeholder="Enter a name or number"
+            bind:value={dialInput}
+            readonly
+          />
+          <div class="w-full border-t mb-4"></div>
+          <!-- Keypad -->
+          <div class="grid grid-cols-3 gap-6 mb-6">
+            {#each [[1,2,3],[4,5,6],[7,8,9],['*',0,'#']] as row}
+              {#each row as digit}
+                <button
+                  class="w-16 h-16 rounded-full text-2xl text-gray-600 hover:bg-gray-100 transition"
+                  on:click={() => appendDialInput(digit.toString())}
+                  type="button"
+                >{digit}</button>
+              {/each}
+            {/each}
+          </div>
+          <button
+            class="w-14 h-14 rounded-full bg-green-600 flex items-center justify-center text-white text-2xl hover:bg-green-700 transition"
+            on:click={call}
+            type="button"
+          >
+            <Phone class="w-7 h-7" />
+          </button>
+        </div>
+      </div>
+      </div>
+      </div>
+      </div>

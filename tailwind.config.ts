@@ -22,8 +22,9 @@ const config: Config = {
 				background: "hsl(var(--background) / <alpha-value>)",
 				foreground: "#565656",
 				primary: {
-					DEFAULT: "#2E53DA",
-					foreground: "#ffffff"
+					DEFAULT: "#577AB7",
+					foreground: "#ffffff",
+					"300": "#618DDB",
 				},
 				root: {
 					background: "#F2F6FE"

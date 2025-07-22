@@ -40,7 +40,7 @@ let ws: WebSocket | null = null;
 onMount(() => {
   if (!browser) return;
   // Use the local SvelteKit WebSocket endpoint for call events
-  ws = new WebSocket('ws://' + window.location.host + '/api/ws');
+  ws = new WebSocket('wss://' + window.location.host + '/api/ws');
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);

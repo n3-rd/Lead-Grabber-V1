@@ -1,31 +1,15 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { pb } from '$lib/pocketbase';
-import { TELNYX_API_KEY } from '$env/static/private';
-import { TELNYX_RECEIVING_NUMBER } from '$env/static/private';
+import { TELNYX_API_KEY, TELNYX_RECEIVING_NUMBER } from '$env/static/private';
+import { broadcastCallEvent } from '$lib/utils/sse';
 
 // The phone number that receives calls
-const INCOMING_CALL_NUMBER = TELNYX_RECEIVING_NUMBER; // +17059986143
-
-// Simple in-memory WebSocket connections storage
-const wsConnections = new Set<WebSocket>();
-
-// Function to broadcast events to connected WebSocket clients
-function broadcastCallEvent(event: { type: string; name?: string; phone?: string; callId?: string }) {
-  const message = JSON.stringify(event);
-  for (const ws of wsConnections) {
-    try {
-      if (ws.readyState === 1) { // WebSocket.OPEN
-        ws.send(message);
-      }
-    } catch {
-      wsConnections.delete(ws);
-    }
-  }
-}
+const INCOMING_CALL_NUMBER = TELNYX_RECEIVING_NUMBER;
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
+    
     const body = await request.json();
     
     // Log the webhook event data

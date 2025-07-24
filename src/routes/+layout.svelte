@@ -6,14 +6,13 @@ import { setUserContext } from '$lib/contexts/user';
 import { pb } from '$lib/pocketbase';
 import { onDestroy, onMount, type Snippet } from 'svelte';
 import { writable } from 'svelte/store';
-import type { PageData } from './$types';
 import LoadingBar from '@//components/loading-bar.svelte';
 import { Toaster } from 'svelte-sonner';
 import IncomingCallDialog from '$lib/components/IncomingCallDialog.svelte';
 import { callDialog } from '$lib/stores/callDialog';
 
 interface Props {
-  data: PageData;
+  data: any;
   children?: Snippet;
 }
 
@@ -35,29 +34,43 @@ if (browser) {
   onDestroy(unsubscribe);
 }
 
-// --- Incoming Call WebSocket Logic ---
-let ws: WebSocket | null = null;
+// --- Incoming Call SSE Logic ---
+let eventSource: EventSource | null = null;
 onMount(() => {
   if (!browser) return;
-  // Use the local SvelteKit WebSocket endpoint for call events
-  ws = new WebSocket('wss://' + window.location.host + '/api/ws');
-  ws.onmessage = (event) => {
+  
+  // Connect to Server-Sent Events for call events
+  eventSource = new EventSource('/api/events');
+  
+  eventSource.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
       if (data.type === 'incoming_call') {
-        callDialog.set({ open: true, call: { name: data.name, phone: data.phone, callId: data.callId } });
+        callDialog.set({ 
+          open: true, 
+          call: { 
+            name: data.name || 'Unknown Caller',
+            phone: data.phone,
+            callId: data.callId 
+          }
+        });
       }
       if (data.type === 'call_ended') {
         callDialog.set({ open: false, call: null });
       }
     } catch (e) {
-      // ignore
+      // ignore parsing errors
     }
   };
-  ws.onerror = () => {};
-  ws.onclose = () => {};
+  
+  eventSource.onerror = () => {
+    console.log('SSE connection error, will reconnect automatically');
+  };
+  
   return () => {
-    ws?.close();
+    if (eventSource) {
+      eventSource.close();
+    }
   };
 });
 </script>
@@ -71,12 +84,16 @@ onMount(() => {
 </svelte:head>
 <Toaster richColors/>
 <div class="root-layout overflow-hidden">
- 
-    {@render children()}
+    {#if children}
+      {@render children()}
+    {/if}
     {#if $callDialog.open && $callDialog.call}
       <IncomingCallDialog
         open={$callDialog.open}
-        caller={$callDialog.call}
+        caller={{ 
+          name: $callDialog.call.name || 'Unknown Caller', 
+          phone: $callDialog.call.phone 
+        }}
         on:answer={() => { /* TODO: implement answer logic */ callDialog.set({ open: false, call: null }); }}
         on:decline={() => { /* TODO: implement decline logic */ callDialog.set({ open: false, call: null }); }}
       />

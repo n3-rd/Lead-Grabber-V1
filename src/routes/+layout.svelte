@@ -39,13 +39,27 @@ let eventSource: EventSource | null = null;
 onMount(() => {
   if (!browser) return;
   
+  console.log('🔌 Connecting to SSE events...');
+  
   // Connect to Server-Sent Events for call events
   eventSource = new EventSource('/api/events');
   
+  eventSource.onopen = () => {
+    console.log('✅ SSE connection opened');
+    if (typeof document !== 'undefined') {
+      const statusEl = document.getElementById('sse-status');
+      if (statusEl) statusEl.textContent = 'Connected ✅';
+    }
+  };
+  
   eventSource.onmessage = (event) => {
+    console.log('📨 SSE message received:', event.data);
     try {
       const data = JSON.parse(event.data);
+      console.log('📞 Parsed SSE data:', data);
+      
       if (data.type === 'incoming_call') {
+        console.log('🚨 INCOMING CALL - Opening dialog!', data);
         callDialog.set({ 
           open: true, 
           call: { 
@@ -56,18 +70,35 @@ onMount(() => {
         });
       }
       if (data.type === 'call_ended') {
+        console.log('📴 CALL ENDED - Closing dialog');
         callDialog.set({ open: false, call: null });
       }
+      if (data.type === 'connected') {
+        console.log('🔗 SSE connection confirmed');
+        if (typeof document !== 'undefined') {
+          const statusEl = document.getElementById('sse-status');
+          if (statusEl) statusEl.textContent = 'Connected ✅';
+        }
+      }
+      if (data.type === 'heartbeat') {
+        console.log('💓 SSE heartbeat');
+      }
     } catch (e) {
-      // ignore parsing errors
+      console.error('❌ Error parsing SSE data:', e, event.data);
     }
   };
   
-  eventSource.onerror = () => {
-    console.log('SSE connection error, will reconnect automatically');
+  eventSource.onerror = (error) => {
+    console.error('❌ SSE connection error:', error);
+    console.log('🔄 SSE will reconnect automatically');
+    if (typeof document !== 'undefined') {
+      const statusEl = document.getElementById('sse-status');
+      if (statusEl) statusEl.textContent = 'Error ❌';
+    }
   };
   
   return () => {
+    console.log('🔌 Closing SSE connection');
     if (eventSource) {
       eventSource.close();
     }
@@ -87,6 +118,40 @@ onMount(() => {
     {#if children}
       {@render children()}
     {/if}
+    
+    <!-- Debug Section - Remove in production -->
+    {#if import.meta.env.DEV}
+      <div class="fixed top-4 right-4 z-50 bg-black/80 text-white p-4 rounded-lg text-sm">
+        <div>🔌 SSE Status: <span id="sse-status">Connecting...</span></div>
+        <div>📞 Call Dialog Open: {$callDialog.open}</div>
+        <div>📱 Call Data: {JSON.stringify($callDialog.call)}</div>
+        <button 
+          class="mt-2 bg-blue-600 text-white px-3 py-1 rounded text-xs"
+          onclick={() => {
+            console.log('🧪 Testing call dialog...');
+            callDialog.set({ 
+              open: true, 
+              call: { 
+                name: 'Test Caller',
+                phone: '+15551234567',
+                callId: 'test-123' 
+              }
+            });
+          }}
+        >
+          Test Call Dialog
+        </button>
+        <button 
+          class="mt-1 bg-red-600 text-white px-3 py-1 rounded text-xs"
+          onclick={() => {
+            callDialog.set({ open: false, call: null });
+          }}
+        >
+          Close Dialog
+        </button>
+      </div>
+    {/if}
+    
     {#if $callDialog.open && $callDialog.call}
       <IncomingCallDialog
         open={$callDialog.open}

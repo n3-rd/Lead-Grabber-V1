@@ -9,16 +9,43 @@ const INCOMING_CALL_NUMBER = TELNYX_RECEIVING_NUMBER;
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    
     const body = await request.json();
     
-    // Log the webhook event data
-    console.log('Received Telnyx webhook:', body.data?.event_type, body.data?.payload?.call_control_id);
+    // Detect webhook format: Event API (wrapped) vs Call Control (direct)
+    const isEventAPI = body.data?.event_type;
+    const isCallControl = body.call_control_id;
     
-    // Extract the event type from the webhook payload
-    const eventType = body.data?.event_type;
-    const callControlId = body.data?.payload?.call_control_id;
-    const payload = body.data?.payload;
+    let eventType: string;
+    let callControlId: string;
+    let payload: Record<string, unknown>;
+    
+    if (isEventAPI) {
+      // Event API format (test webhooks)
+      eventType = body.data.event_type;
+      callControlId = body.data.payload.call_control_id;
+      payload = body.data.payload;
+      console.log('📞 Event API webhook:', eventType, callControlId);
+    } else if (isCallControl) {
+      // Call Control format (production webhooks)
+      callControlId = body.call_control_id;
+      payload = body;
+      
+      // Infer event type from payload state/properties
+      if (body.state === 'parked' && !body.hangup_cause) {
+        eventType = 'call.initiated';
+      } else if (body.hangup_cause) {
+        eventType = 'call.hangup';
+      } else if (body.start_time && !body.hangup_cause) {
+        eventType = 'call.answered';
+      } else {
+        eventType = 'call.unknown';
+      }
+      
+      console.log('📞 Call Control webhook:', eventType, callControlId, 'state:', body.state);
+    } else {
+      console.log('❓ Unknown webhook format:', body);
+      return json({ success: true }); // Acknowledge unknown format
+    }
     
     // For answering machine detection result
     let detectionResult: string | undefined;
@@ -30,18 +57,19 @@ export const POST: RequestHandler = async ({ request }) => {
         await logCallEvent(callControlId, 'initiated', payload);
         
         // Check if this is an incoming call to our specific number
-        const toNumber = payload?.to?.replace(/\D/g, ''); // Remove non-digits
-        const fromNumber = payload?.from;
+        const toNumber = (payload?.to as string)?.replace(/\D/g, '') || '';
+        const fromNumber = (payload?.from as string) || '';
+        const callerName = (payload?.caller_id_name as string) || 'Unknown Caller';
         const isIncomingCall = payload?.direction === 'incoming' || 
                               (toNumber && toNumber.includes('7059986143'));
         
         if (isIncomingCall) {
-          console.log('Incoming call detected to:', INCOMING_CALL_NUMBER, 'from:', fromNumber);
+          console.log('🔔 Incoming call detected to:', INCOMING_CALL_NUMBER, 'from:', fromNumber);
           
-          // Broadcast incoming call event via WebSocket
+          // Broadcast incoming call event via SSE
           broadcastCallEvent({
             type: 'incoming_call',
-            name: 'Unknown Caller',
+            name: callerName,
             phone: fromNumber,
             callId: callControlId
           });
@@ -72,9 +100,9 @@ export const POST: RequestHandler = async ({ request }) => {
                   }
                 })
               });
-              console.log('Incoming call answered and recording started');
+              console.log('✅ Incoming call answered and recording started');
             } catch (error) {
-              console.error('Error answering/recording incoming call:', error);
+              console.error('❌ Error answering/recording incoming call:', error);
             }
           }
         } else {
@@ -89,9 +117,9 @@ export const POST: RequestHandler = async ({ request }) => {
                 },
                 body: JSON.stringify({ record: 'record-from-answer' })
               });
-              console.log('Outbound call answered and recording started');
+              console.log('✅ Outbound call answered and recording started');
             } catch (error) {
-              console.error('Error answering/recording outbound call:', error);
+              console.error('❌ Error answering/recording outbound call:', error);
             }
           }
         }
@@ -99,13 +127,13 @@ export const POST: RequestHandler = async ({ request }) => {
       }
 
       case 'call.answered': {
-        console.log('Call answered:', callControlId);
+        console.log('✅ Call answered:', callControlId);
         await logCallEvent(callControlId, 'answered', payload);
         break;
       }
 
       case 'call.hangup': {
-        console.log('Call hangup:', callControlId);
+        console.log('📞 Call hangup:', callControlId);
         await logCallEvent(callControlId, 'ended', payload);
         
         // Broadcast call ended event
@@ -118,52 +146,47 @@ export const POST: RequestHandler = async ({ request }) => {
 
       case 'call.machine.detection.ended': {
         // Handle answering machine detection
-        detectionResult = body.data?.payload?.result;
-        console.log('Answering machine detection:', detectionResult);
+        detectionResult = (payload?.result as string) || (isEventAPI ? (body.data?.payload?.result as string) : undefined);
+        console.log('🤖 Answering machine detection:', detectionResult);
 
         if (detectionResult === 'machine') {
-          console.log('Answering machine detected, leaving a message');
-          // Logic for leaving a voicemail
-          await logCallEvent(callControlId, 'machine-detection-machine', body.data?.payload);
+          console.log('📞 Answering machine detected, leaving a message');
+          await logCallEvent(callControlId, 'machine-detection-machine', payload);
 
-          // Optional: Leave a message for answering machine
           if (callControlId) {
             await playAudio(callControlId, "This is an automated message from Clearsky. Please call us back at your convenience.");
           }
         } else if (detectionResult === 'human') {
-          console.log('Human answered, connecting call');
-          // Logic for human answer
-          await logCallEvent(callControlId, 'machine-detection-human', body.data?.payload);
+          console.log('👤 Human answered, connecting call');
+          await logCallEvent(callControlId, 'machine-detection-human', payload);
         }
         break;
       }
 
       case 'call.machine.premium.detection.ended': {
         // Handle premium answering machine detection
-        detectionResult = body.data?.payload?.result;
-        console.log('Premium answering machine detection:', detectionResult);
+        detectionResult = (payload?.result as string) || (isEventAPI ? (body.data?.payload?.result as string) : undefined);
+        console.log('🤖 Premium answering machine detection:', detectionResult);
 
         if (detectionResult === 'machine') {
-          console.log('Premium: Answering machine detected, leaving a message');
-          await logCallEvent(callControlId, 'premium-machine-detection-machine', body.data?.payload);
+          console.log('📞 Premium: Answering machine detected, leaving a message');
+          await logCallEvent(callControlId, 'premium-machine-detection-machine', payload);
 
-          // Leave a message for answering machine
           if (callControlId) {
             await playAudio(callControlId, "This is an automated message from Clearsky. Please call us back at your convenience.");
           }
         } else if (detectionResult === 'human') {
-          console.log('Premium: Human answered, connecting call');
-          await logCallEvent(callControlId, 'premium-machine-detection-human', body.data?.payload);
+          console.log('👤 Premium: Human answered, connecting call');
+          await logCallEvent(callControlId, 'premium-machine-detection-human', payload);
         }
         break;
       }
 
       case 'call.machine.premium.greeting.ended': {
         // Handle when machine greeting ends (beep detected)
-        console.log('Premium: Machine greeting ended, beep detected');
-        await logCallEvent(callControlId, 'premium-greeting-ended', body.data?.payload);
+        console.log('📞 Premium: Machine greeting ended, beep detected');
+        await logCallEvent(callControlId, 'premium-greeting-ended', payload);
         
-        // This is the optimal time to start leaving a voicemail message
         if (callControlId) {
           await playAudio(callControlId, "Hello, this is an automated message from Clearsky. We tried to reach you regarding your inquiry. Please call us back at your earliest convenience. Thank you.");
         }
@@ -172,13 +195,13 @@ export const POST: RequestHandler = async ({ request }) => {
 
       case 'call.recording.saved': {
         // Recording is available, save the URL(s)
-        const recUrls = body.data?.payload?.recording_urls;
-        const recId = body.data?.payload?.recording_id;
-        console.log('Call recording saved:', recId, recUrls);
+        const recUrls = payload?.recording_urls;
+        const recId = payload?.recording_id;
+        console.log('🎥 Call recording saved:', recId, recUrls);
         if (callControlId && recUrls) {
           await pb.collection('call_recordings').create({
             call_id: callControlId,
-            recording_id: recId,
+            recording_id: recId as string,
             urls: JSON.stringify(recUrls),
             timestamp: new Date().toISOString()
           });
@@ -187,7 +210,7 @@ export const POST: RequestHandler = async ({ request }) => {
       }
 
       default: {
-        console.log('Unhandled event:', eventType);
+        console.log('❓ Unhandled event:', eventType);
         break;
       }
     }

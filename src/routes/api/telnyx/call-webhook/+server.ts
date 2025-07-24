@@ -74,39 +74,11 @@ export const POST: RequestHandler = async ({ request }) => {
             callId: callControlId
           });
           
-          // Automatically answer and start recording for incoming calls
-          if (callControlId) {
-            try {
-              await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${TELNYX_API_KEY}`
-                },
-                body: JSON.stringify({ 
-                  record: 'record-from-answer',
-                  answering_machine_detection: 'premium',
-                  answering_machine_detection_config: {
-                    total_analysis_time_millis: 5000,
-                    after_greeting_silence_millis: 1000,
-                    between_words_silence_millis: 1000,
-                    greeting_duration_millis: 1000,
-                    initial_silence_millis: 1000,
-                    maximum_number_of_words: 1000,
-                    maximum_word_length_millis: 2000,
-                    silence_threshold: 512,
-                    greeting_total_analysis_time_millis: 50000,
-                    greeting_silence_duration_millis: 2000
-                  }
-                })
-              });
-              console.log('✅ Incoming call answered and recording started');
-            } catch (error) {
-              console.error('❌ Error answering/recording incoming call:', error);
-            }
-          }
+          // DON'T auto-answer - let user decide via dialog!
+          console.log('📞 Call is ringing - waiting for user to answer via dialog');
+          
         } else {
-          // This is an outbound call
+          // For outbound calls, we can still auto-answer
           if (callControlId) {
             try {
               await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {

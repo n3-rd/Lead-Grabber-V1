@@ -159,8 +159,50 @@ onMount(() => {
           name: $callDialog.call.name || 'Unknown Caller', 
           phone: $callDialog.call.phone 
         }}
-        on:answer={() => { /* TODO: implement answer logic */ callDialog.set({ open: false, call: null }); }}
-        on:decline={() => { /* TODO: implement decline logic */ callDialog.set({ open: false, call: null }); }}
+        on:answer={async () => { 
+          console.log('📞 User clicked ANSWER');
+          try {
+            // Answer the call via API
+            const response = await fetch('/api/telnyx/answer-call', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ callId: $callDialog.call?.callId })
+            });
+            
+            if (response.ok) {
+              console.log('✅ Call answered successfully');
+            } else {
+              console.error('❌ Failed to answer call');
+            }
+          } catch (error) {
+            console.error('❌ Error answering call:', error);
+          }
+          
+          // Close dialog
+          callDialog.set({ open: false, call: null }); 
+        }}
+        on:decline={async () => { 
+          console.log('📞 User clicked DECLINE');
+          try {
+            // Hang up the call via API
+            const response = await fetch('/api/telnyx/hangup', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ callId: $callDialog.call?.callId })
+            });
+            
+            if (response.ok) {
+              console.log('✅ Call declined successfully');
+            } else {
+              console.error('❌ Failed to decline call');
+            }
+          } catch (error) {
+            console.error('❌ Error declining call:', error);
+          }
+          
+          // Close dialog
+          callDialog.set({ open: false, call: null }); 
+        }}
       />
     {/if}
 </div>

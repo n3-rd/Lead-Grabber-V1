@@ -33,10 +33,18 @@ export const POST: RequestHandler = async ({ request }) => {
         client_state: clientId ? btoa(JSON.stringify({ clientId })) : undefined,
         webhook_url: `${request.headers.get('origin')}/api/telnyx/call-webhook`, // Ensure webhooks are properly routed
         // Optional: Enable answering machine detection if needed
-        answering_machine_detection: 'detect',
+        answering_machine_detection: 'premium',
         answering_machine_detection_config: {
           total_analysis_time_millis: 5000,
-          after_greeting_silence_millis: 800
+          after_greeting_silence_millis: 1000,
+          between_words_silence_millis: 1000,
+          greeting_duration_millis: 1000,
+          initial_silence_millis: 1000,
+          maximum_number_of_words: 1000,
+          maximum_word_length_millis: 2000,
+          silence_threshold: 512,
+          greeting_total_analysis_time_millis: 50000,
+          greeting_silence_duration_millis: 2000
         }
       })
     });

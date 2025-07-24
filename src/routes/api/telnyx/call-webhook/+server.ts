@@ -2,6 +2,27 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { pb } from '$lib/pocketbase';
 import { TELNYX_API_KEY } from '$env/static/private';
+import { TELNYX_RECEIVING_NUMBER } from '$env/static/private';
+
+// The phone number that receives calls
+const INCOMING_CALL_NUMBER = TELNYX_RECEIVING_NUMBER; // +17059986143
+
+// Simple in-memory WebSocket connections storage
+const wsConnections = new Set<WebSocket>();
+
+// Function to broadcast events to connected WebSocket clients
+function broadcastCallEvent(event: { type: string; name?: string; phone?: string; callId?: string }) {
+  const message = JSON.stringify(event);
+  for (const ws of wsConnections) {
+    try {
+      if (ws.readyState === 1) { // WebSocket.OPEN
+        ws.send(message);
+      }
+    } catch {
+      wsConnections.delete(ws);
+    }
+  }
+}
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
@@ -13,63 +34,105 @@ export const POST: RequestHandler = async ({ request }) => {
     // Extract the event type from the webhook payload
     const eventType = body.data?.event_type;
     const callControlId = body.data?.payload?.call_control_id;
+    const payload = body.data?.payload;
     
     // For answering machine detection result
     let detectionResult: string | undefined;
     
     // Process different call events
     switch (eventType) {
-      case 'call.initiated':
+      case 'call.initiated': {
         console.log('Call initiated:', callControlId);
-        await logCallEvent(callControlId, 'initiated', body.data?.payload);
-        // Answer and start recording immediately
-        if (callControlId) {
-          try {
-            await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${TELNYX_API_KEY}`
-              },
-              body: JSON.stringify({ record: 'record-from-answer' })
-            });
-            console.log('Call answered and recording started');
-          } catch (error) {
-            console.error('Error answering/recording call:', error);
+        await logCallEvent(callControlId, 'initiated', payload);
+        
+        // Check if this is an incoming call to our specific number
+        const toNumber = payload?.to?.replace(/\D/g, ''); // Remove non-digits
+        const fromNumber = payload?.from;
+        const isIncomingCall = payload?.direction === 'incoming' || 
+                              (toNumber && toNumber.includes('7059986143'));
+        
+        if (isIncomingCall) {
+          console.log('Incoming call detected to:', INCOMING_CALL_NUMBER, 'from:', fromNumber);
+          
+          // Broadcast incoming call event via WebSocket
+          broadcastCallEvent({
+            type: 'incoming_call',
+            name: 'Unknown Caller',
+            phone: fromNumber,
+            callId: callControlId
+          });
+          
+          // Automatically answer and start recording for incoming calls
+          if (callControlId) {
+            try {
+              await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${TELNYX_API_KEY}`
+                },
+                body: JSON.stringify({ 
+                  record: 'record-from-answer',
+                  answering_machine_detection: 'premium',
+                  answering_machine_detection_config: {
+                    total_analysis_time_millis: 5000,
+                    after_greeting_silence_millis: 1000,
+                    between_words_silence_millis: 1000,
+                    greeting_duration_millis: 1000,
+                    initial_silence_millis: 1000,
+                    maximum_number_of_words: 1000,
+                    maximum_word_length_millis: 2000,
+                    silence_threshold: 512,
+                    greeting_total_analysis_time_millis: 50000,
+                    greeting_silence_duration_millis: 2000
+                  }
+                })
+              });
+              console.log('Incoming call answered and recording started');
+            } catch (error) {
+              console.error('Error answering/recording incoming call:', error);
+            }
+          }
+        } else {
+          // This is an outbound call
+          if (callControlId) {
+            try {
+              await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${TELNYX_API_KEY}`
+                },
+                body: JSON.stringify({ record: 'record-from-answer' })
+              });
+              console.log('Outbound call answered and recording started');
+            } catch (error) {
+              console.error('Error answering/recording outbound call:', error);
+            }
           }
         }
         break;
+      }
 
-      case 'call.answered':
+      case 'call.answered': {
         console.log('Call answered:', callControlId);
-        await logCallEvent(callControlId, 'answered', body.data?.payload);
-        // Optionally, start recording here if not started from answer
-        // Uncomment below to start recording on answer event instead
-        /*
-        if (callControlId) {
-          try {
-            await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/record_start`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${TELNYX_API_KEY}`
-              },
-              body: JSON.stringify({ format: 'mp3', channels: 'dual', play_beep: true, recording_track: 'both' })
-            });
-            console.log('Recording started on answer');
-          } catch (error) {
-            console.error('Error starting recording:', error);
-          }
-        }
-        */
+        await logCallEvent(callControlId, 'answered', payload);
         break;
+      }
 
-      case 'call.hangup':
+      case 'call.hangup': {
         console.log('Call hangup:', callControlId);
-        await logCallEvent(callControlId, 'ended', body.data?.payload);
+        await logCallEvent(callControlId, 'ended', payload);
+        
+        // Broadcast call ended event
+        broadcastCallEvent({
+          type: 'call_ended',
+          callId: callControlId
+        });
         break;
+      }
 
-      case 'call.machine.detection.ended':
+      case 'call.machine.detection.ended': {
         // Handle answering machine detection
         detectionResult = body.data?.payload?.result;
         console.log('Answering machine detection:', detectionResult);
@@ -89,8 +152,41 @@ export const POST: RequestHandler = async ({ request }) => {
           await logCallEvent(callControlId, 'machine-detection-human', body.data?.payload);
         }
         break;
+      }
 
-      case 'call.recording.saved':
+      case 'call.machine.premium.detection.ended': {
+        // Handle premium answering machine detection
+        detectionResult = body.data?.payload?.result;
+        console.log('Premium answering machine detection:', detectionResult);
+
+        if (detectionResult === 'machine') {
+          console.log('Premium: Answering machine detected, leaving a message');
+          await logCallEvent(callControlId, 'premium-machine-detection-machine', body.data?.payload);
+
+          // Leave a message for answering machine
+          if (callControlId) {
+            await playAudio(callControlId, "This is an automated message from Clearsky. Please call us back at your convenience.");
+          }
+        } else if (detectionResult === 'human') {
+          console.log('Premium: Human answered, connecting call');
+          await logCallEvent(callControlId, 'premium-machine-detection-human', body.data?.payload);
+        }
+        break;
+      }
+
+      case 'call.machine.premium.greeting.ended': {
+        // Handle when machine greeting ends (beep detected)
+        console.log('Premium: Machine greeting ended, beep detected');
+        await logCallEvent(callControlId, 'premium-greeting-ended', body.data?.payload);
+        
+        // This is the optimal time to start leaving a voicemail message
+        if (callControlId) {
+          await playAudio(callControlId, "Hello, this is an automated message from Clearsky. We tried to reach you regarding your inquiry. Please call us back at your earliest convenience. Thank you.");
+        }
+        break;
+      }
+
+      case 'call.recording.saved': {
         // Recording is available, save the URL(s)
         const recUrls = body.data?.payload?.recording_urls;
         const recId = body.data?.payload?.recording_id;
@@ -104,9 +200,12 @@ export const POST: RequestHandler = async ({ request }) => {
           });
         }
         break;
+      }
 
-      default:
+      default: {
         console.log('Unhandled event:', eventType);
+        break;
+      }
     }
     
     // Always respond with a 200 OK to acknowledge receipt

@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { pb } from '$lib/pocketbase';
 import { TELNYX_API_KEY, TELNYX_RECEIVING_NUMBER } from '$env/static/private';
-import { broadcastCallEvent } from '$lib/utils/sse';
+import { addPendingCall } from '$lib/utils/callStore';
 
 // The phone number that receives calls
 const INCOMING_CALL_NUMBER = TELNYX_RECEIVING_NUMBER;
@@ -66,16 +66,14 @@ export const POST: RequestHandler = async ({ request }) => {
         if (isIncomingCall) {
           console.log('🔔 Incoming call detected to:', INCOMING_CALL_NUMBER, 'from:', fromNumber);
           
-          // Broadcast incoming call event via SSE
-          broadcastCallEvent({
-            type: 'incoming_call',
+          // Store the incoming call for polling
+          addPendingCall({
             name: callerName,
             phone: fromNumber,
             callId: callControlId
           });
           
-          // DON'T auto-answer - let user decide via dialog!
-          console.log('📞 Call is ringing - waiting for user to answer via dialog');
+          console.log('📞 Call stored in pending calls - waiting for user to answer via dialog');
           
         } else {
           // For outbound calls, we can still auto-answer
@@ -109,10 +107,7 @@ export const POST: RequestHandler = async ({ request }) => {
         await logCallEvent(callControlId, 'ended', payload);
         
         // Broadcast call ended event
-        broadcastCallEvent({
-          type: 'call_ended',
-          callId: callControlId
-        });
+        // Removed SSE broadcasting as per edit hint
         break;
       }
 

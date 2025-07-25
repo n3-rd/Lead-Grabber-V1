@@ -34,73 +34,68 @@ if (browser) {
   onDestroy(unsubscribe);
 }
 
-// --- Incoming Call SSE Logic ---
-let eventSource: EventSource | null = null;
-onMount(() => {
-  if (!browser) return;
+// --- Incoming Call Polling Logic ---
+let pollInterval: ReturnType<typeof setInterval>;
+let isPolling = false;
+let currentPendingCallId: string | null = null;
+
+async function checkForIncomingCalls() {
+  if (isPolling) return; // Prevent concurrent polls
   
-  console.log('🔌 Connecting to SSE events...');
-  
-  // Connect to Server-Sent Events for call events
-  eventSource = new EventSource('/api/events');
-  
-  eventSource.onopen = () => {
-    console.log('✅ SSE connection opened');
-    if (typeof document !== 'undefined') {
-      const statusEl = document.getElementById('sse-status');
-      if (statusEl) statusEl.textContent = 'Connected ✅';
-    }
-  };
-  
-  eventSource.onmessage = (event) => {
-    console.log('📨 SSE message received:', event.data);
-    try {
-      const data = JSON.parse(event.data);
-      console.log('📞 Parsed SSE data:', data);
+  isPolling = true;
+  try {
+    const response = await fetch('/api/calls/pending');
+    const data = await response.json();
+    
+    if (data.hasCall && data.call) {
+      console.log('📞 Found pending call:', data.call);
       
-      if (data.type === 'incoming_call') {
-        console.log('🚨 INCOMING CALL - Opening dialog!', data);
-        callDialog.set({ 
-          open: true, 
-          call: { 
-            name: data.name || 'Unknown Caller',
-            phone: data.phone,
-            callId: data.callId 
+      // Only show dialog if we don't already have one open
+      if (!$callDialog.open) {
+        currentPendingCallId = data.call.id;
+        callDialog.set({
+          open: true,
+          call: {
+            name: data.call.name || 'Unknown Caller',
+            phone: data.call.phone,
+            callId: data.call.callId
           }
         });
       }
-      if (data.type === 'call_ended') {
-        console.log('📴 CALL ENDED - Closing dialog');
-        callDialog.set({ open: false, call: null });
-      }
-      if (data.type === 'connected') {
-        console.log('🔗 SSE connection confirmed');
-        if (typeof document !== 'undefined') {
-          const statusEl = document.getElementById('sse-status');
-          if (statusEl) statusEl.textContent = 'Connected ✅';
-        }
-      }
-      if (data.type === 'heartbeat') {
-        console.log('💓 SSE heartbeat');
-      }
-    } catch (e) {
-      console.error('❌ Error parsing SSE data:', e, event.data);
     }
-  };
+  } catch (error) {
+    console.error('❌ Error checking for calls:', error);
+  } finally {
+    isPolling = false;
+  }
+}
+
+async function clearPendingCall() {
+  if (currentPendingCallId) {
+    try {
+      await fetch(`/api/calls/pending?id=${currentPendingCallId}`, { method: 'DELETE' });
+      currentPendingCallId = null;
+    } catch (error) {
+      console.error('❌ Error clearing pending call:', error);
+    }
+  }
+}
+
+onMount(() => {
+  if (!browser) return;
   
-  eventSource.onerror = (error) => {
-    console.error('❌ SSE connection error:', error);
-    console.log('🔄 SSE will reconnect automatically');
-    if (typeof document !== 'undefined') {
-      const statusEl = document.getElementById('sse-status');
-      if (statusEl) statusEl.textContent = 'Error ❌';
-    }
-  };
+  console.log('🔌 Starting call polling...');
+  
+  // Poll every 2 seconds for incoming calls
+  pollInterval = setInterval(checkForIncomingCalls, 2000);
+  
+  // Initial check
+  checkForIncomingCalls();
   
   return () => {
-    console.log('🔌 Closing SSE connection');
-    if (eventSource) {
-      eventSource.close();
+    console.log('🔌 Stopping call polling');
+    if (pollInterval) {
+      clearInterval(pollInterval);
     }
   };
 });
@@ -122,11 +117,26 @@ onMount(() => {
     <!-- Debug Section - Remove in production -->
     {#if import.meta.env.DEV}
       <div class="fixed top-4 right-4 z-50 bg-black/80 text-white p-4 rounded-lg text-sm">
-        <div>🔌 SSE Status: <span id="sse-status">Connecting...</span></div>
+        <div>📞 Call Polling: {isPolling ? 'Active' : 'Idle'}</div>
         <div>📞 Call Dialog Open: {$callDialog.open}</div>
         <div>📱 Call Data: {JSON.stringify($callDialog.call)}</div>
         <button 
           class="mt-2 bg-blue-600 text-white px-3 py-1 rounded text-xs"
+          onclick={async () => {
+            console.log('🧪 Creating test incoming call...');
+            try {
+              const response = await fetch('/api/calls/test', { method: 'POST' });
+              const result = await response.json();
+              console.log('✅ Test call created:', result);
+            } catch (error) {
+              console.error('❌ Failed to create test call:', error);
+            }
+          }}
+        >
+          Test Incoming Call
+        </button>
+        <button 
+          class="mt-1 bg-gray-600 text-white px-3 py-1 rounded text-xs"
           onclick={() => {
             console.log('🧪 Testing call dialog...');
             callDialog.set({ 
@@ -139,7 +149,7 @@ onMount(() => {
             });
           }}
         >
-          Test Call Dialog
+          Test Dialog Only
         </button>
         <button 
           class="mt-1 bg-red-600 text-white px-3 py-1 rounded text-xs"
@@ -178,7 +188,8 @@ onMount(() => {
             console.error('❌ Error answering call:', error);
           }
           
-          // Close dialog
+          // Clear pending call and close dialog
+          await clearPendingCall();
           callDialog.set({ open: false, call: null }); 
         }}
         on:decline={async () => { 
@@ -200,7 +211,8 @@ onMount(() => {
             console.error('❌ Error declining call:', error);
           }
           
-          // Close dialog
+          // Clear pending call and close dialog
+          await clearPendingCall();
           callDialog.set({ open: false, call: null }); 
         }}
       />

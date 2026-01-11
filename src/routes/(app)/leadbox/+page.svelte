@@ -5,6 +5,7 @@
     import { CodeXml, Edit, MessageSquare, Pen, Phone, Play, PlusCircle } from "lucide-svelte";
     import EditChannelDialog from "$lib/components/EditChannelDialog.svelte";
     import EditSecondaryButtonDialog from "$lib/components/EditSecondaryButtonDialog.svelte";
+    import EditPrimaryButtonDialog from "$lib/components/EditPrimaryButtonDialog.svelte";
     import { toast } from 'svelte-sonner';
     import { enhance } from '$app/forms';
 	import { getLeadboxEmbedCode } from "$lib/utils/getEmbedCode.js";
@@ -44,6 +45,13 @@
         }
     );
 
+    let primaryButton = $state(
+        data.leadbox?.leadbox_data?.primaryButton ?? {
+            text: "TEXT US",
+            icon: "MessageSquare"
+        }
+    );
+
     function handleChannelUpdate(index: number, updatedChannel: any) {
         const iconComponent = updatedChannel.icon;
         channels[index] = {
@@ -56,6 +64,10 @@
 
     function handleSecondaryButtonUpdate(data: { text: string, icon: any, showIcon: boolean }) {
         secondaryButton = data;
+    }
+
+    function handlePrimaryButtonUpdate(data: { text: string, icon: string }) {
+        primaryButton = data;
     }
 
     // Add image upload handler
@@ -72,8 +84,13 @@
             formData.append('user', user.id);
 
             const record = await pb.collection('logos').create(formData);
-            logoImage = getFileUrl(record, record.logo);
-            toast.success('Logo uploaded successfully!');
+            const fileUrl = getFileUrl(record, record.logo);
+            if (fileUrl) {
+                logoImage = fileUrl;
+                toast.success('Logo uploaded successfully!');
+            } else {
+                toast.error('Error: Logo URL could not be generated');
+            }
         } catch (err) {
             toast.error('Error uploading logo');
             console.error(err);
@@ -105,7 +122,7 @@
 </script>
 
 {#if user.company_id && user.company_id !== ''}
-<div class="h-[90vh] flex flex-col gap-3 p-4 bg-gray-100">
+<div class="min-h-screen flex flex-col gap-3 p-4 bg-gray-100">
     <div class="flex items-center justify-between w-full py-2">
         <div class="h1 font-semibold text-2xl">Leadbox</div>
         <div class="flex gap-2 items-center">
@@ -138,6 +155,7 @@ use:enhance={() => {
         iconOnly,
         leadBoxOpen,
         primaryIconOnly,
+        primaryButton,
         channels,
         secondaryButton,
         logoImage
@@ -215,9 +233,15 @@ use:enhance={() => {
                         <Switch checked={primaryIconOnly} onCheckedChange={(v) => primaryIconOnly = v} />
                         <span class="text-primary">Icon only</span>
                     </div>
-                    <Button variant="ghost" class="p-0 hover:bg-transparent">
-                        <Pen class="h-6 w-6" />
-                    </Button>
+                    <EditPrimaryButtonDialog
+                        buttonText={primaryButton.text}
+                        selectedIcon={primaryButton.icon}
+                        onSave={handlePrimaryButtonUpdate}
+                    >
+                        <Button variant="ghost" class="p-0 hover:bg-transparent">
+                            <Pen class="h-6 w-6" />
+                        </Button>
+                    </EditPrimaryButtonDialog>
                 </div>
 
                 <div class="flex items-center gap-4 w-full justify-between">
@@ -271,10 +295,10 @@ use:enhance={() => {
         </div>
 
         <!-- Right Section - Preview -->
-        <div class="w-1/2 bg-white rounded-xl p-6 relative min-h-[90vh]">
+        <div class="w-1/2 bg-white rounded-xl p-6 relative min-h-[600px]">
             <h2 class="text-xl font-semibold mb-6">Leadbox Preview</h2>
             
-            <div class="absolute  bottom-4 right-4">
+            <div class="absolute bottom-4 right-4 origin-bottom-right" style="transform: scale(0.65);">
 
             
             {#if leadBoxOpen}
@@ -352,7 +376,7 @@ use:enhance={() => {
                 <Button variant="custom" class="bg-[#3B5BDB] h-14 w-14 rounded-full text-white p-2 flex items-center gap-2"
                 onclick={() => leadBoxOpen = !leadBoxOpen}
                 >
-                    <MessageSquare class="h-8 w-8" />
+                    {@html iconSvgs[primaryButton.icon] || iconSvgs['MessageSquare'] || ''}
                 </Button>
                 {:else}
                 <div class="flex flex-col items-center relative">
@@ -362,7 +386,7 @@ use:enhance={() => {
                 <Button variant="custom" class="bg-white h-14 px-20 z-20 rounded-full text-primary shadow-md flex items-center justify-center gap-2 text-lg font-medium"
                 onclick={() => leadBoxOpen = !leadBoxOpen}
                 >
-                    TEXT US
+                    {primaryButton.text}
                 </Button>
                 </div>
                 {/if}

@@ -30,6 +30,9 @@
 
 	<Sidebar.Inset>
 		<main class="bg-background px-4">
+			<div class="flex items-center gap-4 mb-4 pt-4">
+				<Sidebar.Trigger />
+			</div>
 			<div class="flex w-full justify-between bg-white px-9 py-5">
 				<div class="flex items-center gap-4">
 					<img src="/img/profile.png" alt="" class="profile h-12 w-12" />

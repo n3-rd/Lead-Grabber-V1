@@ -43,7 +43,7 @@
 <Sidebar.Group>
 	<Sidebar.Menu>
 		{#each items as mainItem (mainItem.title)}
-			<Sidebar.MenuItem class="gap-4 !text-5xl">
+			<Sidebar.MenuItem class="gap-4">
 				<a 
 					href={mainItem.href}
 					class="w-full"
@@ -56,16 +56,20 @@
 					}}
 				>
 					<Sidebar.MenuButton 
-						class="!py-7 flex items-center gap-3 hover:bg-primary-300 hover:text-white text-white font-medium w-full {$page.url.pathname === mainItem.href ? 'bg-primary-300 text-white' : ''}"
+						class="hover:bg-primary-300 hover:text-white text-white font-medium {$page.url.pathname === mainItem.href ? 'bg-primary-300 text-white' : ''}"
+						isActive={$page.url.pathname === mainItem.href}
 					>
-						<mainItem.icon class="!w-6 !h-6" />
-						{mainItem.title}
+						{#snippet tooltipContent()}
+							{mainItem.title}
+						{/snippet}
+						<mainItem.icon class="w-5 h-5" />
+						<span class="group-data-[collapsible=icon]:hidden">{mainItem.title}</span>
 						{#if mainItem.subItems}
-							<Button variant="ghost" class="ml-auto hover:bg-transparent hover:text-white">
+							<Button variant="ghost" class="ml-auto hover:bg-transparent hover:text-white group-data-[collapsible=icon]:hidden">
 								{#if expanded}
-									<ChevronUp class="w-5 h-5 ml-auto" />
+									<ChevronUp class="w-5 h-5" />
 								{:else}
-									<ChevronDown class="w-5 h-5 ml-auto" />
+									<ChevronDown class="w-5 h-5" />
 								{/if}
 							</Button>
 						{/if}
@@ -74,20 +78,20 @@
 			</Sidebar.MenuItem>
 
 			{#if mainItem.subItems && expanded}
-			<div transition:slide>
+			<div transition:slide class="group-data-[collapsible=icon]:hidden">
 				{#each mainItem.subItems as subItem}
-				
-						<Sidebar.MenuItem class="gap-4 !text-5xl" >
-							<a href={subItem.href} class="w-full">
-							<Sidebar.MenuButton class="!py-7 flex items-center gap-3 pl-14 hover:bg-primary-300 hover:text-white text-white font-medium w-full {$page.url.pathname === subItem.href ? 'bg-primary-300 text-white' : ''}">
-								<!-- <subItem.icon class="!w-6 !h-6" /> -->
-								{subItem.title}
+					<Sidebar.MenuItem>
+						<a href={subItem.href} class="w-full">
+							<Sidebar.MenuButton 
+								class="pl-14 hover:bg-primary-300 hover:text-white text-white font-medium {$page.url.pathname === subItem.href ? 'bg-primary-300 text-white' : ''}"
+								isActive={$page.url.pathname === subItem.href}
+							>
+								<span>{subItem.title}</span>
 							</Sidebar.MenuButton>
-							</a>
-						</Sidebar.MenuItem>
-					
+						</a>
+					</Sidebar.MenuItem>
 				{/each}
-				</div>
+			</div>
 			{/if}
 		{/each}
 	</Sidebar.Menu>

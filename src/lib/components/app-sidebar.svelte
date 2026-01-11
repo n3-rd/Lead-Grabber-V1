@@ -10,19 +10,24 @@
 
 	let { user, ref = $bindable(null), ...restProps } = $props();
 	console.log("user from sidebar", user);
+	
 	function handleLogout() {
 		pb.authStore.clear();
 		goto('/login');
 	}
 </script>
 
-<Sidebar.Root bind:ref {...restProps}>
+<Sidebar.Root bind:ref collapsible="icon" {...restProps}>
 	<Sidebar.Header>
 		<Sidebar.Menu>
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton size="lg">
 					{#snippet child({ props })}
-						<img src="/icons/main-logo.svg" alt="Bits UI" class="w-[160px] py-12 mx-auto" />
+						<img 
+							src="/icons/main-logo.svg" 
+							alt="Bits UI" 
+							class="w-[160px] py-12 mx-auto group-data-[collapsible=icon]:hidden" 
+						/>
 					{/snippet}
 				</Sidebar.MenuButton>
 			</Sidebar.MenuItem>
@@ -36,10 +41,13 @@
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton 
 					onclick={handleLogout}
-					class=" hover:text-red-700 hover:bg-red-50"
+					class="hover:text-red-700 hover:bg-red-50"
 				>
+					{#snippet tooltipContent()}
+						Logout
+					{/snippet}
 					<LogOut class="w-5 h-5" />
-					<span>Logout</span>
+					<span class="group-data-[collapsible=icon]:hidden">Logout</span>
 				</Sidebar.MenuButton>
 			</Sidebar.MenuItem>
 		</Sidebar.Menu>

@@ -38,6 +38,10 @@
 	let pollInterval: ReturnType<typeof setInterval>;
 	let isPolling = false;
 	let currentPendingCallId: string | null = null;
+	let pollDelay = 5000; // Start with 5 seconds
+	let consecutiveErrors = 0;
+	const MAX_POLL_DELAY = 30000; // Max 30 seconds
+	const BASE_POLL_DELAY = 5000; // Base 5 seconds
 
 	async function checkForIncomingCalls() {
 		if (isPolling) return; // Prevent concurrent polls
@@ -45,7 +49,35 @@
 		isPolling = true;
 		try {
 			const response = await fetch('/api/calls/pending');
+			
+			if (!response.ok) {
+				// Handle rate limiting with exponential backoff
+				if (response.status === 429) {
+					consecutiveErrors++;
+					pollDelay = Math.min(BASE_POLL_DELAY * Math.pow(2, consecutiveErrors), MAX_POLL_DELAY);
+					
+					// Restart polling with new delay
+					if (pollInterval) {
+						clearInterval(pollInterval);
+					}
+					pollInterval = setInterval(checkForIncomingCalls, pollDelay);
+					return;
+				}
+				throw new Error(`HTTP ${response.status}`);
+			}
+			
 			const data = await response.json();
+
+			// Reset error counter on success
+			consecutiveErrors = 0;
+			if (pollDelay > BASE_POLL_DELAY) {
+				pollDelay = BASE_POLL_DELAY;
+				// Restart with base delay
+				if (pollInterval) {
+					clearInterval(pollInterval);
+				}
+				pollInterval = setInterval(checkForIncomingCalls, pollDelay);
+			}
 
 			if (data.hasCall && data.call) {
 				console.log('📞 Found pending call:', data.call);
@@ -65,6 +97,15 @@
 			}
 		} catch (error) {
 			console.error('❌ Error checking for calls:', error);
+			// Increment error counter on network errors too
+			consecutiveErrors++;
+			if (consecutiveErrors < 5) {
+				pollDelay = Math.min(BASE_POLL_DELAY * Math.pow(2, consecutiveErrors), MAX_POLL_DELAY);
+				if (pollInterval) {
+					clearInterval(pollInterval);
+				}
+				pollInterval = setInterval(checkForIncomingCalls, pollDelay);
+			}
 		} finally {
 			isPolling = false;
 		}
@@ -86,8 +127,8 @@
 
 		console.log('🔌 Starting call polling...');
 
-		// Poll every 2 seconds for incoming calls
-		pollInterval = setInterval(checkForIncomingCalls, 2000);
+		// Poll every 5 seconds for incoming calls (reduced from 2s to reduce load)
+		pollInterval = setInterval(checkForIncomingCalls, pollDelay);
 
 		// Initial check
 		checkForIncomingCalls();

@@ -2,7 +2,7 @@
 	import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
 	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
 	import { useSidebar } from "$lib/components/ui/sidebar/index.js";
-	import { Home, Users, ChartColumnBig, Smartphone, BookOpen, Settings, ChevronDown, ChevronUp, SquareSlash, Reply, Building, Phone, LayoutDashboard, MessageCircle, ChartLineIcon } from "lucide-svelte";
+	import { Home, Users, ChartColumnBig, Smartphone, BookOpen, Settings, ChevronDown, ChevronUp, SquareSlash, Reply, Building, Phone, LayoutDashboard, MessageCircle, ChartLineIcon, FileText, Bell, UserCircle, ShoppingCart, Headphones, UserCheck, MapPin } from "lucide-svelte";
 	import { page } from "$app/stores";
     import { Button } from "$lib/components/ui/button/index";
 	import { slide } from "svelte/transition";
@@ -10,20 +10,28 @@
 	let isCompany = $state(user?.company_id && user?.company_id !== '');
 
 	let items = $state([
-		{ title: "Dashboard", url: "/inbox", icon: LayoutDashboard, href: "/d" },
+		{ title: "Dashboard", url: "/inbox", icon: LayoutDashboard, href: "/" },
+		{ title: "Communication Log", url: "/communication-hub", icon: FileText, href: "/communication-hub" },
 		{ title: "Communication Hub", url: "/communication-hub", icon: MessageCircle, href: "/communication-hub" },
-		{ title: "Inbox", url: "/inbox", icon: Home, href: "/" },
+		{ title: "Important Notifications", url: "/notifications", icon: Bell, href: "/notifications" },
+		{ title: "Inbox", url: "/inbox", icon: Home, href: "/inbox" },
+		{ title: "Profiles", url: "/profiles", icon: UserCircle, href: "/profiles" },
 		{ title: "Contacts", url: "/contacts", icon: Users, href: "/contacts" },
 		{ title: "Dialer", url: "/dialer", icon: Phone, href: "/dialer" },
+		{ title: "Buy Number", url: "/buy-number", icon: ShoppingCart, href: "/buy-number" },
+		{ title: "IVR", url: "/ivr", icon: Headphones, href: "/ivr" },
+		{ title: "Representatives", url: "/representatives", icon: UserCheck, href: "/representatives" },
+		{ title: "Locations", url: "/locations", icon: MapPin, href: "/locations" },
 		{ title: "Analytics", url: "/analytics", icon: ChartLineIcon, href: "/analytics" },
 		{ title: "Settings", url: "/settings", icon: Settings, href: "/settings", 
 			subItems: [
-						{ title: "Leadbox", url: "/leadbox", icon: Smartphone, href: "/leadbox" },
-		{ title: "Leadform", url: "/leadform", icon: BookOpen, href: "/leadform" },
+				{ title: "Lead Box", url: "/leadbox", icon: Smartphone, href: "/leadbox" },
+				{ title: "Lead Form", url: "/leadform", icon: BookOpen, href: "/leadform" },
 				{ title: "Auto Replies", url: "/settings/auto-replies", icon: Reply, href: "/settings/auto-replies" },
 				{ title: "Shortcuts", url: "/settings/shortcuts", icon: SquareSlash, href: "/settings/shortcuts" },
 				...(isCompany ? [] : [{ title: "Create Company", url: "/create-company", icon: Building, href: "/create-company" }]),
 				...(isCompany ? [{ title: "Company", url: "/settings/company", icon: Building, href: "/settings/company" }] : []),
+				{ title: "Knowledge Base", url: "/knowledge-base", icon: BookOpen, href: "/knowledge-base" },
 			]
 		 },
 	]);

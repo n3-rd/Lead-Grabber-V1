@@ -11,7 +11,7 @@
 
 	let items = $state([
 		{ title: "Dashboard", url: "/inbox", icon: LayoutDashboard, href: "/" },
-		{ title: "Communication Log", url: "/communication-hub", icon: FileText, href: "/communication-hub" },
+		{ title: "Communication Log", url: "/communication-log", icon: FileText, href: "/communication-log" },
 		{ title: "Communication Hub", url: "/communication-hub", icon: MessageCircle, href: "/communication-hub" },
 		{ title: "Important Notifications", url: "/notifications", icon: Bell, href: "/notifications" },
 		{ title: "Inbox", url: "/inbox", icon: Home, href: "/inbox" },

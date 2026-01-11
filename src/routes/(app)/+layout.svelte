@@ -28,8 +28,8 @@
 		{/if}
 	{/await}
 
-	<Sidebar.Inset>
-		<main class="bg-background px-4">
+	<Sidebar.Inset class="min-w-0 overflow-x-auto">
+		<main class="bg-background px-4 overflow-x-auto min-w-0">
 			<div class="flex items-center gap-4 mb-4 pt-4">
 				<Sidebar.Trigger />
 			</div>

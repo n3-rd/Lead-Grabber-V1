@@ -110,7 +110,7 @@
 
 <div class="min-w-0 w-full overflow-x-auto">
 	<!-- Main Container -->
-	<div class="min-w-[1282px] bg-white border border-[#ABABAB] rounded-[5px] p-0 m-4">
+	<div class="min-w-[1282px] bg-white border border-[#ABABAB] rounded p-0 m-4">
 		<!-- Top Section: Filters and Search -->
 		<div class="flex items-center justify-between px-4 py-4 border-b border-[#ABABAB]">
 			<!-- Filter Buttons -->
@@ -118,7 +118,7 @@
 				{#each filters as filter}
 					<button
 						onclick={() => selectedFilter = filter}
-						class="px-4 py-2.5 rounded-[5px] transition-colors font-['Poppins'] font-medium text-base leading-[128.67%] whitespace-nowrap {selectedFilter === filter
+						class="px-4 py-2.5 rounded transition-colors font-sans font-medium text-base leading-[1.29] whitespace-nowrap {selectedFilter === filter
 							? 'bg-[#0F172A] text-white font-bold'
 							: 'text-[#555555] hover:bg-gray-50'}"
 					>
@@ -128,14 +128,14 @@
 			</div>
 
 			<!-- Search Bar -->
-			<div class="relative w-[349px] h-[43px] bg-white border-[0.5px] border-[#ADADAD] rounded-[5px] flex items-center px-3 gap-2 flex-shrink-0">
+			<div class="relative w-[349px] h-[43px] bg-white border-[0.5px] border-[#ADADAD] rounded flex items-center px-3 gap-2 flex-shrink-0">
 				<Search class="w-[18px] h-[18px] text-[#555555] flex-shrink-0" />
 				<input
 					type="text"
 					placeholder="Search communications..."
-					class="flex-1 outline-none font-['Poppins'] font-light text-sm leading-[128.67%] text-[rgba(85,85,85,0.53)] placeholder:text-[rgba(85,85,85,0.53)]"
+					class="flex-1 outline-none font-sans font-light text-sm leading-[1.29] text-[rgba(85,85,85,0.53)] placeholder:text-[rgba(85,85,85,0.53)]"
 				/>
-				<div class="w-[1px] h-4 bg-[#ADADAD]"></div>
+				<div class="w-px h-4 bg-[#ADADAD]"></div>
 				<button class="w-3 h-4 flex items-center justify-center" aria-label="Filter">
 					<svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
 						<path d="M6 0L11.1962 4H8V14H4V4H0.803848L6 0Z" fill="#555555" />
@@ -150,27 +150,27 @@
 			<div class="w-full min-w-[1280px] bg-[#F3F3F3] rounded-t-[4px] h-[46px] flex items-center px-4 border-b border-[#ABABAB]">
 				<div class="flex items-center gap-2 w-[140px]">
 					<Info class="w-4 h-4 text-[#555555]" />
-					<span class="font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">DATE</span>
+					<span class="font-sans font-semibold text-xs leading-[1.29] text-[#555555]">DATE</span>
 				</div>
-				<div class="w-[120px] font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">
+				<div class="w-[120px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">
 					TYPE
 				</div>
-				<div class="w-[160px] font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">
+				<div class="w-[160px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">
 					SOURCE
 				</div>
-				<div class="w-[160px] font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">
+				<div class="w-[160px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">
 					ENDPOINT
 				</div>
-				<div class="w-[140px] font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">
+				<div class="w-[140px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">
 					PURPOSE
 				</div>
-				<div class="w-[120px] font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">
+				<div class="w-[120px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">
 					SUMMARY
 				</div>
-				<div class="w-[120px] font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">
+				<div class="w-[120px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">
 					COMM ID
 				</div>
-				<div class="flex-1 font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">
+				<div class="flex-1 font-sans font-semibold text-xs leading-[1.29] text-[#555555]">
 					ACTIONS
 				</div>
 			</div>
@@ -188,10 +188,10 @@
 								style="background-color: {getStatusColor(comm.status)}"
 							></div>
 							<div class="flex flex-col">
-								<span class="font-['Poppins'] font-semibold text-sm leading-[128.67%] text-[#555555]">
+								<span class="font-sans font-semibold text-sm leading-[1.29] text-[#555555]">
 									{comm.date}
 								</span>
-								<span class="font-['Poppins'] font-normal text-xs leading-[128.67%] text-[#555555]">
+								<span class="font-sans font-normal text-xs leading-[1.29] text-[#555555]">
 									{comm.time}
 								</span>
 							</div>
@@ -200,23 +200,23 @@
 						<!-- TYPE -->
 						<div class="flex items-center gap-2 w-[120px]">
 							<Mail class="w-[23px] h-4 text-[#555555]" />
-							<span class="font-['Poppins'] font-medium text-sm leading-[128.67%] text-[#555555]">
+							<span class="font-sans font-medium text-sm leading-[1.29] text-[#555555]">
 								{comm.type}
 							</span>
 						</div>
 
 						<!-- SOURCE -->
-						<div class="w-[160px] font-['Poppins'] font-medium text-sm leading-[128.67%] text-[#555555] truncate">
+						<div class="w-[160px] font-sans font-medium text-sm leading-[1.29] text-[#555555] truncate">
 							{comm.source}
 						</div>
 
 						<!-- ENDPOINT -->
 						<div class="w-[160px] flex flex-col gap-1">
-							<span class="font-['Poppins'] font-medium text-sm leading-[128.67%] text-[#555555] truncate">
+							<span class="font-sans font-medium text-sm leading-[1.29] text-[#555555] truncate">
 								{comm.endpoint}
 							</span>
 							<button
-								class="font-['Poppins'] font-normal text-xs leading-[128.67%] text-[#0023D7] underline hover:no-underline text-left"
+								class="font-sans font-normal text-xs leading-[1.29] text-[#0023D7] underline hover:no-underline text-left"
 								onclick={() => {
 									selectedEndpoint = comm.endpoint;
 									assignDialogOpen = true;
@@ -230,7 +230,7 @@
 						<div class="w-[140px]">
 							{#if comm.purposeIsButton}
 								<button
-									class="bg-[#577AB7] rounded-[4px] px-3 py-1.5 font-['Poppins'] font-medium text-sm leading-[128.67%] text-white hover:bg-[#577AB7]/90 transition-colors"
+									class="bg-[#577AB7] rounded px-3 py-1.5 font-sans font-medium text-sm leading-[1.29] text-white hover:bg-[#577AB7]/90 transition-colors"
 									onclick={() => {
 										notificationsDialogOpen = true;
 									}}
@@ -238,7 +238,7 @@
 									{comm.purpose}
 								</button>
 							{:else}
-								<span class="font-['Poppins'] font-medium text-sm leading-[128.67%] text-[#555555]">
+								<span class="font-sans font-medium text-sm leading-[1.29] text-[#555555]">
 									{comm.purpose}
 								</span>
 							{/if}
@@ -247,7 +247,7 @@
 						<!-- SUMMARY -->
 						<div class="w-[120px]">
 							<button
-								class="font-['Poppins'] font-normal text-sm leading-[128.67%] text-[#0023D7] underline hover:no-underline"
+								class="font-sans font-normal text-sm leading-[1.29] text-[#0023D7] underline hover:no-underline"
 								onclick={() => {
 									selectedComm = comm;
 									summaryDialogOpen = true;
@@ -258,7 +258,7 @@
 						</div>
 
 						<!-- COMM ID -->
-						<div class="w-[120px] font-['Poppins'] font-normal text-sm leading-[128.67%] text-[#555555]">
+						<div class="w-[120px] font-sans font-normal text-sm leading-[1.29] text-[#555555]">
 							{comm.commId}
 						</div>
 

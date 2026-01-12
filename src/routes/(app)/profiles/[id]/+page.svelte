@@ -180,14 +180,14 @@
 		<!-- Left Sidebar -->
 		<div class="w-[325px] min-w-[325px] bg-[#EDF2FA] border-r border-[#7E7E7E] p-6">
 			<!-- Profile Name -->
-			<h1 class="font-['Poppins'] font-semibold text-[27px] leading-[128.67%] text-[#555555] mb-2">
+			<h1 class="font-sans font-semibold text-3xl leading-[1.29] text-[#555555] mb-2">
 				{selectedProfile.name}
 			</h1>
 
 			<!-- Address -->
 			<div class="flex items-start gap-2 mb-4">
 				<MapPin class="w-5 h-5 text-[#0F172A] mt-0.5 flex-shrink-0" />
-				<span class="font-['Poppins'] font-normal text-base leading-[128.67%] text-[rgba(86,86,86,0.8)]">
+				<span class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.8)]">
 					{selectedProfile.address}
 				</span>
 			</div>
@@ -195,16 +195,16 @@
 			<!-- Contact Info -->
 			<div class="space-y-2 mb-4">
 				<div class="flex items-center">
-					<span class="font-['Poppins'] font-medium text-base leading-[128.67%] text-[#565656] w-[82px]">Landline:</span>
-					<span class="font-['Poppins'] font-normal text-base leading-[128.67%] text-[rgba(86,86,86,0.8)]">{selectedProfile.landline}</span>
+					<span class="font-sans font-medium text-base leading-[1.29] text-[#565656] w-[82px]">Landline:</span>
+					<span class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.8)]">{selectedProfile.landline}</span>
 				</div>
 				<div class="flex items-center">
-					<span class="font-['Poppins'] font-medium text-base leading-[128.67%] text-[#565656] w-[82px]">Cell #:</span>
-					<span class="font-['Poppins'] font-normal text-base leading-[128.67%] text-[rgba(86,86,86,0.8)]">{selectedProfile.cell}</span>
+					<span class="font-sans font-medium text-base leading-[1.29] text-[#565656] w-[82px]">Cell #:</span>
+					<span class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.8)]">{selectedProfile.cell}</span>
 				</div>
 				<div class="flex items-center">
-					<span class="font-['Poppins'] font-medium text-base leading-[128.67%] text-[#565656] w-[82px]">Email:</span>
-					<span class="font-['Poppins'] font-normal text-base leading-[128.67%] text-[rgba(86,86,86,0.8)]">{selectedProfile.email}</span>
+					<span class="font-sans font-medium text-base leading-[1.29] text-[#565656] w-[82px]">Email:</span>
+					<span class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.8)]">{selectedProfile.email}</span>
 				</div>
 			</div>
 
@@ -219,7 +219,7 @@
 						<X class="w-3 h-3 text-[#7B2E17]" />
 					{/if}
 				</div>
-				<span class="font-['Poppins'] font-normal text-base leading-[128.67%] text-[rgba(86,86,86,0.8)]">Permission to send SMS</span>
+				<span class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.8)]">Permission to send SMS</span>
 			</div>
 
 			<!-- Divider -->
@@ -230,30 +230,30 @@
 				class="flex items-center justify-between w-full mb-4"
 				onclick={() => connectionsExpanded = !connectionsExpanded}
 			>
-				<span class="font-['Poppins'] font-medium text-[17px] leading-[128.67%] text-[#565656]">Connections</span>
+				<span class="font-sans font-medium text-lg leading-[1.29] text-[#565656]">Connections</span>
 				<ChevronDown class="w-4 h-3 text-[#565656] transition-transform {connectionsExpanded ? 'rotate-180' : ''}" />
 			</button>
 
 			{#if connectionsExpanded && selectedProfile.connections.length > 0}
 				{#each selectedProfile.connections as connection}
 					<div class="mb-4">
-						<h3 class="font-['Poppins'] font-semibold text-xl leading-[128.67%] text-[#555555] mb-2">{connection.name}</h3>
+						<h3 class="font-sans font-semibold text-xl leading-[1.29] text-[#555555] mb-2">{connection.name}</h3>
 						<div class="flex items-start gap-2 mb-2">
 							<MapPin class="w-5 h-5 text-[#0F172A] mt-0.5 flex-shrink-0" />
-							<span class="font-['Poppins'] font-normal text-base leading-[128.67%] text-[rgba(86,86,86,0.8)]">{connection.address}</span>
+							<span class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.8)]">{connection.address}</span>
 						</div>
 						<div class="space-y-1">
 							<div class="flex items-center">
-								<span class="font-['Poppins'] font-medium text-base leading-[128.67%] text-[#565656] w-[82px]">Landline:</span>
-								<span class="font-['Poppins'] font-normal text-base leading-[128.67%] text-[rgba(86,86,86,0.8)]">{connection.landline}</span>
+								<span class="font-sans font-medium text-base leading-[1.29] text-[#565656] w-[82px]">Landline:</span>
+								<span class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.8)]">{connection.landline}</span>
 							</div>
 							<div class="flex items-center">
-								<span class="font-['Poppins'] font-medium text-base leading-[128.67%] text-[#565656] w-[82px]">Cell #:</span>
-								<span class="font-['Poppins'] font-normal text-base leading-[128.67%] text-[rgba(86,86,86,0.8)]">{connection.cell}</span>
+								<span class="font-sans font-medium text-base leading-[1.29] text-[#565656] w-[82px]">Cell #:</span>
+								<span class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.8)]">{connection.cell}</span>
 							</div>
 							<div class="flex items-center">
-								<span class="font-['Poppins'] font-medium text-base leading-[128.67%] text-[#565656] w-[82px]">Email:</span>
-								<span class="font-['Poppins'] font-normal text-base leading-[128.67%] text-[rgba(86,86,86,0.8)]">{connection.email}</span>
+								<span class="font-sans font-medium text-base leading-[1.29] text-[#565656] w-[82px]">Email:</span>
+								<span class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.8)]">{connection.email}</span>
 							</div>
 						</div>
 						<div class="flex items-center gap-2 mt-2">
@@ -266,7 +266,7 @@
 									<X class="w-3 h-3 text-[#7B2E17]" />
 								{/if}
 							</div>
-							<span class="font-['Poppins'] font-normal text-base leading-[128.67%] text-[rgba(86,86,86,0.8)]">Permission to send SMS</span>
+							<span class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.8)]">Permission to send SMS</span>
 						</div>
 					</div>
 				{/each}
@@ -274,26 +274,26 @@
 
 			<!-- Edit | Add -->
 			<div class="text-right mb-4">
-				<span class="font-['Poppins'] font-normal text-[17px] leading-[128.67%] text-[#565656] underline cursor-pointer hover:text-[#333]">Edit</span>
-				<span class="font-['Poppins'] font-normal text-[17px] leading-[128.67%] text-[#565656]"> | </span>
-				<span class="font-['Poppins'] font-normal text-[17px] leading-[128.67%] text-[#565656] underline cursor-pointer hover:text-[#333]">Add</span>
+				<span class="font-sans font-normal text-lg leading-[1.29] text-[#565656] underline cursor-pointer hover:text-[#333]">Edit</span>
+				<span class="font-sans font-normal text-lg leading-[1.29] text-[#565656]"> | </span>
+				<span class="font-sans font-normal text-lg leading-[1.29] text-[#565656] underline cursor-pointer hover:text-[#333]">Add</span>
 			</div>
 
 			<!-- Divider -->
 			<div class="w-full h-px bg-[#565656] mb-4"></div>
 
 			<!-- Playbook Results -->
-			<h3 class="font-['Inter'] font-semibold text-base leading-[21px] text-[#555555] mb-3">Playbook Results</h3>
+			<h3 class="font-sans font-semibold text-base leading-[21px] text-[#555555] mb-3">Playbook Results</h3>
 			<div class="space-y-1 mb-4">
-				<p class="font-['Inter'] font-normal text-base leading-[21px] text-[#747577]">Results</p>
-				<p class="font-['Inter'] font-normal text-base leading-[21px] text-[#747577]">Top[ of Funnel</p>
-				<p class="font-['Inter'] font-normal text-base leading-[21px] text-[#747577]">Mid-funnel (sales outcomes)</p>
-				<p class="font-['Inter'] font-normal text-base leading-[21px] text-[#747577]">Bottom-of-funnel (business outcomes</p>
+				<p class="font-sans font-normal text-base leading-[21px] text-[#747577]">Results</p>
+				<p class="font-sans font-normal text-base leading-[21px] text-[#747577]">Top[ of Funnel</p>
+				<p class="font-sans font-normal text-base leading-[21px] text-[#747577]">Mid-funnel (sales outcomes)</p>
+				<p class="font-sans font-normal text-base leading-[21px] text-[#747577]">Bottom-of-funnel (business outcomes</p>
 			</div>
 
 			<!-- Playbook Engine Placeholder -->
 			<div class="w-full h-[230px] bg-[#949494] rounded flex items-center justify-center">
-				<span class="font-['Inter'] font-normal text-base leading-[21px] text-white">Playbook Engine</span>
+				<span class="font-sans font-normal text-base leading-[21px] text-white">Playbook Engine</span>
 			</div>
 		</div>
 
@@ -302,7 +302,7 @@
 			<!-- Back button -->
 			<button
 				onclick={() => goto('/profiles')}
-				class="mb-4 text-[#577AB7] hover:text-[#3d5a8a] font-['Poppins'] text-sm flex items-center gap-1"
+				class="mb-4 text-[#577AB7] hover:text-[#3d5a8a] font-sans text-sm flex items-center gap-1"
 			>
 				← Back to Profiles
 			</button>
@@ -310,22 +310,22 @@
 			<!-- Top Section: Latest Comm ID & Action Buttons -->
 			<div class="flex gap-6 mb-6 w-fit">
 				<!-- Latest Comm ID Card -->
-				<div class="w-[870px] bg-white rounded-[9px] shadow-[0px_0px_4px_rgba(0,0,0,0.41)] p-6">
-					<h2 class="font-['Inter'] font-semibold text-base leading-[21px] text-[#555555] mb-4">Latest Comm ID</h2>
+				<div class="w-[870px] bg-white rounded-lg shadow-[0px_0px_4px_rgba(0,0,0,0.41)] p-6">
+					<h2 class="font-sans font-semibold text-base leading-[21px] text-[#555555] mb-4">Latest Comm ID</h2>
 					<div class="flex gap-24">
 						<div>
-							<h4 class="font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555] mb-3">COMM ID</h4>
+							<h4 class="font-sans font-semibold text-xs leading-[1.29] text-[#555555] mb-3">COMM ID</h4>
 							<div class="space-y-3">
 								{#each commSummaries as summary}
-									<p class="font-['Poppins'] font-normal text-sm leading-[128.67%] text-[#555555]">{summary.commId}</p>
+									<p class="font-sans font-normal text-sm leading-[1.29] text-[#555555]">{summary.commId}</p>
 								{/each}
 							</div>
 						</div>
 						<div>
-							<h4 class="font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555] mb-3">SUMMARY</h4>
+							<h4 class="font-sans font-semibold text-xs leading-[1.29] text-[#555555] mb-3">SUMMARY</h4>
 							<div class="space-y-3">
 								{#each commSummaries as summary}
-									<p class="font-['Poppins'] font-normal text-sm leading-[128.67%] text-[#0023D7] underline cursor-pointer hover:text-[#001ba3]">{summary.summaryLink}</p>
+									<p class="font-sans font-normal text-sm leading-[1.29] text-[#0023D7] underline cursor-pointer hover:text-[#001ba3]">{summary.summaryLink}</p>
 								{/each}
 							</div>
 						</div>
@@ -333,51 +333,51 @@
 				</div>
 
 				<!-- Action Buttons Card -->
-				<div class="w-[391px] bg-white rounded-[9px] shadow-[0px_0px_4px_rgba(0,0,0,0.25)] p-4">
+				<div class="w-[391px] bg-white rounded-lg shadow-[0px_0px_4px_rgba(0,0,0,0.25)] p-4">
 					<div class="grid grid-cols-2 gap-3">
-						<button class="h-[63px] bg-[#577AB7] rounded-[3px] flex items-center justify-center gap-2 hover:bg-[#4a6aa0] transition-colors">
+						<button class="h-[63px] bg-[#577AB7] rounded-sm flex items-center justify-center gap-2 hover:bg-[#4a6aa0] transition-colors">
 							<Mail class="w-4 h-4 text-white" />
-							<span class="font-['Inter'] font-semibold text-[13px] leading-[16px] text-white">New Email</span>
+							<span class="font-sans font-semibold text-xs leading-[16px] text-white">New Email</span>
 						</button>
-						<button class="h-[63px] bg-[#F2AE5E] rounded-[3px] flex items-center justify-center gap-2 hover:bg-[#e09d4d] transition-colors">
+						<button class="h-[63px] bg-[#F2AE5E] rounded-sm flex items-center justify-center gap-2 hover:bg-[#e09d4d] transition-colors">
 							<Phone class="w-4 h-4 text-white" />
-							<span class="font-['Inter'] font-semibold text-[13px] leading-[16px] text-white">New Call</span>
+							<span class="font-sans font-semibold text-xs leading-[16px] text-white">New Call</span>
 						</button>
-						<button class="h-[63px] bg-[#B5C2DA] rounded-[3px] flex items-center justify-center gap-2 hover:bg-[#a3b3cf] transition-colors">
+						<button class="h-[63px] bg-[#B5C2DA] rounded-sm flex items-center justify-center gap-2 hover:bg-[#a3b3cf] transition-colors">
 							<svg class="w-5 h-5 text-[#577AB7]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 								<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
 							</svg>
-							<span class="font-['Inter'] font-semibold text-[13px] leading-[16px] text-[#577AB7]">New SMS</span>
+							<span class="font-sans font-semibold text-xs leading-[16px] text-[#577AB7]">New SMS</span>
 						</button>
-						<button class="h-[63px] bg-[#B5C2DA] rounded-[3px] flex items-center justify-center gap-2 hover:bg-[#a3b3cf] transition-colors">
+						<button class="h-[63px] bg-[#B5C2DA] rounded-sm flex items-center justify-center gap-2 hover:bg-[#a3b3cf] transition-colors">
 							<SquarePen class="w-5 h-5 text-[#577AB7]" />
-							<span class="font-['Inter'] font-semibold text-[13px] leading-[16px] text-[#577AB7]">Add Task</span>
+							<span class="font-sans font-semibold text-xs leading-[16px] text-[#577AB7]">Add Task</span>
 						</button>
 					</div>
 				</div>
 			</div>
 
 			<!-- Communications Container -->
-			<div class="bg-white border border-[#ABABAB] rounded-[5px] overflow-hidden min-w-[1282px]">
+			<div class="bg-white border border-[#ABABAB] rounded overflow-hidden min-w-[1282px]">
 				<!-- Filter Tabs & Search -->
 				<div class="flex items-center justify-between p-4 border-b border-[#ABABAB]">
 					<div class="flex items-center gap-2">
 						{#each filters as filter}
 							<button
-								class="px-4 py-2 rounded-[5px] font-['Poppins'] font-medium text-base leading-[128.67%] transition-colors {activeFilter === filter ? 'bg-[#0F172A] text-white font-bold' : 'text-[#555555] hover:bg-gray-100'}"
+								class="px-4 py-2 rounded font-sans font-medium text-base leading-[1.29] transition-colors {activeFilter === filter ? 'bg-[#0F172A] text-white font-bold' : 'text-[#555555] hover:bg-gray-100'}"
 								onclick={() => activeFilter = filter}
 							>
 								{filter}
 							</button>
 						{/each}
 					</div>
-					<div class="w-[349px] h-[43px] bg-white border border-[#ADADAD] rounded-[5px] flex items-center px-4 gap-2">
+					<div class="w-[349px] h-[43px] bg-white border border-[#ADADAD] rounded flex items-center px-4 gap-2">
 						<Search class="w-4 h-4 text-[#555555]" />
 						<input
 							type="text"
 							bind:value={commSearchQuery}
 							placeholder="Search communications..."
-							class="flex-1 outline-none font-['Poppins'] font-light text-sm leading-[128.67%] text-[rgba(85,85,85,0.53)] placeholder:text-[rgba(85,85,85,0.53)]"
+							class="flex-1 outline-none font-sans font-light text-sm leading-[1.29] text-[rgba(85,85,85,0.53)] placeholder:text-[rgba(85,85,85,0.53)]"
 						/>
 						<Mic class="w-4 h-4 text-[#555555]" />
 					</div>
@@ -388,14 +388,14 @@
 					<!-- Table Header -->
 					<div class="h-[46px] bg-[#F3F3F3] rounded-t-[4px] flex items-center px-4">
 						<div class="w-[30px]"></div>
-						<div class="w-[100px] font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">DATE</div>
-						<div class="w-[80px] font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">TYPE</div>
-						<div class="w-[130px] font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">SOURCE</div>
-						<div class="w-[150px] font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">ENDPOINT</div>
-						<div class="w-[110px] font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">PURPOSE</div>
-						<div class="w-[90px] font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">SUMMARY</div>
-						<div class="w-[100px] font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555]">COMM ID</div>
-						<div class="flex-1 font-['Poppins'] font-semibold text-[13px] leading-[128.67%] text-[#555555] text-right">ACTIONS</div>
+						<div class="w-[100px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">DATE</div>
+						<div class="w-[80px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">TYPE</div>
+						<div class="w-[130px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">SOURCE</div>
+						<div class="w-[150px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">ENDPOINT</div>
+						<div class="w-[110px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">PURPOSE</div>
+						<div class="w-[90px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">SUMMARY</div>
+						<div class="w-[100px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">COMM ID</div>
+						<div class="flex-1 font-sans font-semibold text-xs leading-[1.29] text-[#555555] text-right">ACTIONS</div>
 					</div>
 
 					<!-- Table Body -->
@@ -405,8 +405,8 @@
 								<div class="w-[18px] h-[18px] rounded-full {getStatusColor(comm.status)}"></div>
 							</div>
 							<div class="w-[100px]">
-								<p class="font-['Poppins'] font-semibold text-sm leading-[128.67%] text-[#555555]">{comm.date}</p>
-								<p class="font-['Poppins'] font-normal text-xs leading-[128.67%] text-[#555555]">{comm.time}</p>
+								<p class="font-sans font-semibold text-sm leading-[1.29] text-[#555555]">{comm.date}</p>
+								<p class="font-sans font-normal text-xs leading-[1.29] text-[#555555]">{comm.time}</p>
 							</div>
 							<div class="w-[80px] flex items-center gap-1">
 								{#if comm.type === "email"}
@@ -426,16 +426,16 @@
 								{:else}
 									<Mail class="w-[23px] h-4 text-black" />
 								{/if}
-								<span class="font-['Poppins'] font-medium text-sm leading-[128.67%] text-[#555555]">{comm.direction}</span>
+								<span class="font-sans font-medium text-sm leading-[1.29] text-[#555555]">{comm.direction}</span>
 							</div>
-							<div class="w-[130px] font-['Poppins'] font-medium text-sm leading-[128.67%] text-[#555555]">{comm.source}</div>
-							<div class="w-[150px] font-['Poppins'] font-medium text-sm leading-[128.67%] text-[#555555]">{comm.endpoint}</div>
+							<div class="w-[130px] font-sans font-medium text-sm leading-[1.29] text-[#555555]">{comm.source}</div>
+							<div class="w-[150px] font-sans font-medium text-sm leading-[1.29] text-[#555555]">{comm.endpoint}</div>
 							<div class="w-[110px]">
 								{#if comm.purpose}
 									{#if comm.purpose === "Confirm"}
-										<button class="px-4 py-1.5 bg-[#577AB7] rounded text-white font-['Poppins'] font-medium text-sm">Confirm</button>
+										<button class="px-4 py-1.5 bg-[#577AB7] rounded text-white font-sans font-medium text-sm">Confirm</button>
 									{:else}
-										<span class="font-['Poppins'] font-medium text-sm leading-[128.67%] text-[#555555]">{comm.purpose}</span>
+										<span class="font-sans font-medium text-sm leading-[1.29] text-[#555555]">{comm.purpose}</span>
 									{/if}
 								{/if}
 							</div>
@@ -443,13 +443,13 @@
 								{#if comm.summary}
 									<button
 										onclick={() => selectedSummary = comm}
-										class="font-['Poppins'] font-normal text-sm leading-[128.67%] text-[#0023D7] underline cursor-pointer hover:text-[#001ba3]"
+										class="font-sans font-normal text-sm leading-[1.29] text-[#0023D7] underline cursor-pointer hover:text-[#001ba3]"
 									>
 										{comm.summary}
 									</button>
 								{/if}
 							</div>
-							<div class="w-[100px] font-['Poppins'] font-normal text-sm leading-[128.67%] text-[#555555]">{comm.commId || ''}</div>
+							<div class="w-[100px] font-sans font-normal text-sm leading-[1.29] text-[#555555]">{comm.commId || ''}</div>
 							<div class="flex-1 flex justify-end relative">
 								<button 
 									class="w-6 h-6 rounded-full border border-[#515151] flex items-center justify-center gap-0.5 hover:bg-gray-100"
@@ -462,27 +462,27 @@
 								</button>
 								
 								{#if openOptionsMenu === comm.id}
-									<div class="absolute right-0 top-8 w-[200px] bg-white rounded-[5px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] border border-[#E5E5E5] z-50">
+									<div class="absolute right-0 top-8 w-[200px] bg-white rounded shadow-[0px_4px_4px_rgba(0,0,0,0.25)] border border-[#E5E5E5] z-50">
 										<button 
-											class="w-full px-4 py-2 text-left font-['Poppins'] text-sm text-[#555555] hover:bg-[#F5F5F5] border-b border-[#E5E5E5]"
+											class="w-full px-4 py-2 text-left font-sans text-sm text-[#555555] hover:bg-[#F5F5F5] border-b border-[#E5E5E5]"
 											onclick={() => { selectedSummary = comm; openOptionsMenu = null; }}
 										>
 											View Details
 										</button>
 										<button 
-											class="w-full px-4 py-2 text-left font-['Poppins'] text-sm text-[#555555] hover:bg-[#F5F5F5] border-b border-[#E5E5E5]"
+											class="w-full px-4 py-2 text-left font-sans text-sm text-[#555555] hover:bg-[#F5F5F5] border-b border-[#E5E5E5]"
 											onclick={() => openOptionsMenu = null}
 										>
 											Call
 										</button>
 										<button 
-											class="w-full px-4 py-2 text-left font-['Poppins'] text-sm text-[#555555] hover:bg-[#F5F5F5] border-b border-[#E5E5E5]"
+											class="w-full px-4 py-2 text-left font-sans text-sm text-[#555555] hover:bg-[#F5F5F5] border-b border-[#E5E5E5]"
 											onclick={() => openOptionsMenu = null}
 										>
 											SMS
 										</button>
 										<button 
-											class="w-full px-4 py-2 text-left font-['Poppins'] text-sm text-red-500 hover:bg-[#F5F5F5]"
+											class="w-full px-4 py-2 text-left font-sans text-sm text-red-500 hover:bg-[#F5F5F5]"
 											onclick={() => openOptionsMenu = null}
 										>
 											Email
@@ -509,7 +509,7 @@
 			{#if selectedSummary.type === "voice" && selectedSummary.direction === "In"}
 				<!-- Incoming Call Modal -->
 				<div
-					class="w-[742px] h-[452px] bg-white rounded-[5px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] p-6 relative"
+					class="w-[742px] h-[452px] bg-white rounded shadow-[0px_4px_4px_rgba(0,0,0,0.25)] p-6 relative"
 					onclick={(e) => e.stopPropagation()}
 				>
 					<!-- Close button -->
@@ -524,21 +524,21 @@
 					<!-- Header -->
 					<div class="flex justify-between items-start mb-4">
 						<div>
-							<p class="font-['Poppins'] font-semibold text-lg leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.88)] mb-1">
+							<p class="font-sans font-semibold text-lg leading-[1.29] tracking-normal text-[rgba(86,86,86,0.88)] mb-1">
 								AI Summary:
 							</p>
-							<p class="font-['Poppins'] font-normal text-lg leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+							<p class="font-sans font-normal text-lg leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)]">
 								{selectedSummary.date} | {selectedSummary.time}
 							</p>
 						</div>
 						<div class="text-right">
-							<p class="font-['Poppins'] font-bold text-lg leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)] mb-1">
+							<p class="font-sans font-bold text-lg leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)] mb-1">
 								Comm ID - {selectedSummary.commId || 'N/A'}
 							</p>
-							<p class="font-['Poppins'] font-semibold text-lg leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.88)]">
+							<p class="font-sans font-semibold text-lg leading-[1.29] tracking-normal text-[rgba(86,86,86,0.88)]">
 								Category: Sales
 							</p>
-							<p class="font-['Poppins'] font-semibold text-lg leading-[128.67%] tracking-[0.01em] text-right text-[rgba(86,86,86,0.88)]">
+							<p class="font-sans font-semibold text-lg leading-[1.29] tracking-normal text-right text-[rgba(86,86,86,0.88)]">
 								Sub-Category: Inquiry/Demo
 							</p>
 						</div>
@@ -546,11 +546,11 @@
 
 					<!-- Summary Section -->
 					<div class="mb-4">
-						<p class="font-['Poppins'] font-semibold text-lg leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.88)] mb-3">
+						<p class="font-sans font-semibold text-lg leading-[1.29] tracking-normal text-[rgba(86,86,86,0.88)] mb-3">
 							Summary:
 						</p>
-						<div class="w-full h-[133px] bg-[#F7F7F7] rounded-[4px] border-b border-[#BEBEBE] p-4">
-							<p class="font-['Poppins'] font-normal text-lg leading-[131%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+						<div class="w-full h-[133px] bg-[#F7F7F7] rounded border-b border-[#BEBEBE] p-4">
+							<p class="font-sans font-normal text-lg leading-[131%] tracking-normal text-[rgba(86,86,86,0.78)]">
 								Sarah Lee called regarding the new AI-powered roofing estimator. Mark explained the features and offered to send a demo link. and will send a appointment time fo early Friday morning.
 							</p>
 						</div>
@@ -558,13 +558,13 @@
 
 					<!-- Tasks -->
 					<div class="space-y-2">
-						<p class="font-['Poppins'] font-normal text-lg leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+						<p class="font-sans font-normal text-lg leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)]">
 							1st Task: Check Mark's Schedule for opening Friday morning
 						</p>
-						<p class="font-['Poppins'] font-normal text-lg leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+						<p class="font-sans font-normal text-lg leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)]">
 							2nd Task: Book appointment
 						</p>
-						<p class="font-['Poppins'] font-normal text-lg leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+						<p class="font-sans font-normal text-lg leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)]">
 							3rd Task: Send email demo link and appointment time
 						</p>
 					</div>
@@ -572,7 +572,7 @@
 			{:else if selectedSummary.type === "email"}
 				<!-- Email Modal (Scaled Down) -->
 				<div
-					class="w-[600px] bg-white rounded-[5px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] p-5 relative"
+					class="w-[600px] bg-white rounded shadow-[0px_4px_4px_rgba(0,0,0,0.25)] p-5 relative"
 					onclick={(e) => e.stopPropagation()}
 				>
 					<!-- Close button -->
@@ -587,21 +587,21 @@
 					<!-- Header -->
 					<div class="flex justify-between items-start mb-3">
 						<div>
-							<p class="font-['Poppins'] font-semibold text-base leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.88)] mb-1">
+							<p class="font-sans font-semibold text-base leading-[1.29] tracking-normal text-[rgba(86,86,86,0.88)] mb-1">
 								AI Summary:
 							</p>
-							<p class="font-['Poppins'] font-normal text-base leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+							<p class="font-sans font-normal text-base leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)]">
 								{selectedSummary.date} | {selectedSummary.time}
 							</p>
 						</div>
 						<div class="text-right">
-							<p class="font-['Poppins'] font-bold text-base leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)] mb-1">
+							<p class="font-sans font-bold text-base leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)] mb-1">
 								Comm ID - {selectedSummary.commId || 'N/A'}
 							</p>
-							<p class="font-['Poppins'] font-semibold text-base leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.88)]">
+							<p class="font-sans font-semibold text-base leading-[1.29] tracking-normal text-[rgba(86,86,86,0.88)]">
 								Category: Sales
 							</p>
-							<p class="font-['Poppins'] font-semibold text-base leading-[128.67%] tracking-[0.01em] text-right text-[rgba(86,86,86,0.88)]">
+							<p class="font-sans font-semibold text-base leading-[1.29] tracking-normal text-right text-[rgba(86,86,86,0.88)]">
 								Sub-Category: Book/Demo
 							</p>
 						</div>
@@ -609,40 +609,40 @@
 
 					<!-- Summary Section -->
 					<div class="mb-3">
-						<p class="font-['Poppins'] font-semibold text-base leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.88)] mb-2">
+						<p class="font-sans font-semibold text-base leading-[1.29] tracking-normal text-[rgba(86,86,86,0.88)] mb-2">
 							Summary:
 						</p>
-						<div class="w-full bg-[#F7F7F7] rounded-[4px] border-b border-[#BEBEBE] p-3">
+						<div class="w-full bg-[#F7F7F7] rounded border-b border-[#BEBEBE] p-3">
 							<div class="space-y-2">
 								<div>
-									<span class="font-['Poppins'] font-normal text-sm leading-[141%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+									<span class="font-sans font-normal text-sm leading-[141%] tracking-normal text-[rgba(86,86,86,0.78)]">
 										Email Address: 
 									</span>
-									<span class="font-['Poppins'] font-medium text-sm leading-[141%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+									<span class="font-sans font-medium text-sm leading-[141%] tracking-normal text-[rgba(86,86,86,0.78)]">
 										sarahlee@gmail.com
 									</span>
 								</div>
 								<div>
-									<span class="font-['Poppins'] font-normal text-sm leading-[141%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+									<span class="font-sans font-normal text-sm leading-[141%] tracking-normal text-[rgba(86,86,86,0.78)]">
 										Subject Line: 
 									</span>
-									<span class="font-['Poppins'] font-medium text-sm leading-[141%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+									<span class="font-sans font-medium text-sm leading-[141%] tracking-normal text-[rgba(86,86,86,0.78)]">
 										Demo Link and Appointment time
 									</span>
 								</div>
 								<div>
-									<span class="font-['Poppins'] font-normal text-sm leading-[141%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+									<span class="font-sans font-normal text-sm leading-[141%] tracking-normal text-[rgba(86,86,86,0.78)]">
 										Body:
 									</span>
-									<div class="mt-2 w-full bg-[#FFFDFD] rounded-[4px] border-b border-[#BEBEBE] p-3">
-										<p class="font-['Poppins'] font-medium text-sm leading-[141%] tracking-[0.01em] text-[rgba(86,86,86,0.78)] mb-2">
+									<div class="mt-2 w-full bg-[#FFFDFD] rounded border-b border-[#BEBEBE] p-3">
+										<p class="font-sans font-medium text-sm leading-[141%] tracking-normal text-[rgba(86,86,86,0.78)] mb-2">
 											Hello Sarah,<br />
 											As per our conversation see demo link and as we discuss i book a appointment at 10am at the office.
 										</p>
-										<p class="font-['Poppins'] font-normal italic text-sm leading-[141%] tracking-[0.01em] text-[rgba(123,132,249,0.78)] underline mb-2">
+										<p class="font-sans font-normal italic text-sm leading-[141%] tracking-normal text-[rgba(123,132,249,0.78)] underline mb-2">
 											httpss://demolink1344/csag.com
 										</p>
-										<p class="font-['Poppins'] font-medium text-sm leading-[141%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+										<p class="font-sans font-medium text-sm leading-[141%] tracking-normal text-[rgba(86,86,86,0.78)]">
 											Looking forward to see you<br />
 											if you have any question just five me a shout
 										</p>
@@ -654,7 +654,7 @@
 
 					<!-- Footer -->
 					<div>
-						<p class="font-['Poppins'] font-normal text-base leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+						<p class="font-sans font-normal text-base leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)]">
 							Task: AI has to update the CRM & Engagement Score
 						</p>
 					</div>
@@ -662,7 +662,7 @@
 			{:else}
 				<!-- Default Modal for other types -->
 				<div
-					class="w-[600px] bg-white rounded-[5px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] p-5 relative"
+					class="w-[600px] bg-white rounded shadow-[0px_4px_4px_rgba(0,0,0,0.25)] p-5 relative"
 					onclick={(e) => e.stopPropagation()}
 				>
 					<button
@@ -673,23 +673,23 @@
 						<X class="w-5 h-5" />
 					</button>
 					<div class="mb-3">
-						<p class="font-['Poppins'] font-semibold text-base leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.88)] mb-1">
+						<p class="font-sans font-semibold text-base leading-[1.29] tracking-normal text-[rgba(86,86,86,0.88)] mb-1">
 							AI Summary:
 						</p>
-						<p class="font-['Poppins'] font-normal text-base leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+						<p class="font-sans font-normal text-base leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)]">
 							{selectedSummary.date} | {selectedSummary.time}
 						</p>
 					</div>
 					<div class="text-right mb-3">
-						<p class="font-['Poppins'] font-bold text-base leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)] mb-1">
+						<p class="font-sans font-bold text-base leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)] mb-1">
 							Comm ID - {selectedSummary.commId || 'N/A'}
 						</p>
-						<p class="font-['Poppins'] font-semibold text-base leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.88)]">
+						<p class="font-sans font-semibold text-base leading-[1.29] tracking-normal text-[rgba(86,86,86,0.88)]">
 							Category: Sales
 						</p>
 					</div>
-					<div class="w-full bg-[#F7F7F7] rounded-[4px] border-b border-[#BEBEBE] p-3">
-						<p class="font-['Poppins'] font-normal text-sm leading-[131%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+					<div class="w-full bg-[#F7F7F7] rounded border-b border-[#BEBEBE] p-3">
+						<p class="font-sans font-normal text-sm leading-[131%] tracking-normal text-[rgba(86,86,86,0.78)]">
 							Summary content for {selectedSummary.type} communication.
 						</p>
 					</div>
@@ -702,7 +702,7 @@
 		<p class="text-[#555555]">Profile not found</p>
 		<button
 			onclick={() => goto('/profiles')}
-			class="mt-4 text-[#577AB7] hover:text-[#3d5a8a] font-['Poppins'] text-sm"
+			class="mt-4 text-[#577AB7] hover:text-[#3d5a8a] font-sans text-sm"
 		>
 			← Back to Profiles
 		</button>

@@ -94,8 +94,8 @@
 				<div class="px-6 py-4">
 					<div class="flex items-start gap-4 mb-4">
 						<!-- Avatar -->
-						<div class="w-[50px] h-[50px] rounded-full bg-[#59875F] flex items-center justify-center flex-shrink-0">
-							<span class="font-['Poppins'] font-semibold text-[23px] leading-[28px] text-white">
+						<div class="w-[50px] h-12 rounded-full bg-[#59875F] flex items-center justify-center flex-shrink-0">
+							<span class="font-sans font-semibold text-2xl leading-[28px] text-white">
 								{replyData?.senderInitials || 'SL'}
 							</span>
 						</div>
@@ -104,16 +104,16 @@
 						<div class="flex-1 min-w-0">
 							<div class="flex items-start justify-between mb-1">
 								<div class="flex flex-col gap-1">
-									<span class="font-['Poppins'] font-semibold text-[17px] leading-[21px] text-[#3D3D3D]">
+									<span class="font-sans font-semibold text-lg leading-[21px] text-[#3D3D3D]">
 										{replyData?.sender || 'Sarah Lee'}
 									</span>
-									<span class="font-['Poppins'] font-normal text-[15px] leading-[18px] text-[#3F3F3F]">
+									<span class="font-sans font-normal text-[15px] leading-[18px] text-[#3F3F3F]">
 										to me, {replyData?.recipient || 'Nate'}
 									</span>
 								</div>
 
 								<div class="flex items-center gap-4 flex-shrink-0">
-									<span class="font-['Poppins'] font-normal text-[17px] leading-[21px] text-[#727272] whitespace-nowrap">
+									<span class="font-sans font-normal text-lg leading-[21px] text-[#727272] whitespace-nowrap">
 										{replyData?.date || 'December, 01 2024'} {replyData?.time || '9:33 PM'}
 									</span>
 
@@ -151,25 +151,25 @@
 
 					<!-- Original Message -->
 					<div class="mb-4">
-						<p class="font-['Poppins'] font-normal text-base leading-[19px] text-black mb-4">
+						<p class="font-sans font-normal text-base leading-[19px] text-black mb-4">
 							{replyData?.originalMessage || 'I am interested in purchasing a new car. Can I test drive the Ford F150 2026. I would like to visit your dealership this coming Friday between 2:00 pm and 3:30 pm.'}
 						</p>
-						<p class="font-['Poppins'] font-normal text-[17px] leading-[21px] text-[#3F3F3F]">
+						<p class="font-sans font-normal text-lg leading-[21px] text-[#3F3F3F]">
 							{replyData?.originalSignature || '-- Best Wishes, Rory'}
 						</p>
 					</div>
 
 					<!-- Separator Line -->
-					<div class="w-full h-[1px] bg-[#868686] mb-4"></div>
+					<div class="w-full h-px bg-[#868686] mb-4"></div>
 				</div>
 
 				<!-- Reply Card -->
 				<div class="px-6 pb-4">
-				<div class="bg-white rounded-[9px] shadow-[0px_0px_4.7px_2px_rgba(0,0,0,0.21)] p-6">
+				<div class="bg-white rounded-lg shadow-[0px_0px_4.7px_2px_rgba(0,0,0,0.21)] p-6">
 					<!-- Reply Header -->
 					<div class="flex items-center gap-2 mb-4">
 						<Reply class="w-5 h-[15px] text-[#474948]" />
-						<span class="font-['Poppins'] font-normal text-[17px] leading-[21px] text-black">
+						<span class="font-sans font-normal text-lg leading-[21px] text-black">
 							{replyData?.sender || 'Sarah Lee'} ({replyData?.recipientEmail || 'sarahlee@email.com'})
 						</span>
 					</div>
@@ -179,7 +179,7 @@
 						{#if useAI}
 							<!-- Pre-filled AI content -->
 							<div class="mb-4">
-								<p class="font-['Poppins'] font-normal text-[17px] leading-[26px] text-[#3F3F3F] mb-4">
+								<p class="font-sans font-normal text-lg leading-[26px] text-[#3F3F3F] mb-4">
 									{replyMessage}
 								</p>
 							</div>
@@ -188,35 +188,35 @@
 							<textarea
 								bind:value={replyMessage}
 								placeholder="Type your reply here..."
-								class="w-full min-h-[130px] p-4 border border-gray-300 rounded-lg font-['Poppins'] font-normal text-[17px] leading-[26px] text-[#3F3F3F] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+								class="w-full min-h-[130px] p-4 border border-gray-300 rounded-lg font-sans font-normal text-lg leading-[26px] text-[#3F3F3F] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
 							></textarea>
 						{/if}
 
 						<!-- Appointment Details (shown on both) -->
 						<div class="mb-4">
-							<p class="font-['Poppins'] font-semibold text-[17px] leading-[26px] text-[#3F3F3F] mb-2">
+							<p class="font-sans font-semibold text-lg leading-[26px] text-[#3F3F3F] mb-2">
 								<span class="font-semibold">Agent:</span> {agent}
 							</p>
-							<p class="font-['Poppins'] font-semibold text-[17px] leading-[26px] text-[#3F3F3F] mb-2">
+							<p class="font-sans font-semibold text-lg leading-[26px] text-[#3F3F3F] mb-2">
 								<span class="font-semibold">Appointment:</span> {appointmentTime}
 							</p>
-							<p class="font-['Poppins'] font-semibold text-[17px] leading-[26px] text-[#3F3F3F] mb-2">
+							<p class="font-sans font-semibold text-lg leading-[26px] text-[#3F3F3F] mb-2">
 								<span class="font-semibold">Location:</span> {location}
 							</p>
-							<p class="font-['Poppins'] font-semibold text-[17px] leading-[26px] text-[#3F3F3F] mb-2">
+							<p class="font-sans font-semibold text-lg leading-[26px] text-[#3F3F3F] mb-2">
 								<span class="font-semibold">Purpose:</span> {purpose}
 							</p>
 							<div class="flex items-center gap-2 mb-2">
-								<span class="font-['Poppins'] font-semibold text-[17px] leading-[26px] text-[#3F3F3F]">
+								<span class="font-sans font-semibold text-lg leading-[26px] text-[#3F3F3F]">
 									<span class="font-semibold">Confirm Appointment:</span>
 								</span>
 								<button
-									class="w-[53px] h-[26px] bg-[#57B76C] rounded-[4px] flex items-center justify-center font-['Poppins'] font-semibold text-[17px] leading-[26px] text-white hover:bg-[#57B76C]/90 transition-colors"
+									class="w-[53px] h-[26px] bg-[#57B76C] rounded flex items-center justify-center font-sans font-semibold text-lg leading-[26px] text-white hover:bg-[#57B76C]/90 transition-colors"
 								>
 									Yes
 								</button>
 								<button
-									class="w-[53px] h-[26px] bg-[#DA3E3E] rounded-[4px] flex items-center justify-center font-['Poppins'] font-semibold text-[17px] leading-[26px] text-white hover:bg-[#DA3E3E]/90 transition-colors"
+									class="w-[53px] h-[26px] bg-[#DA3E3E] rounded flex items-center justify-center font-sans font-semibold text-lg leading-[26px] text-white hover:bg-[#DA3E3E]/90 transition-colors"
 								>
 									No
 								</button>
@@ -228,7 +228,7 @@
 					<div class="w-full h-[63px] bg-[#EBEBEB] rounded-2xl flex items-center justify-between px-4">
 						<div class="flex items-center gap-4">
 							<button
-								class="h-[40px] px-6 bg-[#0C58D1] rounded-[20px] flex items-center gap-2 font-['Poppins'] font-semibold text-[17px] leading-[21px] text-white hover:bg-[#0C58D1]/90 transition-colors"
+								class="h-[40px] px-6 bg-[#0C58D1] rounded-full flex items-center gap-2 font-sans font-semibold text-lg leading-[21px] text-white hover:bg-[#0C58D1]/90 transition-colors"
 								onclick={() => {
 									if (onSend) {
 										onSend();
@@ -242,7 +242,7 @@
 								<Send class="w-5 h-5" />
 								<span>Send</span>
 							</button>
-							<div class="w-[1px] h-10 bg-white"></div>
+							<div class="w-px h-10 bg-white"></div>
 							<button
 								class="w-5 h-5 text-[#3F3F3F] hover:text-[#3D3D3D] transition-colors"
 								aria-label="Format text"

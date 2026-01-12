@@ -109,7 +109,7 @@
 			<!-- Header: Your Notifications -->
 			<div class="px-6 py-4 border-b border-[#C6C6C6] flex-shrink-0">
 				<h2
-					class="font-['Poppins'] font-normal text-2xl leading-[128.67%] text-[#555555]"
+					class="font-sans font-normal text-2xl leading-[1.29] text-[#555555]"
 				>
 					Your Notifications
 				</h2>
@@ -125,12 +125,12 @@
 						<!-- Date and Time -->
 						<div class="flex flex-col gap-1 flex-shrink-0">
 							<span
-								class="font-['Poppins'] font-normal text-[17px] leading-[128.67%] text-[#727272]"
+								class="font-sans font-normal text-lg leading-[1.29] text-[#727272]"
 							>
 								{notification.date}
 							</span>
 							<span
-								class="font-['Poppins'] font-normal text-[15px] leading-[128.67%] text-[#727272]"
+								class="font-sans font-normal text-[15px] leading-[1.29] text-[#727272]"
 							>
 								{notification.time}
 							</span>
@@ -139,12 +139,12 @@
 						<!-- Sender and Comm ID -->
 						<div class="flex flex-col gap-1 flex-shrink-0">
 							<span
-								class="font-['Poppins'] font-normal text-[17px] leading-[128.67%] text-[#727272]"
+								class="font-sans font-normal text-lg leading-[1.29] text-[#727272]"
 							>
 								{notification.sender}
 							</span>
 							<span
-								class="font-['Poppins'] font-normal text-sm leading-[128.67%] text-[#555555]"
+								class="font-sans font-normal text-sm leading-[1.29] text-[#555555]"
 							>
 								{notification.commId}
 							</span>
@@ -153,7 +153,7 @@
 						<!-- Message -->
 						<div class="flex-1 min-w-0">
 							<p
-								class="font-['Poppins'] font-normal text-[17px] leading-[128.67%] text-[#727272] truncate"
+								class="font-sans font-normal text-lg leading-[1.29] text-[#727272] truncate"
 							>
 								{notification.message}
 							</p>

@@ -133,64 +133,64 @@
 <div class="min-h-screen bg-[#ECEEF3] p-0">
 	<div class="p-4">
 		<!-- Dialer Title Header -->
-		<div class="mb-4 rounded-[3px] bg-white px-4 py-3">
-			<h1 class="font-['Poppins'] font-semibold text-[18px] leading-[128.67%] text-[#747474]">
-				Dialer
-			</h1>
-		</div>
+	<div class="mb-4 rounded-sm bg-white px-4 py-3">
+		<h1 class="font-sans font-semibold text-lg leading-[1.29] text-[#747474]">
+			Dialer
+		</h1>
+	</div>
 
 		<!-- Top Row: Search + Tabs -->
 		<div class="mb-4 flex w-full items-center justify-between gap-4">
 			<!-- Search Bar -->
-			<div class="flex h-[50px] w-[50%] items-center gap-2 rounded-[5px] bg-white px-3">
+			<div class="flex h-12 w-1/2 items-center gap-2 rounded bg-white px-3">
 				<Search class="h-5 w-5 text-[#577AB7]" />
 				<input
 					type="text"
 					bind:value={searchQuery}
 					placeholder="Search"
-					class="flex-1 border-0 bg-transparent font-['Poppins'] text-[14px] leading-[128.67%] text-[rgba(120,120,120,0.54)] outline-none placeholder:text-[rgba(120,120,120,0.54)]"
+					class="flex-1 border-0 bg-transparent font-sans text-sm leading-[1.29] text-[rgba(120,120,120,0.54)] outline-none placeholder:text-[rgba(120,120,120,0.54)]"
 				/>
 				<Mic class="h-5 w-5 text-[#577AB7]" />
 			</div>
 
 			<!-- Navigation Tabs -->
-			<div class="flex h-[50px] w-[50%] items-center gap-6 rounded-[5px] bg-white px-6">
-				<button
-					class="flex items-center gap-1.5 font-['Poppins'] text-[14px] leading-[128.67%] tracking-[0.01em] transition-colors {activeTab === 'Phone'
-						? 'font-medium text-[#565656]'
-						: 'font-medium text-[#565656]'}"
-					onclick={() => activeTab = 'Phone'}
-				>
-					<Phone class="h-4 w-4 text-[#565656]" />
-					Phone
-				</button>
-				<button
-					class="flex items-center gap-1.5 font-['Poppins'] text-[14px] leading-[128.67%] tracking-[0.01em] transition-colors {activeTab === 'Calls'
-						? 'font-medium text-[#565656]'
-						: 'font-medium text-[#565656]'}"
-					onclick={() => activeTab = 'Calls'}
-				>
-					<Clock class="h-4 w-4 text-[#999999]" />
-					Calls
-				</button>
-				<button
-					class="flex items-center gap-1.5 font-['Poppins'] text-[14px] leading-[128.67%] tracking-[0.01em] transition-colors {activeTab === 'Voicemail'
-						? 'font-medium text-[#565656]'
-						: 'font-medium text-[#565656]'}"
-					onclick={() => activeTab = 'Voicemail'}
-				>
-					<Voicemail class="h-4 w-4 text-[#999999]" />
-					Voicemail
-				</button>
+			<div class="flex h-12 w-1/2 items-center gap-6 rounded bg-white px-6">
+			<button
+				class="flex items-center gap-1.5 font-sans text-sm leading-[1.29] tracking-normal transition-colors {activeTab === 'Phone'
+					? 'font-medium text-[#565656]'
+					: 'font-medium text-[#565656]'}"
+				onclick={() => activeTab = 'Phone'}
+			>
+				<Phone class="h-4 w-4 text-[#565656]" />
+				Phone
+			</button>
+			<button
+				class="flex items-center gap-1.5 font-sans text-sm leading-[1.29] tracking-normal transition-colors {activeTab === 'Calls'
+					? 'font-medium text-[#565656]'
+					: 'font-medium text-[#565656]'}"
+				onclick={() => activeTab = 'Calls'}
+			>
+				<Clock class="h-4 w-4 text-[#999999]" />
+				Calls
+			</button>
+			<button
+				class="flex items-center gap-1.5 font-sans text-sm leading-[1.29] tracking-normal transition-colors {activeTab === 'Voicemail'
+					? 'font-medium text-[#565656]'
+					: 'font-medium text-[#565656]'}"
+				onclick={() => activeTab = 'Voicemail'}
+			>
+				<Voicemail class="h-4 w-4 text-[#999999]" />
+				Voicemail
+			</button>
 			</div>
 		</div>
 
 		<!-- Main Content Row -->
 		<div class="flex w-full items-start justify-between gap-4">
 			<!-- Left Panel: Contacts List -->
-			<div class="h-[504px] w-[50%] rounded-[8px] bg-white p-4">
+			<div class="h-[504px] w-1/2 rounded-lg bg-white p-4">
 				<!-- Headers -->
-				<div class="mb-3 flex font-['Poppins'] text-[14px] leading-[128.67%] tracking-[0.01em]">
+				<div class="mb-3 flex font-sans text-sm leading-[1.29] tracking-normal">
 					<div class="w-[180px] font-medium text-[#565656]">Name</div>
 					<div class="flex-1 font-medium text-[#565656]">Phone</div>
 				</div>
@@ -202,12 +202,12 @@
 							class="flex items-center border-l-[3px] border-l-[#BEBEBE] bg-[#FAFAFA] py-3 pl-4 pr-3"
 						>
 							<div
-								class="w-[180px] font-['Poppins'] text-[14px] leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]"
+								class="w-[180px] font-sans text-sm leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)]"
 							>
 								{c.name}
 							</div>
 							<div
-								class="flex-1 font-['Poppins'] text-[14px] leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]"
+								class="flex-1 font-sans text-sm leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)]"
 							>
 								{c.phone}
 							</div>
@@ -217,14 +217,14 @@
 			</div>
 
 			<!-- Right Panel: Dial Pad -->
-			<div class="h-[504px] w-[50%] rounded-[8px] bg-white p-6">
+			<div class="h-[504px] w-1/2 rounded-lg bg-white p-6">
 				<!-- Input Field -->
 				<div class="mb-6 text-center">
 					<input
 						type="text"
 						bind:value={dialInput}
 						placeholder="Enter a name or number"
-						class="w-full border-0 border-b border-[#BEBEBE] bg-transparent pb-2 text-center font-['Poppins'] text-2xl font-bold leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)] outline-none placeholder:text-[rgba(86,86,86,0.78)]"
+						class="w-full border-0 border-b border-[#BEBEBE] bg-transparent pb-2 text-center font-sans text-2xl font-bold leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)] outline-none placeholder:text-[rgba(86,86,86,0.78)]"
 					/>
 				</div>
 
@@ -233,15 +233,15 @@
 					<!-- Number Pad Grid -->
 					<div class="grid grid-cols-3 gap-x-4 gap-y-6">
 						{#each [[1, 2, 3], [4, 5, 6], [7, 8, 9], ['*', 0, '#']] as row}
-							{#each row as digit}
-								<button
-									class="flex h-12 w-full items-center justify-center font-['Poppins'] text-[20px] font-medium leading-[128.67%] tracking-[0.01em] text-[#565656] transition hover:bg-gray-50"
-									onclick={() => appendDialInput(digit.toString())}
-									type="button"
-								>
-									{digit}
-								</button>
-							{/each}
+						{#each row as digit}
+							<button
+								class="flex h-12 w-full items-center justify-center font-sans text-xl font-medium leading-[1.29] tracking-normal text-[#565656] transition hover:bg-gray-50"
+								onclick={() => appendDialInput(digit.toString())}
+								type="button"
+							>
+								{digit}
+							</button>
+						{/each}
 						{/each}
 					</div>
 
@@ -249,7 +249,7 @@
 					<div class="mt-6 grid grid-cols-3 gap-x-4">
 						<!-- Plus Button -->
 						<button
-							class="flex h-12 w-full items-center justify-center font-['Poppins'] text-[20px] font-medium leading-[128.67%] tracking-[0.01em] text-[#565656] transition hover:bg-gray-50"
+							class="flex h-12 w-full items-center justify-center font-sans text-xl font-medium leading-[1.29] tracking-normal text-[#565656] transition hover:bg-gray-50"
 							type="button"
 							onclick={() => appendDialInput('+')}
 						>
@@ -258,7 +258,7 @@
 
 						<!-- Call Button -->
 						<button
-							class="flex h-12 w-12 items-center justify-center rounded-full bg-[#24A103] transition hover:bg-[#1f8a02] mx-auto"
+							class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#24A103] transition hover:bg-[#1f8a02]"
 							onclick={call}
 							type="button"
 						>
@@ -267,7 +267,7 @@
 
 						<!-- Delete Button -->
 						<button
-							class="flex h-12 w-full items-center justify-center font-['Poppins'] text-[20px] font-medium leading-[128.67%] tracking-[0.01em] text-[#565656] transition hover:bg-gray-50"
+							class="flex h-12 w-full items-center justify-center font-sans text-xl font-medium leading-[1.29] tracking-normal text-[#565656] transition hover:bg-gray-50"
 							onclick={deleteDialInput}
 							type="button"
 							title="Delete"

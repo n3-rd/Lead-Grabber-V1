@@ -225,9 +225,9 @@
 <div class="w-full p-4 min-w-0">
 	{#if selectedNotification}
 		<!-- Conversation View -->
-		<div class="w-[1117px] bg-white rounded-[3px] flex flex-col h-[calc(100vh-200px)]">
+		<div class="w-[1117px] bg-white rounded-sm flex flex-col h-[calc(100vh-200px)]">
 			<!-- Header -->
-			<div class="w-[1117px] h-[61px] bg-white rounded-[3px] flex items-center px-4 gap-4 border-b border-[#E0E0E0] flex-shrink-0">
+			<div class="w-[1117px] h-[61px] bg-white rounded-sm flex items-center px-4 gap-4 border-b border-[#E0E0E0] flex-shrink-0">
 				<button
 					onclick={handleBack}
 					class="w-[36px] h-[18px] text-[#7D7D7D] hover:text-[#555555] transition-colors"
@@ -235,18 +235,18 @@
 				>
 					<ArrowLeft class="w-[36px] h-[18px]" />
 				</button>
-				<h1 class="font-['Poppins'] font-semibold text-[23px] leading-[128.67%] text-[#747474]">
+				<h1 class="font-sans font-semibold text-2xl leading-[1.29] text-[#747474]">
 					{selectedNotification.name}
 				</h1>
 			</div>
 
 			<!-- Content -->
-			<div class="w-[1117px] bg-white rounded-[3px] flex flex-col flex-1 min-h-0">
+			<div class="w-[1117px] bg-white rounded-sm flex flex-col flex-1 min-h-0">
 				<!-- Metadata Bar -->
 				<div class="flex items-center justify-between px-6 py-4 border-b border-[#E0E0E0] flex-shrink-0">
 					<div class="flex items-center gap-3">
 						<Mail class="w-5 h-5 text-[#848484]" />
-						<span class="font-['Inter'] font-medium text-sm leading-[26px] text-[#717171]">
+						<span class="font-sans font-medium text-sm leading-[26px] text-[#717171]">
 							Fri, November 5, 2025 – 9:00 AM
 						</span>
 					</div>
@@ -275,7 +275,7 @@
 								{#if msg.senderIsYou}
 									<User class="w-5 h-5 text-white" />
 								{:else}
-									<span class="font-['Poppins'] font-semibold text-xs text-[#848484]">
+									<span class="font-sans font-semibold text-xs text-[#848484]">
 										{getInitials(msg.sender)}
 									</span>
 								{/if}
@@ -284,15 +284,15 @@
 							<!-- Message Content -->
 							<div class="flex-1 min-w-0">
 								<div class="flex items-center gap-3 mb-2">
-									<span class="font-['Poppins'] font-medium text-sm leading-[128.67%] tracking-[0.01em] text-[#696969]">
+									<span class="font-sans font-medium text-sm leading-[1.29] tracking-normal text-[#696969]">
 										{msg.sender}
 									</span>
-									<span class="font-['Inter'] font-normal text-sm leading-[26px] text-[#717171]">
+									<span class="font-sans font-normal text-sm leading-[26px] text-[#717171]">
 										{msg.date} – {msg.time}
 									</span>
 								</div>
-								<div class="w-full min-h-[60px] bg-[#F9F9F9] rounded-[3px] p-4">
-									<div class="font-['Inter'] font-normal text-sm leading-[26px] text-[#717171] whitespace-pre-wrap">
+								<div class="w-full min-h-[60px] bg-[#F9F9F9] rounded-sm p-4">
+									<div class="font-sans font-normal text-sm leading-[26px] text-[#717171] whitespace-pre-wrap">
 										{@html msg.message}
 									</div>
 								</div>
@@ -310,12 +310,12 @@
 						</div>
 
 						<!-- Composer Box -->
-						<div class="flex-1 bg-white border border-[#E0E0E0] rounded-[3px] relative">
+						<div class="flex-1 bg-white border border-[#E0E0E0] rounded-sm relative">
 							<!-- Recipient Header -->
 							<div class="flex items-center gap-2 px-4 py-2 border-b border-[#E0E0E0]">
 								<ArrowLeft class="w-4 h-4 text-[#848484]" />
 								<Reply class="w-4 h-4 text-[#848484]" />
-								<span class="font-['Poppins'] font-medium text-sm text-[#848484]">
+								<span class="font-sans font-medium text-sm text-[#848484]">
 									{selectedNotification.name}
 								</span>
 							</div>
@@ -325,7 +325,7 @@
 								<div
 									bind:this={editorRef}
 									contenteditable="true"
-									class="min-h-[120px] p-4 outline-none font-['Inter'] font-normal text-sm leading-[26px] text-[#717171]"
+									class="min-h-[120px] p-4 outline-none font-sans font-normal text-sm leading-[26px] text-[#717171]"
 									oninput={(e) => {
 										const html = e.currentTarget.innerHTML;
 										if (html === '<div><br></div>' || html === '<br>' || html === '<div></div>') {
@@ -339,7 +339,7 @@
 									}}
 								></div>
 								{#if !replyMessage || replyMessage === '<div><br></div>' || replyMessage === '<br>' || replyMessage === '<div></div>'}
-									<div class="absolute top-4 left-4 pointer-events-none text-gray-400 font-['Inter'] font-normal text-sm leading-[26px]">
+									<div class="absolute top-4 left-4 pointer-events-none text-gray-400 font-sans font-normal text-sm leading-[26px]">
 										Type your message here...
 									</div>
 								{/if}
@@ -405,7 +405,7 @@
 								<div class="flex items-center gap-2">
 									<button
 										onclick={handleSend}
-										class="h-9 px-4 bg-[#0C58D1] rounded-lg flex items-center gap-2 font-['Poppins'] font-medium text-sm text-white hover:bg-[#0C58D1]/90 transition-colors"
+										class="h-9 px-4 bg-[#0C58D1] rounded-lg flex items-center gap-2 font-sans font-medium text-sm text-white hover:bg-[#0C58D1]/90 transition-colors"
 									>
 										<Send class="w-4 h-4" />
 										Send

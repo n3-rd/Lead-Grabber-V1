@@ -187,9 +187,9 @@
 <div class="w-full p-4 min-w-0 overflow-x-auto">
 	{#if selectedNotification}
 			<!-- Notification Detail View -->
-			<div class="max-w-5xl bg-white rounded-[3px]">
+			<div class="max-w-5xl bg-white rounded-sm">
 				<!-- Header -->
-				<div class="h-[52px] bg-white rounded-[3px] flex items-center px-4 gap-3 border-b border-[#E0E0E0]">
+				<div class="h-[52px] bg-white rounded-sm flex items-center px-4 gap-3 border-b border-[#E0E0E0]">
 					<button
 						onclick={() => selectedNotification = null}
 						class="w-7 h-5 text-[#7D7D7D] hover:text-[#555555] transition-colors"
@@ -197,18 +197,18 @@
 					>
 						<ArrowLeft class="w-7 h-5" />
 					</button>
-					<h1 class="font-['Poppins'] font-semibold text-xl leading-[128.67%] text-[#747474]">
+					<h1 class="font-sans font-semibold text-xl leading-[1.29] text-[#747474]">
 						{selectedNotification.name}
 					</h1>
 				</div>
 
 			<!-- Content -->
-			<div class="bg-white rounded-[3px] p-5">
+			<div class="bg-white rounded-sm p-5">
 				<!-- Metadata Bar -->
 				<div class="flex items-center justify-between mb-5">
 					<div class="flex items-center gap-2.5">
 						<Mail class="w-4.5 h-4.5 text-[#848484]" />
-						<span class="font-['Inter'] font-medium text-sm leading-[22px] text-[#717171]">
+						<span class="font-sans font-medium text-sm leading-[22px] text-[#717171]">
 							{selectedNotification.date || "Fri, Oct 17, 2025"} {selectedNotification.time || "11:29 PM"}
 						</span>
 					</div>
@@ -233,13 +233,13 @@
 					<div class="w-8 h-8 rounded-full bg-[#E0E0E0] flex items-center justify-center">
 						<User class="w-4.5 h-4.5 text-[#848484]" />
 					</div>
-					<span class="font-['Poppins'] font-medium text-sm leading-[128.67%] tracking-[0.01em] text-[#696969]">
+					<span class="font-sans font-medium text-sm leading-[1.29] tracking-normal text-[#696969]">
 						{selectedNotification.name}
 					</span>
 				</div>
 
 				<!-- Message Body -->
-				<div class="min-h-[120px] bg-[#F9F9F9] rounded-[3px] p-4 mb-5">
+				<div class="min-h-[120px] bg-[#F9F9F9] rounded-sm p-4 mb-5">
 					<p class="font-normal text-sm leading-[22px] text-[#717171]">
 						{selectedNotification.fullMessage || selectedNotification.message}
 					</p>
@@ -248,7 +248,7 @@
 				<!-- Action Buttons -->
 				<div class="flex items-center gap-2.5 flex-wrap">
 					<button onclick={handleReplyClick} class="relative h-7 px-3 border border-[#7F7F7F] rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
-						<span class="font-['Poppins'] font-medium text-xs leading-[128.67%] tracking-[0.01em] text-[#787878]">
+						<span class="font-sans font-medium text-xs leading-[1.29] tracking-normal text-[#787878]">
 							Reply Now
 						</span>
 						<Reply class="w-3.5 h-3 text-[#787878] rotate-180" />
@@ -263,19 +263,19 @@
 						}}
 						class="relative h-7 px-3 border border-[#7F7F7F] rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors"
 					>
-						<span class="font-['Poppins'] font-medium text-xs leading-[128.67%] tracking-[0.01em] text-[#787878]">
+						<span class="font-sans font-medium text-xs leading-[1.29] tracking-normal text-[#787878]">
 							Call this Contact
 						</span>
 						<Phone class="w-3.5 h-3 text-[#787878] rotate-180" />
 					</button>
 					<button class="relative h-7 px-3 border border-[#7F7F7F] rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
-						<span class="font-['Poppins'] font-medium text-xs leading-[128.67%] tracking-[0.01em] text-[#787878]">
+						<span class="font-sans font-medium text-xs leading-[1.29] tracking-normal text-[#787878]">
 							Reply via SMS
 						</span>
 						<MessageSquare class="w-3.5 h-3 text-[#787878] rotate-180" />
 					</button>
 					<button class="relative h-7 px-3 border border-[#7F7F7F] rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
-						<span class="font-['Poppins'] font-medium text-xs leading-[128.67%] tracking-[0.01em] text-[#787878]">
+						<span class="font-sans font-medium text-xs leading-[1.29] tracking-normal text-[#787878]">
 							Reply via Email
 						</span>
 						<Mail class="w-3.5 h-3 text-[#787878] rotate-180" />
@@ -285,7 +285,7 @@
 		</div>
 	{:else}
 		<!-- Title -->
-		<h1 class="font-['Poppins'] font-semibold text-xl leading-[128.67%] text-[#747474] mb-5">
+		<h1 class="font-sans font-semibold text-xl leading-[1.29] text-[#747474] mb-5">
 			Important Notifications
 		</h1>
 
@@ -296,7 +296,7 @@
 			{#each filters as filter}
 				<button
 					onclick={() => selectedFilter = filter}
-					class="h-9 px-3.5 rounded-lg font-['Poppins'] font-normal text-sm leading-[128.67%] transition-colors {selectedFilter === filter
+					class="h-9 px-3.5 rounded-lg font-sans font-normal text-sm leading-[1.29] transition-colors {selectedFilter === filter
 						? 'bg-[#577AB7] text-white'
 						: 'bg-[#D7DFEB] text-[#577AB7]'}"
 				>
@@ -315,7 +315,7 @@
 				type="text"
 				bind:value={searchQuery}
 				placeholder="Search"
-				class="flex-1 outline-none font-['Poppins'] font-normal text-sm leading-[128.67%] text-[rgba(120,120,120,0.54)] placeholder:text-[rgba(120,120,120,0.54)]"
+				class="flex-1 outline-none font-sans font-normal text-sm leading-[1.29] text-[rgba(120,120,120,0.54)] placeholder:text-[rgba(120,120,120,0.54)]"
 			/>
 			<Mic class="w-4 h-4.5 text-[#577AB7]" />
 		</div>
@@ -329,18 +329,18 @@
 				type="checkbox"
 				checked={selectAll}
 				onchange={toggleSelectAll}
-				class="w-4.5 h-4.5 bg-[rgba(217,217,217,0.15)] border-[1.5px] border-[#4B4B4B] rounded-[3px] cursor-pointer"
+				class="w-4.5 h-4.5 bg-[rgba(217,217,217,0.15)] border-[1.5px] border-[#4B4B4B] rounded-sm cursor-pointer"
 			/>
-			<div class="w-20 font-['Poppins'] font-medium text-sm leading-[128.67%] text-[#565656]">
+			<div class="w-20 font-sans font-medium text-sm leading-[1.29] text-[#565656]">
 				Type
 			</div>
-			<div class="w-36 font-['Poppins'] font-medium text-sm leading-[128.67%] text-[#565656]">
+			<div class="w-36 font-sans font-medium text-sm leading-[1.29] text-[#565656]">
 				Name
 			</div>
-			<div class="flex-1 font-['Poppins'] font-medium text-sm leading-[128.67%] text-[#565656]">
+			<div class="flex-1 font-sans font-medium text-sm leading-[1.29] text-[#565656]">
 				Message
 			</div>
-			<div class="w-24 font-['Poppins'] font-medium text-sm leading-[128.67%] text-[#565656]">
+			<div class="w-24 font-sans font-medium text-sm leading-[1.29] text-[#565656]">
 				Time
 			</div>
 		</div>
@@ -365,22 +365,22 @@
 						checked={selectedNotifications.has(notification.id)}
 						onchange={() => toggleNotification(notification.id)}
 						onclick={(e) => e.stopPropagation()}
-						class="w-4.5 h-4.5 bg-[rgba(217,217,217,0.15)] border-[1.5px] border-[#919191] rounded-[3px] cursor-pointer"
+						class="w-4.5 h-4.5 bg-[rgba(217,217,217,0.15)] border-[1.5px] border-[#919191] rounded-sm cursor-pointer"
 					/>
 					<div class="w-20 flex items-center">
 						<Mail class="w-5 h-4 text-[#B7B7B7]" />
 					</div>
-					<div class="w-36 font-['Poppins'] font-medium text-sm leading-[128.67%] text-[#787878]">
+					<div class="w-36 font-sans font-medium text-sm leading-[1.29] text-[#787878]">
 						{notification.name}
 					</div>
 					<div
-						class="flex-1 font-['Poppins'] text-sm leading-[128.67%] text-[#717171] truncate {notification.isBold
+						class="flex-1 font-sans text-sm leading-[1.29] text-[#717171] truncate {notification.isBold
 							? 'font-semibold'
 							: 'font-normal'}"
 					>
 						{notification.message}
 					</div>
-					<div class="w-24 font-['Poppins'] font-normal text-sm leading-[128.67%] text-[rgba(86,86,86,0.78)]">
+					<div class="w-24 font-sans font-normal text-sm leading-[1.29] text-[rgba(86,86,86,0.78)]">
 						{notification.time}
 					</div>
 				</div>

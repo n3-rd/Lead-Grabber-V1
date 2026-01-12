@@ -70,18 +70,18 @@
 <!-- Profile List View -->
 	<div class="w-full p-4 min-w-0">
 		<!-- Title -->
-		<h1 class="font-['Poppins'] font-semibold text-xl leading-[128.67%] text-[#747474] mb-5">
+		<h1 class="font-sans font-semibold text-xl leading-[1.29] text-[#747474] mb-5">
 			Profile
 		</h1>
 
 		<!-- Search Bar -->
-		<div class="max-w-lg h-10 bg-white rounded-[5px] flex items-center px-4 gap-3 mb-5">
+		<div class="max-w-lg h-10 bg-white rounded flex items-center px-4 gap-3 mb-5">
 			<Search class="w-4.5 h-4.5 text-[#577AB7]" />
 			<input
 				type="text"
 				bind:value={searchQuery}
 				placeholder="Search"
-				class="flex-1 outline-none font-['Poppins'] font-normal text-base leading-[128.67%] text-[rgba(120,120,120,0.54)] placeholder:text-[rgba(120,120,120,0.54)]"
+				class="flex-1 outline-none font-sans font-normal text-base leading-[1.29] text-[rgba(120,120,120,0.54)] placeholder:text-[rgba(120,120,120,0.54)]"
 			/>
 			<Mic class="w-4 h-4.5 text-[#577AB7]" />
 			<button class="w-4 h-4 text-[#848484] hover:text-[#555555] transition-colors">
@@ -93,16 +93,16 @@
 		<div class="bg-white rounded-lg overflow-hidden">
 			<!-- Table Header -->
 			<div class="h-12 bg-white rounded-t-lg flex items-center px-4 border-b border-[#BEBEBE]">
-				<div class="w-[200px] font-['Poppins'] font-medium text-base leading-[128.67%] tracking-[0.01em] text-[#565656]">
+				<div class="w-[200px] font-sans font-medium text-base leading-[1.29] tracking-normal text-[#565656]">
 					Name
 				</div>
-				<div class="w-[200px] font-['Poppins'] font-medium text-base leading-[128.67%] tracking-[0.01em] text-[#565656]">
+				<div class="w-[200px] font-sans font-medium text-base leading-[1.29] tracking-normal text-[#565656]">
 					Phone
 				</div>
-				<div class="flex-1 font-['Poppins'] font-medium text-base leading-[128.67%] tracking-[0.01em] text-[#565656]">
+				<div class="flex-1 font-sans font-medium text-base leading-[1.29] tracking-normal text-[#565656]">
 					Email
 				</div>
-				<div class="w-[150px] font-['Poppins'] font-medium text-base leading-[128.67%] tracking-[0.01em] text-[#565656] text-right">
+				<div class="w-[150px] font-sans font-medium text-base leading-[1.29] tracking-normal text-[#565656] text-right">
 					Actions
 				</div>
 			</div>
@@ -117,13 +117,13 @@
 						onclick={() => handleProfileClick(profile)}
 						onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleProfileClick(profile); }}}
 					>
-						<div class="w-[200px] font-['Poppins'] font-normal text-base leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+						<div class="w-[200px] font-sans font-normal text-base leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)]">
 							{profile.name}
 						</div>
-						<div class="w-[200px] font-['Poppins'] font-normal text-base leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+						<div class="w-[200px] font-sans font-normal text-base leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)]">
 							{profile.phone}
 						</div>
-						<div class="flex-1 font-['Poppins'] font-normal text-base leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]">
+						<div class="flex-1 font-sans font-normal text-base leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)]">
 							{profile.email}
 						</div>
 						<div class="w-[150px] flex items-center justify-end gap-3">

@@ -99,8 +99,8 @@
 			<div class="px-6 py-4 flex-shrink-0">
 				<div class="flex items-start gap-4 mb-4">
 					<!-- Avatar -->
-					<div class="w-[50px] h-[50px] rounded-full bg-[#59875F] flex items-center justify-center flex-shrink-0">
-						<span class="font-['Poppins'] font-semibold text-[23px] leading-[28px] text-white">
+					<div class="w-[50px] h-12 rounded-full bg-[#59875F] flex items-center justify-center flex-shrink-0">
+						<span class="font-sans font-semibold text-2xl leading-[28px] text-white">
 							{notification?.senderInitials || 'SL'}
 						</span>
 					</div>
@@ -109,16 +109,16 @@
 					<div class="flex-1 min-w-0">
 						<div class="flex items-start justify-between mb-1">
 							<div class="flex flex-col gap-1">
-								<span class="font-['Poppins'] font-semibold text-[17px] leading-[21px] text-[#3D3D3D]">
+								<span class="font-sans font-semibold text-lg leading-[21px] text-[#3D3D3D]">
 									{notification?.sender || 'Sarah Lee'}
 								</span>
-								<span class="font-['Poppins'] font-normal text-[15px] leading-[18px] text-[#3F3F3F]">
+								<span class="font-sans font-normal text-[15px] leading-[18px] text-[#3F3F3F]">
 									to me, {notification?.recipient || 'Mark Doe'}
 								</span>
 							</div>
 
 							<div class="flex items-center gap-4 flex-shrink-0">
-								<span class="font-['Poppins'] font-normal text-[17px] leading-[21px] text-[#727272] whitespace-nowrap">
+								<span class="font-sans font-normal text-lg leading-[21px] text-[#727272] whitespace-nowrap">
 									{formatDate(notification?.date || 'Dec 01 2024')} {notification?.time || '9:33 PM'}
 								</span>
 
@@ -155,28 +155,28 @@
 				</div>
 
 				<!-- Separator Line -->
-				<div class="w-full h-[1px] bg-[#868686] mb-4"></div>
+				<div class="w-full h-px bg-[#868686] mb-4"></div>
 			</div>
 
 			<!-- Message Body -->
 			<div class="flex-1 overflow-y-auto min-h-0 px-6">
 				<div class="mb-4">
-					<p class="font-['Poppins'] font-normal text-base leading-[19px] text-black mb-4">
+					<p class="font-sans font-normal text-base leading-[19px] text-black mb-4">
 						{notification?.message || 'I am interested in purchasing a new car. Can I test drive the Ford F150 2026. I would like to visit your dealership this coming Friday between 2:00 pm and 3:30 pm.'}
 					</p>
-					<p class="font-['Poppins'] font-normal text-[17px] leading-[21px] text-[#3F3F3F]">
+					<p class="font-sans font-normal text-lg leading-[21px] text-[#3F3F3F]">
 						{notification?.signature || '-- Best Wishes, Sarah'}
 					</p>
 				</div>
 
 				<!-- Separator Line -->
-				<div class="w-full h-[1px] bg-[#AAAAAA] mb-4"></div>
+				<div class="w-full h-px bg-[#AAAAAA] mb-4"></div>
 			</div>
 
 			<!-- Action Buttons -->
 			<div class="px-6 py-4 flex items-center gap-4 flex-shrink-0 border-t border-[#C6C6C6] bg-white">
 				<button
-					class="h-[41px] px-4 border border-black rounded-2xl flex items-center gap-2 font-['Poppins'] font-normal text-[17px] leading-[21px] text-black hover:bg-gray-50 transition-colors"
+					class="h-[41px] px-4 border border-black rounded-2xl flex items-center gap-2 font-sans font-normal text-lg leading-[21px] text-black hover:bg-gray-50 transition-colors"
 					onclick={() => {
 						useAI = true;
 						replyDialogOpen = true;
@@ -186,13 +186,13 @@
 					<span>Reply with AI</span>
 				</button>
 				<button
-					class="h-[41px] px-4 border border-black rounded-2xl flex items-center gap-2 font-['Poppins'] font-normal text-[17px] leading-[21px] text-black hover:bg-gray-50 transition-colors"
+					class="h-[41px] px-4 border border-black rounded-2xl flex items-center gap-2 font-sans font-normal text-lg leading-[21px] text-black hover:bg-gray-50 transition-colors"
 				>
 					<Reply class="w-5 h-[15px] text-[#474948] rotate-180" />
 					<span>Forward with AI</span>
 				</button>
 				<button
-					class="h-[41px] px-4 border border-black rounded-[13px] flex items-center gap-2 font-['Poppins'] font-normal text-[17px] leading-[21px] text-black hover:bg-gray-50 transition-colors"
+					class="h-[41px] px-4 border border-black rounded-xl flex items-center gap-2 font-sans font-normal text-lg leading-[21px] text-black hover:bg-gray-50 transition-colors"
 					onclick={() => {
 						useAI = false;
 						replyDialogOpen = true;
@@ -202,7 +202,7 @@
 					<span>Reply</span>
 				</button>
 				<button
-					class="h-[41px] px-4 border border-black rounded-[13px] flex items-center gap-2 font-['Poppins'] font-normal text-[17px] leading-[21px] text-black hover:bg-gray-50 transition-colors"
+					class="h-[41px] px-4 border border-black rounded-xl flex items-center gap-2 font-sans font-normal text-lg leading-[21px] text-black hover:bg-gray-50 transition-colors"
 				>
 					<Reply class="w-5 h-[15px] text-[#474948] rotate-180" />
 					<span>Forward</span>

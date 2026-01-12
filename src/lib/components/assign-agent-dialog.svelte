@@ -43,7 +43,7 @@
 
 <Dialog.Root bind:open>
 	<Dialog.Content
-		class="!w-[462px] !h-[290px] !p-0 bg-white rounded-[3px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] [&>button]:hidden"
+		class="!w-[462px] !h-[290px] !p-0 bg-white rounded-sm shadow-[0px_4px_4px_rgba(0,0,0,0.25)] [&>button]:hidden"
 	>
 		<div class="w-full h-full p-6 flex flex-col relative">
 			<!-- Close Button -->
@@ -57,14 +57,14 @@
 
 			<!-- Title -->
 			<h2
-				class="font-['Poppins'] font-semibold text-xl leading-[24px] text-[#717171] mb-4"
+				class="font-sans font-semibold text-xl leading-[24px] text-[#717171] mb-4"
 			>
 				Assigning {endpointName} to:
 			</h2>
 
 			<!-- All Sales Agents Label -->
 			<p
-				class="font-['Poppins'] font-medium italic text-base leading-[19px] text-[#577AB7] mb-3"
+				class="font-sans font-medium italic text-base leading-[19px] text-[#577AB7] mb-3"
 			>
 				All Sales Agents:
 			</p>
@@ -83,7 +83,7 @@
 								class="w-[21px] h-[21px] border-[1.4px] border-[#717171] rounded-[2px] cursor-pointer accent-[#577AB7]"
 							/>
 							<span
-								class="font-['Poppins'] font-medium text-[17px] leading-[21px] text-[#717171]"
+								class="font-sans font-medium text-lg leading-[21px] text-[#717171]"
 							>
 								{agent}
 							</span>
@@ -95,13 +95,13 @@
 			<!-- Action Buttons -->
 			<div class="flex items-center justify-end gap-3 flex-shrink-0">
 				<button
-					class="w-[77px] h-[33px] bg-white border border-[#577AB7] rounded-[4px] flex items-center justify-center font-['Poppins'] font-medium text-base leading-[19px] text-[#577AB7] hover:bg-gray-50 transition-colors"
+					class="w-[77px] h-[33px] bg-white border border-[#577AB7] rounded flex items-center justify-center font-sans font-medium text-base leading-[19px] text-[#577AB7] hover:bg-gray-50 transition-colors"
 					onclick={handleCancel}
 				>
 					Cancel
 				</button>
 				<button
-					class="w-[123px] h-[33px] bg-[#577AB7] rounded-[4px] flex items-center justify-center font-['Poppins'] font-medium text-base leading-[19px] text-white hover:bg-[#577AB7]/90 transition-colors"
+					class="w-[123px] h-[33px] bg-[#577AB7] rounded flex items-center justify-center font-sans font-medium text-base leading-[19px] text-white hover:bg-[#577AB7]/90 transition-colors"
 					onclick={handleSelect}
 				>
 					Select Agent

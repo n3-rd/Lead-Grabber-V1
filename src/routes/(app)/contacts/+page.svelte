@@ -7,9 +7,10 @@
     import { toast } from "svelte-sonner";
     import { pb } from '$lib/pocketbase';
     import { Pencil, Trash2 } from 'lucide-svelte';
+	import { invalidateAll } from '$app/navigation';
 
     let { data } = $props();
-    let contacts = data.contacts;
+    const contacts = $derived(data.contacts);
     
     // Dialog state
     let showEditDialog = $state(false);
@@ -32,40 +33,42 @@
 
     async function handleUpdateContact() {
         try {
-            const updatedContact = await pb.collection('contacts').update(editingContact.id, {
+            await pb.collection('contacts').update(editingContact.id, {
                 name: editingContact.name,
                 email: editingContact.email,
                 phone: editingContact.phone,
                 updated: new Date().toISOString()
             });
 
-            contacts = contacts.map(c => 
-                c.id === updatedContact.id ? updatedContact : c
-            );
-
             showEditDialog = false;
             toast.success('Contact updated successfully');
+            await invalidateAll();
         } catch (error) {
             console.error('Error updating contact:', error);
             toast.error('Failed to update contact');
         }
     }
 
-    function handleDeleteContact(contactId: string) {
+    async function handleDeleteContact(contactId: string) {
         const form = new FormData();
         form.append('contactId', contactId);
         
-        fetch('?/deleteContact', {
-            method: 'POST',
-            body: form
-        }).then(async (res) => {
+        try {
+            const res = await fetch('?/deleteContact', {
+                method: 'POST',
+                body: form
+            });
+            
             if (res.ok) {
-                contacts = contacts.filter(c => c.id !== contactId);
                 toast.success('Contact deleted successfully');
+                await invalidateAll();
             } else {
                 toast.error('Failed to delete contact');
             }
-        });
+        } catch (error) {
+            console.error('Error deleting contact:', error);
+            toast.error('Failed to delete contact');
+        }
     }
 </script>
 

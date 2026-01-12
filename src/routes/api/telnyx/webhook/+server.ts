@@ -2,6 +2,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { pb } from '$lib/pocketbase';
+import { normalizePhoneNumber } from '$lib/utils/phone';
 
 // Define the hardcoded company ID
 const HARDCODED_COMPANY_ID = '6h4zpjhqip1d50b';
@@ -47,8 +48,8 @@ export const POST: RequestHandler = async ({ request }) => {
       return json({ success: false, error: 'Missing phone number' });
     }
     
-    // Normalize phone number by removing any non-digit characters except leading +
-    const normalizedPhoneNumber = phoneNumber.replace(/[^+\d]/g, '');
+    // Normalize phone number
+    const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
     console.log('Normalized phone number:', normalizedPhoneNumber);
     
     // Generate a thread ID - use only the customer's phone number

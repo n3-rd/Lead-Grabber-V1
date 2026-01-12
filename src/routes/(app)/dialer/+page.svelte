@@ -2,6 +2,11 @@
 	import { Phone, Clock, Voicemail, Search, Mic, Delete, Plus } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
+	import { normalizePhoneNumber } from '$lib/utils/phone';
+	import { filterContacts } from '$lib/utils/contacts';
+
+	let { data } = $props();
 
 	let phoneNumber = $state('');
 	let isDialing = $state(false);
@@ -92,19 +97,14 @@
 			});
 	}
 
-	let contacts = [
-		{ name: 'Peter Griffin', phone: '705-6433-2564' },
-		{ name: 'Michael Scofield', phone: '705-9755-1953' },
-		{ name: 'Joe Swanson', phone: '705-9012-0124' },
-		{ name: 'Adam West', phone: '705-7812-3321' },
-		{ name: 'Cleveland Brown', phone: '705-0091-7542' },
-		{ name: 'Sarah Lee', phone: '705-4123-6346' },
-		{ name: 'Peter Griffin', phone: '705-6433-2564' },
-		{ name: 'Michael Scofield', phone: '705-9755-1953' },
-		{ name: 'Joe Swanson', phone: '705-9012-0124' }
-	];
+	const contacts = $derived(data.contacts);
 
 	let dialInput = $state('');
+	
+	let contextMenuOpen = $state(false);
+	let contextMenuX = $state(0);
+	let contextMenuY = $state(0);
+	let dialInputElement: HTMLInputElement | null = $state(null);
 	
 	function appendDialInput(d: string) {
 		dialInput += d;
@@ -119,15 +119,48 @@
 		initiateCall();
 	}
 
-	const filteredContacts = $derived(
-		searchQuery
-			? contacts.filter(
-					(c) =>
-						c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-						c.phone.includes(searchQuery)
-				)
-			: contacts
-	);
+	function handleContextMenu(e: MouseEvent) {
+		e.preventDefault();
+		contextMenuX = e.clientX;
+		contextMenuY = e.clientY;
+		contextMenuOpen = true;
+	}
+
+	function closeContextMenu() {
+		contextMenuOpen = false;
+	}
+
+	function handleCreateNewContact() {
+		closeContextMenu();
+		const phoneParam = dialInput ? `?phone=${encodeURIComponent(dialInput)}` : '';
+		goto(`/contacts/create${phoneParam}`);
+	}
+
+	function handleAddToExistingContact() {
+		closeContextMenu();
+		// TODO: Implement add to existing contact
+		console.log('Add to existing contact:', dialInput);
+	}
+
+	function handleContactClick(contact: any) {
+		if (contact.phone) {
+			dialInput = normalizePhoneNumber(contact.phone);
+		}
+	}
+
+	$effect(() => {
+		if (contextMenuOpen) {
+			const handleClickOutside = (e: MouseEvent) => {
+				if (!(e.target as HTMLElement).closest('.context-menu')) {
+					closeContextMenu();
+				}
+			};
+			document.addEventListener('click', handleClickOutside);
+			return () => document.removeEventListener('click', handleClickOutside);
+		}
+	});
+
+	const filteredContacts = $derived(filterContacts(contacts, searchQuery));
 </script>
 
 <div class="min-h-screen bg-[#ECEEF3] p-0">
@@ -199,7 +232,16 @@
 				<div class="h-[calc(100%-40px)] space-y-2 overflow-y-auto">
 					{#each filteredContacts as c}
 						<div
-							class="flex items-center border-l-[3px] border-l-[#BEBEBE] bg-[#FAFAFA] py-3 pl-4 pr-3"
+							class="flex cursor-pointer items-center border-l-[3px] border-l-[#BEBEBE] bg-[#FAFAFA] py-3 pl-4 pr-3 transition-colors hover:bg-[#F0F0F0]"
+							onclick={() => handleContactClick(c)}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									handleContactClick(c);
+								}
+							}}
+							role="button"
+							tabindex="0"
 						>
 							<div
 								class="w-[180px] font-sans text-sm leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)]"
@@ -221,9 +263,11 @@
 				<!-- Input Field -->
 				<div class="mb-6 text-center">
 					<input
+						bind:this={dialInputElement}
 						type="text"
 						bind:value={dialInput}
 						placeholder="Enter a name or number"
+						oncontextmenu={handleContextMenu}
 						class="w-full border-0 border-b border-[#BEBEBE] bg-transparent pb-2 text-center font-sans text-2xl font-bold leading-[1.29] tracking-normal text-[rgba(86,86,86,0.78)] outline-none placeholder:text-[rgba(86,86,86,0.78)]"
 					/>
 				</div>
@@ -279,4 +323,29 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- Context Menu -->
+	{#if contextMenuOpen}
+		<div
+			class="context-menu fixed z-50 min-w-[180px] rounded-sm bg-[#F5F5F5] py-1 shadow-lg"
+			style="left: {contextMenuX}px; top: {contextMenuY}px;"
+			role="menu"
+		>
+			<button
+				class="w-full px-4 py-2 text-left font-sans text-sm leading-[1.29] text-[#565656] hover:bg-[#E8E8E8]"
+				onclick={handleCreateNewContact}
+				role="menuitem"
+			>
+				Create New Contact
+			</button>
+			<div class="my-1 border-t border-[#D0D0D0]"></div>
+			<button
+				class="w-full px-4 py-2 text-left font-sans text-sm leading-[1.29] text-[#565656] hover:bg-[#E8E8E8]"
+				onclick={handleAddToExistingContact}
+				role="menuitem"
+			>
+				Add to Existing Contact
+			</button>
+		</div>
+	{/if}
 </div>

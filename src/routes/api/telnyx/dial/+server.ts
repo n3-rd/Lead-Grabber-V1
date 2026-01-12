@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { TELNYX_API_KEY, TELNYX_CONNECTION_ID } from '$env/static/private';
+import { formatPhoneForDialing } from '$lib/utils/phone';
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
@@ -10,13 +11,8 @@ export const POST: RequestHandler = async ({ request }) => {
       return json({ success: false, error: 'Missing destination phone number' }, { status: 400 });
     }
     
-    // Clean the phone number
-    const cleanedPhone = to.replace(/\D/g, '');
-    
-    // For international calls, format appropriately
-    const formattedPhone = cleanedPhone.startsWith('1') 
-      ? `+${cleanedPhone}` 
-      : `+1${cleanedPhone}`;
+    // Format phone number for dialing (E.164 format)
+    const formattedPhone = formatPhoneForDialing(to);
     
     // Create the call using Telnyx API
     const response = await fetch('https://api.telnyx.com/v2/calls', {

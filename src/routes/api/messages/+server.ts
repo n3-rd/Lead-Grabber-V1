@@ -3,6 +3,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { TWILIO_ENABLED } from '$env/static/private';
 import { createOrUpdateContact } from '$lib/utils/contacts';
+import { normalizePhoneNumber } from '$lib/utils/phone';
 
 function getAutoReplyMessage(
   source: string,
@@ -145,7 +146,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
     
     // Normalize phone number if available
     if (messageData.customer_phone) {
-      const normalizedPhone = messageData.customer_phone.replace(/[^+\d]/g, '');
+      const normalizedPhone = normalizePhoneNumber(messageData.customer_phone);
       
       // Update both the thread_id and customer_phone for consistency
       if (normalizedPhone) {

@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { TELNYX_API_KEY, TELNYX_PHONE_NUMBER, TELNYX_MESSAGING_PROFILE_ID } from '$env/static/private';
 import { PUBLIC_BASE_URL } from '$env/static/public';
+import { normalizePhoneNumber } from '$lib/utils/phone';
 
 export const POST: RequestHandler = async ({ request }) => {
   const { message, phoneNumber } = await request.json();
@@ -10,8 +11,8 @@ export const POST: RequestHandler = async ({ request }) => {
     // Your Telnyx phone number (from your Messaging Profile)
     const fromNumber = TELNYX_PHONE_NUMBER;
     
-    // Format phone number - remove any non-digit characters except leading +
-    const formattedPhoneNumber = phoneNumber.replace(/[^+\d]/g, '');
+    // Normalize phone number
+    const formattedPhoneNumber = normalizePhoneNumber(phoneNumber);
     
     // Log the request being sent to Telnyx
     console.log('Sending to Telnyx:', {

@@ -1,6 +1,7 @@
 import { pb } from '$lib/pocketbase';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { getContactsByCompany } from '$lib/utils/contacts';
 
 export const load: PageServerLoad = async ({ locals }) => {
     const user = locals.user;
@@ -9,22 +10,11 @@ export const load: PageServerLoad = async ({ locals }) => {
         throw redirect(303, '/login');
     }
 
-    try {
-        // Fetch contacts for the user's company
-        const contacts = await pb.collection('contacts').getList(1, 50, {
-            filter: `company_id = "${user.company_id}"`,
-            sort: '-created'
-        });
+    const contacts = await getContactsByCompany(user.company_id);
 
-        return {
-            contacts: contacts.items
-        };
-    } catch (error) {
-        console.error('Error loading contacts:', error);
-        return {
-            contacts: []
-        };
-    }
+    return {
+        contacts
+    };
 };
 
 export const actions: Actions = {

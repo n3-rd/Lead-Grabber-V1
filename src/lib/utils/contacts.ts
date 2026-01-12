@@ -7,6 +7,41 @@ interface ContactData {
   phone?: string;
 }
 
+/**
+ * Fetches contacts for a company
+ * @param companyId - The company ID to fetch contacts for
+ * @param limit - Maximum number of contacts to fetch (default: 50)
+ * @returns Array of contacts
+ */
+export async function getContactsByCompany(companyId: string, limit: number = 50) {
+	try {
+		const contacts = await pb.collection('contacts').getList(1, limit, {
+			filter: `company_id = "${companyId}"`,
+			sort: '-created'
+		});
+		return contacts.items;
+	} catch (error) {
+		console.error('Error fetching contacts:', error);
+		return [];
+	}
+}
+
+/**
+ * Filters contacts by search query (searches name and phone)
+ * @param contacts - Array of contacts to filter
+ * @param query - Search query string
+ * @returns Filtered array of contacts
+ */
+export function filterContacts(contacts: Array<any>, query: string): typeof contacts {
+	if (!query) return contacts;
+	const lowerQuery = query.toLowerCase();
+	return contacts.filter(
+		(c: any) =>
+			c.name?.toLowerCase().includes(lowerQuery) ||
+			c.phone?.includes(query)
+	);
+}
+
 export async function createOrUpdateContact(data: ContactData) {
   if (!data.name && !data.email && !data.phone) {
     return null;

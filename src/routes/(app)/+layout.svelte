@@ -37,7 +37,7 @@
 				<div class="flex items-center gap-4">
 					<img src="/img/profile.png" alt="" class="profile h-12 w-12" />
 					<div class="flex-col">
-						<h2 class="text-lg font-semibold">Good Morning, {user.name}!</h2>
+						<h2 class="text-lg font-semibold">Good Morning, {user?.name || 'User'}!</h2>
 						<p class="text-sm text-gray-500">Simplify how you manage calls and messages.</p>
 					</div>
 				</div>

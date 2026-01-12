@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { Phone, Clock, Voicemail, ChevronDown, X, MicOff, Volume2, Delete } from 'lucide-svelte';
-	import { Button } from '$lib/components/ui/button/index';
+	import { Phone, Clock, Voicemail, Search, Mic, Delete, Plus } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
 
@@ -9,6 +8,8 @@
 	let isCallActive = $state(false);
 	let callId = $state('');
 	let callStatus = $state('');
+	let activeTab = $state('Phone');
+	let searchQuery = $state('');
 
 	// Optional client ID for tracking purposes
 	let clientId = 'test-client';
@@ -91,16 +92,7 @@
 			});
 	}
 
-	function appendDigit(digit: string) {
-		phoneNumber += digit;
-	}
-
-	function deleteDigit() {
-		phoneNumber = phoneNumber.slice(0, -1);
-	}
-
 	let contacts = [
-		{ name: 'Sarah Lee', phone: '705-4123-6346' },
 		{ name: 'Peter Griffin', phone: '705-6433-2564' },
 		{ name: 'Michael Scofield', phone: '705-9755-1953' },
 		{ name: 'Joe Swanson', phone: '705-9012-0124' },
@@ -113,97 +105,176 @@
 	];
 
 	let dialInput = $state('');
-	let callerId = '(406) 555-1234';
+	
 	function appendDialInput(d: string) {
 		dialInput += d;
 	}
+	
 	function deleteDialInput() {
 		dialInput = dialInput.slice(0, -1);
 	}
+	
 	function call() {
 		phoneNumber = dialInput;
 		initiateCall();
 	}
+
+	const filteredContacts = $derived(
+		searchQuery
+			? contacts.filter(
+					(c) =>
+						c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+						c.phone.includes(searchQuery)
+				)
+			: contacts
+	);
 </script>
 
-<div class="min-h-screen bg-[#F5F7FF] p-0">
-	<div class="mx-auto max-w-6xl py-8">
-		<h1 class="mb-6 text-2xl font-semibold text-gray-700">Dialer</h1>
-		<div class="flex gap-6">
-			<!-- Contacts List -->
-			<div class="max-w-md flex-1">
-				<div class="rounded-xl bg-white p-0 shadow">
-					<div class="flex border-b px-6 py-4 text-lg font-semibold text-gray-600">
-						<div class="flex-1">Name</div>
-						<div class="flex-1">Phone</div>
-					</div>
-					<div>
-						{#each contacts as c}
+<div class="min-h-screen bg-[#ECEEF3] p-0">
+	<div class="p-4">
+		<!-- Dialer Title Header -->
+		<div class="mb-4 rounded-[3px] bg-white px-4 py-3">
+			<h1 class="font-['Poppins'] font-semibold text-[18px] leading-[128.67%] text-[#747474]">
+				Dialer
+			</h1>
+		</div>
+
+		<!-- Top Row: Search + Tabs -->
+		<div class="mb-4 flex w-full items-center justify-between gap-4">
+			<!-- Search Bar -->
+			<div class="flex h-[50px] w-[50%] items-center gap-2 rounded-[5px] bg-white px-3">
+				<Search class="h-5 w-5 text-[#577AB7]" />
+				<input
+					type="text"
+					bind:value={searchQuery}
+					placeholder="Search"
+					class="flex-1 border-0 bg-transparent font-['Poppins'] text-[14px] leading-[128.67%] text-[rgba(120,120,120,0.54)] outline-none placeholder:text-[rgba(120,120,120,0.54)]"
+				/>
+				<Mic class="h-5 w-5 text-[#577AB7]" />
+			</div>
+
+			<!-- Navigation Tabs -->
+			<div class="flex h-[50px] w-[50%] items-center gap-6 rounded-[5px] bg-white px-6">
+				<button
+					class="flex items-center gap-1.5 font-['Poppins'] text-[14px] leading-[128.67%] tracking-[0.01em] transition-colors {activeTab === 'Phone'
+						? 'font-medium text-[#565656]'
+						: 'font-medium text-[#565656]'}"
+					onclick={() => activeTab = 'Phone'}
+				>
+					<Phone class="h-4 w-4 text-[#565656]" />
+					Phone
+				</button>
+				<button
+					class="flex items-center gap-1.5 font-['Poppins'] text-[14px] leading-[128.67%] tracking-[0.01em] transition-colors {activeTab === 'Calls'
+						? 'font-medium text-[#565656]'
+						: 'font-medium text-[#565656]'}"
+					onclick={() => activeTab = 'Calls'}
+				>
+					<Clock class="h-4 w-4 text-[#999999]" />
+					Calls
+				</button>
+				<button
+					class="flex items-center gap-1.5 font-['Poppins'] text-[14px] leading-[128.67%] tracking-[0.01em] transition-colors {activeTab === 'Voicemail'
+						? 'font-medium text-[#565656]'
+						: 'font-medium text-[#565656]'}"
+					onclick={() => activeTab = 'Voicemail'}
+				>
+					<Voicemail class="h-4 w-4 text-[#999999]" />
+					Voicemail
+				</button>
+			</div>
+		</div>
+
+		<!-- Main Content Row -->
+		<div class="flex w-full items-start justify-between gap-4">
+			<!-- Left Panel: Contacts List -->
+			<div class="h-[504px] w-[50%] rounded-[8px] bg-white p-4">
+				<!-- Headers -->
+				<div class="mb-3 flex font-['Poppins'] text-[14px] leading-[128.67%] tracking-[0.01em]">
+					<div class="w-[180px] font-medium text-[#565656]">Name</div>
+					<div class="flex-1 font-medium text-[#565656]">Phone</div>
+				</div>
+
+				<!-- Contacts List -->
+				<div class="h-[calc(100%-40px)] space-y-2 overflow-y-auto">
+					{#each filteredContacts as c}
+						<div
+							class="flex items-center border-l-[3px] border-l-[#BEBEBE] bg-[#FAFAFA] py-3 pl-4 pr-3"
+						>
 							<div
-								class="flex items-center border-b px-6 py-3 text-base text-gray-700 transition last:border-b-0 hover:bg-gray-50"
+								class="w-[180px] font-['Poppins'] text-[14px] leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]"
 							>
-								<div class="flex-1">{c.name}</div>
-								<div class="flex-1">{c.phone}</div>
+								{c.name}
 							</div>
-						{/each}
-					</div>
+							<div
+								class="flex-1 font-['Poppins'] text-[14px] leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)]"
+							>
+								{c.phone}
+							</div>
+						</div>
+					{/each}
 				</div>
 			</div>
 
-			<!-- Dialer Section -->
-			<div class="flex flex-1 flex-col gap-6">
-				<!-- Tabs -->
-				<div class="flex items-center gap-8 rounded-xl bg-white px-6 py-3 shadow">
-					<div class="flex items-center gap-2 font-semibold text-[#6B7FC9]">
-						<Phone class="h-5 w-5" /> Phone
-					</div>
-					<div class="flex items-center gap-2 font-semibold text-gray-400">
-						<Clock class="h-5 w-5" /> Calls
-					</div>
-					<div class="flex items-center gap-2 font-semibold text-gray-400">
-						<Voicemail class="h-5 w-5" /> Voicemail
-					</div>
-				</div>
-				<!-- Dialer Card -->
-				<div class="flex flex-col items-center rounded-xl bg-white px-8 py-8 shadow">
-					<div class="mb-2 flex items-center gap-2 font-medium text-gray-600">
-						My Caller ID: <span class="font-semibold text-gray-800">{callerId}</span>
-						<ChevronDown class="h-4 w-4" />
-					</div>
+			<!-- Right Panel: Dial Pad -->
+			<div class="h-[504px] w-[50%] rounded-[8px] bg-white p-6">
+				<!-- Input Field -->
+				<div class="mb-6 text-center">
 					<input
-						class="mb-4 w-full border-0 bg-transparent text-center text-base text-gray-500 outline-none"
-						placeholder="Enter a name or number"
+						type="text"
 						bind:value={dialInput}
-						type="number"
+						placeholder="Enter a name or number"
+						class="w-full border-0 border-b border-[#BEBEBE] bg-transparent pb-2 text-center font-['Poppins'] text-2xl font-bold leading-[128.67%] tracking-[0.01em] text-[rgba(86,86,86,0.78)] outline-none placeholder:text-[rgba(86,86,86,0.78)]"
 					/>
-					<div class="mb-4 w-full border-t"></div>
-					<!-- Keypad -->
-					<div class="mb-6 grid grid-cols-3 gap-6">
-						{#each [[1, 2, 3], [4, 5, 6], [7, 8, 9], ['*', 0]] as row}
+				</div>
+
+				<!-- Number Pad Container -->
+				<div class="mx-auto mb-6 w-[280px]">
+					<!-- Number Pad Grid -->
+					<div class="grid grid-cols-3 gap-x-4 gap-y-6">
+						{#each [[1, 2, 3], [4, 5, 6], [7, 8, 9], ['*', 0, '#']] as row}
 							{#each row as digit}
 								<button
-									class="h-16 w-16 rounded-full text-2xl text-gray-600 transition hover:bg-gray-100"
+									class="flex h-12 w-full items-center justify-center font-['Poppins'] text-[20px] font-medium leading-[128.67%] tracking-[0.01em] text-[#565656] transition hover:bg-gray-50"
 									onclick={() => appendDialInput(digit.toString())}
-									type="button">{digit}</button
+									type="button"
 								>
+									{digit}
+								</button>
 							{/each}
 						{/each}
-						<!-- Backspace button -->
+					</div>
+
+					<!-- Action Buttons: Plus, Call, Delete -->
+					<div class="mt-6 grid grid-cols-3 gap-x-4">
+						<!-- Plus Button -->
 						<button
-							class="h-16 w-16 rounded-full text-2xl text-gray-600 transition hover:bg-gray-100"
-							onclick={deleteDialInput}
+							class="flex h-12 w-full items-center justify-center font-['Poppins'] text-[20px] font-medium leading-[128.67%] tracking-[0.01em] text-[#565656] transition hover:bg-gray-50"
+							type="button"
+							onclick={() => appendDialInput('+')}
+						>
+							+
+						</button>
+
+						<!-- Call Button -->
+						<button
+							class="flex h-12 w-12 items-center justify-center rounded-full bg-[#24A103] transition hover:bg-[#1f8a02] mx-auto"
+							onclick={call}
 							type="button"
 						>
-							<Delete class="h-6 w-6" />
+							<Phone class="h-5 w-5 text-white" />
+						</button>
+
+						<!-- Delete Button -->
+						<button
+							class="flex h-12 w-full items-center justify-center font-['Poppins'] text-[20px] font-medium leading-[128.67%] tracking-[0.01em] text-[#565656] transition hover:bg-gray-50"
+							onclick={deleteDialInput}
+							type="button"
+							title="Delete"
+						>
+							<Delete class="h-5 w-5" />
 						</button>
 					</div>
-					<button
-						class="flex h-14 w-14 items-center justify-center rounded-full bg-green-600 text-2xl text-white transition hover:bg-green-700"
-						onclick={call}
-						type="button"
-					>
-						<Phone class="h-7 w-7" />
-					</button>
 				</div>
 			</div>
 		</div>

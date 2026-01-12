@@ -2,6 +2,7 @@
 	import { Phone, Clock, Voicemail, ChevronDown, X, MicOff, Volume2, Delete } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index';
 	import { toast } from 'svelte-sonner';
+	import { page } from '$app/stores';
 
 	let phoneNumber = $state('');
 	let isDialing = $state(false);
@@ -11,6 +12,15 @@
 
 	// Optional client ID for tracking purposes
 	let clientId = 'test-client';
+
+	// Read phone number from URL params
+	$effect(() => {
+		const phoneParam = $page.url.searchParams.get('phone');
+		if (phoneParam) {
+			dialInput = phoneParam;
+			phoneNumber = phoneParam;
+		}
+	});
 
 	async function initiateCall() {
 		if (!phoneNumber || phoneNumber.length < 10) {

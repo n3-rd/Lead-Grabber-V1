@@ -37,6 +37,6 @@ export const actions: Actions = {
 			return { success: false, message: 'An unexpected error occurred' };
     }
 
-    throw redirect(303, '/')
+    throw redirect(303, '/dashboard')
   },
 }

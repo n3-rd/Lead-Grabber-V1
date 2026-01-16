@@ -38,7 +38,7 @@
             
             if (result.type === 'success') {
                 toast.success('Invitation accepted successfully');
-                goto('/'); // Redirect to dashboard
+                goto('/dashboard'); // Redirect to dashboard
             } else {
                 toast.error(result.data?.error || 'Failed to accept invitation');
             }

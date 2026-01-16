@@ -10,7 +10,7 @@
 	let isCompany = $state(user?.company_id && user?.company_id !== '');
 
 	let items = $state([
-		{ title: "Dashboard", url: "/inbox", icon: LayoutDashboard, href: "/" },
+		{ title: "Dashboard", url: "/inbox", icon: LayoutDashboard, href: "/dashboard" },
 		{ title: "Communication Log", url: "/communication-log", icon: FileText, href: "/communication-log" },
 		{ title: "Communication Hub", url: "/communication-hub", icon: MessageCircle, href: "/communication-hub" },
 		{ title: "Important Notifications", url: "/notifications", icon: Bell, href: "/notifications" },

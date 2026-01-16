@@ -3,8 +3,16 @@
 	import { goto } from '$app/navigation';
 
 	let activeTab = $state<'myNumber' | 'messaging' | 'voice'>('myNumber');
+	let messagingSubTab = $state<'numbers' | 'orders'>('numbers');
 	let searchQuery = $state('');
+	let verifiedSearchQuery = $state('');
 	let selectedNumbers = $state<Set<string>>(new Set());
+
+	// Mock data for verified numbers
+	const verifiedNumbers = [
+		{ number: '+1 705 274 9564', verifiedAt: '8 Jan 2025 11:38 PM' },
+		{ number: '+1 705 274 9564', verifiedAt: '8 Jan 2025 11:38 PM' }
+	];
 
 	// Mock data for numbers
 	const numbers = [
@@ -117,27 +125,157 @@
 			</div>
 		</div>
 
-		<!-- Search and Buy Numbers Button -->
-		<div class="mb-4 flex items-center gap-4">
-			<div class="relative flex-1">
-				<input
-					type="text"
-					bind:value={searchQuery}
-					placeholder="Enter full or partial number (e.g last 4 digital)"
-					class="h-[29px] w-full rounded-[2px] border border-[#787878] bg-white px-3 pr-10 font-['Poppins'] text-base font-normal leading-[19px] text-[#B6B6B6] outline-none placeholder:text-[#B6B6B6]"
-				/>
-				<Search class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#808080]" />
-			</div>
-			<button
-				onclick={handleBuyNumbers}
-				class="h-[27px] w-[138px] rounded-[4px] bg-[#577AB7] font-['Poppins'] text-base font-medium leading-[19px] text-white transition-colors hover:bg-[#4a6ba5]"
-			>
-				Buy Numbers
-			</button>
-		</div>
+		{#if activeTab === 'messaging'}
+			<!-- Hosted Messaging Numbers Content -->
+			<div class="space-y-6">
+				<!-- Title -->
+				<h2 class="font-['Poppins'] text-[23px] font-semibold leading-[30px] text-[#747474]">
+					Hosted Messaging Numbers
+				</h2>
 
-		<!-- Filter Dropdowns and Action Buttons -->
-		<div class="mb-4 flex items-center justify-between gap-4">
+				<!-- Description -->
+				<p class="font-['Poppins'] text-lg font-light leading-[24px] text-[#808080]">
+					Hosted SMS allows you to enable SMS/MMS services on numbers that have existing voice services from another provider. The numbers that could also be for landlines that traditionally have never had SMS capabilities.
+				</p>
+
+				<!-- Sub-tabs and Create Button -->
+				<div class="flex items-center justify-between border-b border-[#949494] pb-2">
+					<div class="flex gap-6">
+						<button
+							class="relative font-['Poppins'] text-lg font-medium leading-[21px] transition-colors {messagingSubTab === 'numbers'
+								? 'text-[#577AB7]'
+								: 'text-[#A0A0A0]'}"
+							onclick={() => messagingSubTab = 'numbers'}
+						>
+							Numbers
+							{#if messagingSubTab === 'numbers'}
+								<div class="absolute -bottom-2 left-0 h-[6px] w-full bg-[#577AB7]"></div>
+							{/if}
+						</button>
+						<button
+							class="relative font-['Poppins'] text-lg font-medium leading-[21px] transition-colors {messagingSubTab === 'orders'
+								? 'text-[#577AB7]'
+								: 'text-[#A0A0A0]'}"
+							onclick={() => messagingSubTab = 'orders'}
+						>
+							Orders
+							{#if messagingSubTab === 'orders'}
+								<div class="absolute -bottom-2 left-0 h-[6px] w-full bg-[#577AB7]"></div>
+							{/if}
+						</button>
+					</div>
+					<button
+						onclick={() => goto('/manage-numbers/create-order')}
+						class="h-[31px] rounded-[4px] bg-[#577AB7] px-4 font-['Poppins'] text-base font-medium leading-[19px] text-white transition-colors hover:bg-[#4a6ba5]"
+					>
+						Create New Order
+					</button>
+				</div>
+
+				<!-- Table Container -->
+				<div class="rounded-b border border-[#BEBEBE] bg-white">
+					<!-- Table Headers -->
+					<div class="border-b border-[#949494] px-4 py-3">
+						<div class="grid grid-cols-4 gap-4 font-['Poppins'] text-[15px] font-medium leading-[18px] text-[#757575]">
+							<div>Number</div>
+							<div>Messaging Profile</div>
+							<div>Features</div>
+							<div>Created At</div>
+						</div>
+					</div>
+
+					<!-- Empty State -->
+					<div class="flex h-[400px] items-center justify-center">
+						<p class="font-['Poppins'] text-xl font-medium leading-[24px] text-[#808080]">
+							No Results Found
+						</p>
+					</div>
+				</div>
+			</div>
+		{:else if activeTab === 'voice'}
+			<!-- Verified Numbers Content -->
+			<div class="space-y-6">
+				<!-- Title -->
+				<h2 class="font-['Poppins'] text-[23px] font-semibold leading-[30px] text-[#747474]">
+					Verified Numbers
+				</h2>
+
+				<!-- Description -->
+				<p class="font-['Poppins'] text-base font-light leading-[21px] text-[#808080]">
+					Verified Numbers enable you to use that number as a Calling Line Identity (CLI) on your outbound calls done through Telnyx.
+				</p>
+
+				<!-- Search and Verify Button -->
+				<div class="flex items-center gap-4">
+					<div class="relative flex-1">
+						<input
+							type="text"
+							bind:value={verifiedSearchQuery}
+							placeholder="Search numbers starting with....."
+							class="h-[38px] w-full rounded-[2px] border border-[#787878] bg-white px-3 pr-10 font-['Poppins'] text-base font-normal leading-[19px] text-[#B6B6B6] outline-none placeholder:text-[#B6B6B6]"
+						/>
+						<Search class="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-[#999999]" />
+					</div>
+					<button
+						class="h-[38px] rounded-[4px] bg-[#577AB7] px-4 font-['Poppins'] text-base font-medium leading-[19px] text-white transition-colors hover:bg-[#4a6ba5]"
+					>
+						Verify Number
+					</button>
+				</div>
+
+				<!-- Table Container -->
+				<div class="rounded-b border border-[#BEBEBE] bg-white">
+					<!-- Table Headers -->
+					<div class="border-b border-[rgba(193,193,193,0.96)] px-4 py-3">
+						<div class="grid grid-cols-2 gap-4 font-['Poppins'] text-[15px] font-medium leading-[18px] text-[#757575]">
+							<div>Phone Number</div>
+							<div>Verified At</div>
+						</div>
+					</div>
+
+					<!-- Table Rows -->
+					<div class="divide-y divide-[rgba(193,193,193,0.96)]">
+						{#each verifiedNumbers as verified}
+							<div class="grid grid-cols-2 gap-4 px-4 py-3">
+								<div class="font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080]">
+									{verified.number}
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080]">
+										{verified.verifiedAt}
+									</span>
+									<button class="text-[#808080] hover:text-red-500 transition-colors">
+										<Trash2 class="h-4 w-4" />
+									</button>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			</div>
+		{:else}
+
+			<!-- Search and Buy Numbers Button -->
+			<div class="mb-4 flex items-center gap-4">
+				<div class="relative flex-1">
+					<input
+						type="text"
+						bind:value={searchQuery}
+						placeholder="Enter full or partial number (e.g last 4 digital)"
+						class="h-[29px] w-full rounded-[2px] border border-[#787878] bg-white px-3 pr-10 font-['Poppins'] text-base font-normal leading-[19px] text-[#B6B6B6] outline-none placeholder:text-[#B6B6B6]"
+					/>
+					<Search class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#808080]" />
+				</div>
+				<button
+					onclick={handleBuyNumbers}
+					class="h-[27px] w-[138px] rounded-[4px] bg-[#577AB7] font-['Poppins'] text-base font-medium leading-[19px] text-white transition-colors hover:bg-[#4a6ba5]"
+				>
+					Buy Numbers
+				</button>
+			</div>
+
+			<!-- Filter Dropdowns and Action Buttons -->
+			<div class="mb-4 flex items-center justify-between gap-4">
 			<div class="flex items-center gap-2 flex-wrap">
 				<!-- Status -->
 				<div class="relative">
@@ -213,8 +351,8 @@
 			</div>
 		</div>
 
-		<!-- Table -->
-		<div class="rounded-b border border-t-0 border-[#BEBEBE]">
+			<!-- Table -->
+			<div class="rounded-b border border-t-0 border-[#BEBEBE]">
 			<div class="max-h-[391px] overflow-y-auto overflow-x-auto">
 				<table class="w-full min-w-[1069px]">
 					<thead class="sticky top-0 bg-white z-10">
@@ -317,5 +455,6 @@
 				</table>
 			</div>
 		</div>
+		{/if}
 	</div>
 </div>

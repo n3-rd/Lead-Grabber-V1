@@ -15,7 +15,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     });
 
     if (companies.items.length > 0) {
-        throw redirect(303, '/');
+        throw redirect(303, '/dashboard');
     }
 
     return {};

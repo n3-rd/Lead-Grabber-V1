@@ -1,0 +1,321 @@
+<script lang="ts">
+	import { ChevronDown, Search, Pencil, Trash2, Phone, MessageSquare, Mail, Image as ImageIcon, Play, FileText, Settings, User, Plus, Download } from 'lucide-svelte';
+	import { goto } from '$app/navigation';
+
+	let activeTab = $state<'myNumber' | 'messaging' | 'voice'>('myNumber');
+	let searchQuery = $state('');
+	let selectedNumbers = $state<Set<string>>(new Set());
+
+	// Mock data for numbers
+	const numbers = [
+		{ number: '+1 705 243 8416', status: 'Active', connection: 'ClearSky Software', messagingProfile: 'ClearSky Software' },
+		{ number: '+1 705 243 8417', status: 'Active', connection: 'ClearSky Software', messagingProfile: 'ClearSky Software' },
+		{ number: '+1 705 243 8418', status: 'Active', connection: 'ClearSky Software', messagingProfile: '-' },
+		{ number: '+1 705 243 8419', status: 'Active', connection: 'ClearSky Software', messagingProfile: 'ClearSky Software' },
+		{ number: '+1 705 243 8420', status: 'Active', connection: 'ClearSky Software', messagingProfile: 'ClearSky Software' },
+		{ number: '+1 705 243 8421', status: 'Active', connection: 'ClearSky Software', messagingProfile: 'ClearSky Software' },
+		{ number: '+1 705 243 8422', status: 'Active', connection: 'ClearSky Software', messagingProfile: '-' },
+		{ number: '+1 705 243 8423', status: 'Active', connection: 'ClearSky Software', messagingProfile: 'ClearSky Software' },
+		{ number: '+1 705 243 8424', status: 'Active', connection: 'ClearSky Software', messagingProfile: 'ClearSky Software' },
+		{ number: '+1 705 243 8425', status: 'Active', connection: 'ClearSky Software', messagingProfile: 'ClearSky Software' },
+		{ number: '+1 705 243 8426', status: 'Active', connection: 'ClearSky Software', messagingProfile: '-' },
+		{ number: '+1 705 243 8427', status: 'Active', connection: 'ClearSky Software', messagingProfile: 'ClearSky Software' },
+		{ number: '+1 705 243 8428', status: 'Active', connection: 'ClearSky Software', messagingProfile: 'ClearSky Software' },
+		{ number: '+1 705 243 8429', status: 'Active', connection: 'ClearSky Software', messagingProfile: 'ClearSky Software' },
+		{ number: '+1 705 243 8430', status: 'Active', connection: 'ClearSky Software', messagingProfile: '-' }
+	];
+
+	function toggleNumber(number: string) {
+		const newSelected = new Set(selectedNumbers);
+		if (newSelected.has(number)) {
+			newSelected.delete(number);
+		} else {
+			newSelected.add(number);
+		}
+		selectedNumbers = newSelected;
+	}
+
+	function toggleAllNumbers() {
+		if (selectedNumbers.size === numbers.length) {
+			selectedNumbers = new Set();
+		} else {
+			selectedNumbers = new Set(numbers.map(n => n.number));
+		}
+	}
+
+	function handleBuyNumbers() {
+		goto('/buy-number');
+	}
+
+	function handleBulkUpdate() {
+		// TODO: Implement bulk update
+		console.log('Bulk update:', Array.from(selectedNumbers));
+	}
+
+	function handleExport() {
+		// TODO: Implement export
+		console.log('Export');
+	}
+
+	function handleEdit(number: string) {
+		// TODO: Implement edit
+		console.log('Edit:', number);
+	}
+
+	function handleDelete(number: string) {
+		// TODO: Implement delete
+		console.log('Delete:', number);
+	}
+</script>
+
+<div class="min-h-screen bg-[#ECEEF3] p-4">
+	<!-- Header -->
+	<div class="mb-4 rounded-[3px] bg-white px-4 py-3">
+		<h1 class="font-['Poppins'] text-[23px] font-semibold leading-[30px] text-[#747474]">
+			My Numbers
+		</h1>
+	</div>
+
+	<!-- Main Content Card -->
+	<div class="rounded-lg bg-white p-6">
+		<!-- Tabs -->
+		<div class="mb-6 border-b border-[#949494]">
+			<div class="flex gap-6">
+				<button
+					class="relative pb-2 font-['Poppins'] text-lg font-medium leading-[21px] transition-colors {activeTab === 'myNumber'
+						? 'text-[#577AB7]'
+						: 'text-[#A0A0A0]'}"
+					onclick={() => activeTab = 'myNumber'}
+				>
+					My Number
+					{#if activeTab === 'myNumber'}
+						<div class="absolute bottom-0 left-0 h-[6px] w-[122px] bg-[#577AB7]"></div>
+					{/if}
+				</button>
+				<button
+					class="relative pb-2 font-['Poppins'] text-lg font-medium leading-[21px] transition-colors {activeTab === 'messaging'
+						? 'text-[#577AB7]'
+						: 'text-[#A0A0A0]'}"
+					onclick={() => activeTab = 'messaging'}
+				>
+					Messaging
+					{#if activeTab === 'messaging'}
+						<div class="absolute bottom-0 left-0 h-[6px] w-[122px] bg-[#577AB7]"></div>
+					{/if}
+				</button>
+				<button
+					class="relative pb-2 font-['Poppins'] text-lg font-medium leading-[21px] transition-colors {activeTab === 'voice'
+						? 'text-[#577AB7]'
+						: 'text-[#A0A0A0]'}"
+					onclick={() => activeTab = 'voice'}
+				>
+					Voice
+					{#if activeTab === 'voice'}
+						<div class="absolute bottom-0 left-0 h-[6px] w-[122px] bg-[#577AB7]"></div>
+					{/if}
+				</button>
+			</div>
+		</div>
+
+		<!-- Search and Buy Numbers Button -->
+		<div class="mb-4 flex items-center gap-4">
+			<div class="relative flex-1">
+				<input
+					type="text"
+					bind:value={searchQuery}
+					placeholder="Enter full or partial number (e.g last 4 digital)"
+					class="h-[29px] w-full rounded-[2px] border border-[#787878] bg-white px-3 pr-10 font-['Poppins'] text-base font-normal leading-[19px] text-[#B6B6B6] outline-none placeholder:text-[#B6B6B6]"
+				/>
+				<Search class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#808080]" />
+			</div>
+			<button
+				onclick={handleBuyNumbers}
+				class="h-[27px] w-[138px] rounded-[4px] bg-[#577AB7] font-['Poppins'] text-base font-medium leading-[19px] text-white transition-colors hover:bg-[#4a6ba5]"
+			>
+				Buy Numbers
+			</button>
+		</div>
+
+		<!-- Filter Dropdowns and Action Buttons -->
+		<div class="mb-4 flex items-center justify-between gap-4">
+			<div class="flex items-center gap-2 flex-wrap">
+				<!-- Status -->
+				<div class="relative">
+					<select class="py-1 min-w-[78px] appearance-none rounded-[2px] border-[0.5px] border-black bg-white px-2 pr-6 font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#757575] outline-none">
+						<option>Status</option>
+					</select>
+					<ChevronDown class="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-[#808080]" />
+				</div>
+
+				<!-- Tags -->
+				<div class="relative">
+					<select class="py-1 min-w-[67px] appearance-none rounded-[2px] border-[0.5px] border-black bg-white px-2 pr-6 font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#757575] outline-none">
+						<option>Tags</option>
+					</select>
+					<ChevronDown class="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-[#808080]" />
+				</div>
+
+				<!-- Connection -->
+				<div class="relative">
+					<select class="py-1 min-w-[111px] appearance-none rounded-[2px] border-[0.5px] border-black bg-white px-2 pr-6 font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#757575] outline-none">
+						<option>Connection</option>
+					</select>
+					<ChevronDown class="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-[#808080]" />
+				</div>
+
+				<!-- Messaging Profile -->
+				<div class="relative">
+					<select class="py-1 min-w-[148px] appearance-none rounded-[2px] border-[0.5px] border-black bg-white px-2 pr-6 font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#757575] outline-none">
+						<option>Messaging Profile</option>
+					</select>
+					<ChevronDown class="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-[#808080]" />
+				</div>
+
+				<!-- Voice Billing Method -->
+				<div class="relative">
+					<select class="py-1 min-w-[163px] appearance-none rounded-[2px] border-[0.5px] border-black bg-white px-2 pr-6 font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#757575] outline-none">
+						<option>Voice Billing Method</option>
+					</select>
+					<ChevronDown class="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-[#808080]" />
+				</div>
+
+				<!-- Emergency Status -->
+				<div class="relative">
+					<select class="py-1 min-w-[151px] appearance-none rounded-[2px] border-[0.5px] border-black bg-white px-2 pr-6 font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#757575] outline-none">
+						<option>Emergency Status</option>
+					</select>
+					<ChevronDown class="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-[#808080]" />
+				</div>
+
+				<!-- Countries -->
+				<div class="relative">
+					<select class="py-1 min-w-[97px] appearance-none rounded-[2px] border-[0.5px] border-black bg-white px-2 pr-6 font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#757575] outline-none">
+						<option>Countries</option>
+					</select>
+					<ChevronDown class="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-[#808080]" />
+				</div>
+			</div>
+
+			<div class="flex items-center gap-2">
+				<button
+					onclick={handleBulkUpdate}
+					class="flex h-[23px] items-center gap-2 rounded-[3px] border-[0.5px] border-black bg-[#ECEFF3] px-3 font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#757575] transition-colors hover:bg-[#E0E5EA]"
+				>
+					Bulk Update
+				</button>
+				<button
+					onclick={handleExport}
+					class="flex h-[23px] items-center gap-2 rounded-[3px] border-[0.5px] border-black bg-[#ECEFF3] px-3 font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#757575] transition-colors hover:bg-[#E0E5EA]"
+				>
+					<Download class="h-3.5 w-3.5" />
+					Export
+				</button>
+			</div>
+		</div>
+
+		<!-- Table -->
+		<div class="rounded-b border border-t-0 border-[#BEBEBE]">
+			<div class="max-h-[391px] overflow-y-auto overflow-x-auto">
+				<table class="w-full min-w-[1069px]">
+					<thead class="sticky top-0 bg-white z-10">
+						<tr class="border-b border-[rgba(193,193,193,0.96)]">
+							<th class="pb-3 pl-4 pr-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								<input
+									type="checkbox"
+									checked={selectedNumbers.size === numbers.length && numbers.length > 0}
+									onchange={toggleAllNumbers}
+									class="h-[18px] w-[17px] rounded-[1px] border-[0.8px] border-[#949494] bg-[rgba(217,217,217,0.08)]"
+								/>
+							</th>
+							<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								Number
+							</th>
+							<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								Status
+							</th>
+							<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								Connection/Application
+							</th>
+							<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								Messaging Profile
+							</th>
+							<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								Services
+							</th>
+							<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								Tags
+							</th>
+							<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								Action
+							</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each numbers as num}
+							<tr class="border-b border-[rgba(193,193,193,0.4)]">
+								<td class="py-3 pl-4 pr-3">
+									<input
+										type="checkbox"
+										checked={selectedNumbers.has(num.number)}
+										onchange={() => toggleNumber(num.number)}
+										class="h-[18px] w-[17px] rounded-[1px] border-[0.8px] border-[#949494] bg-[rgba(217,217,217,0.08)]"
+									/>
+								</td>
+								<td class="py-3 font-['Poppins'] text-[14px] font-normal leading-[17px] text-[#808080]">
+									{num.number}
+								</td>
+								<td class="py-3">
+									<div class="flex items-center gap-2">
+										<div class="h-[6px] w-[5px] rounded-full bg-[#04CB15]"></div>
+										<span class="font-['Poppins'] text-[14px] font-normal leading-[17px] text-[#808080]">
+											- {num.status}
+										</span>
+									</div>
+								</td>
+								<td class="py-3 font-['Poppins'] text-[14px] font-normal leading-[17px] text-[#808080]">
+									{num.connection}
+								</td>
+								<td class="py-3 font-['Poppins'] text-[14px] font-normal leading-[17px] text-[#808080]">
+									{num.messagingProfile}
+								</td>
+								<td class="py-3">
+									<div class="flex gap-1.5">
+										<MessageSquare class="h-3.5 w-3.5 text-[#577AB7]" />
+										<Phone class="h-3.5 w-3.5 text-[#577AB7]" />
+										<Play class="h-3.5 w-3.5 text-[#577AB7]" />
+										<User class="h-3.5 w-3.5 text-[#577AB7]" />
+										<FileText class="h-3.5 w-3.5 text-[#577AB7]" />
+										<Settings class="h-3.5 w-3.5 text-[#577AB7]" />
+									</div>
+								</td>
+								<td class="py-3">
+									<button class="text-[#808080] hover:text-[#577AB7] transition-colors">
+										<Plus class="h-4 w-4" />
+									</button>
+								</td>
+								<td class="py-3">
+									<div class="flex items-center gap-2">
+										<button
+											onclick={() => handleEdit(num.number)}
+											class="text-[#666666] hover:text-[#577AB7] transition-colors"
+											aria-label="Edit"
+										>
+											<Pencil class="h-4 w-4" />
+										</button>
+										<button
+											onclick={() => handleDelete(num.number)}
+											class="text-[#666666] hover:text-red-500 transition-colors"
+											aria-label="Delete"
+										>
+											<Trash2 class="h-4 w-4" />
+										</button>
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+</div>

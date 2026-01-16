@@ -18,7 +18,13 @@
 		{ title: "Profiles", url: "/profiles", icon: UserCircle, href: "/profiles" },
 		{ title: "Contacts", url: "/contacts", icon: Users, href: "/contacts" },
 		{ title: "Dialer", url: "/dialer", icon: Phone, href: "/dialer" },
-		{ title: "Buy Number", url: "/buy-number", icon: ShoppingCart, href: "/buy-number" },
+		{ title: "Buy Number", url: "/buy-number", icon: ShoppingCart, href: "/buy-number",
+			subItems: [
+				{ title: "Buy Numbers", url: "/buy-number", icon: ShoppingCart, href: "/buy-number" },
+				{ title: "Manage Numbers", url: "/manage-numbers", icon: ShoppingCart, href: "/manage-numbers" },
+				{ title: "Port Numbers", url: "/port-numbers", icon: ShoppingCart, href: "/port-numbers" },
+			]
+		},
 		{ title: "IVR", url: "/ivr", icon: Headphones, href: "/ivr" },
 		{ title: "Representatives", url: "/representatives", icon: UserCheck, href: "/representatives" },
 		{ title: "Locations", url: "/locations", icon: MapPin, href: "/locations" },
@@ -37,7 +43,7 @@
 	]);
 
 	const sidebar = useSidebar();
-	let expanded = $state(false);
+	let expandedItems = $state<Set<string>>(new Set());
 </script>
 
 <Sidebar.Group>
@@ -51,7 +57,13 @@
 						if (mainItem.subItems) {
 							e.preventDefault();
 							e.stopPropagation();
-							expanded = !expanded;
+							const newExpanded = new Set(expandedItems);
+							if (newExpanded.has(mainItem.title)) {
+								newExpanded.delete(mainItem.title);
+							} else {
+								newExpanded.add(mainItem.title);
+							}
+							expandedItems = newExpanded;
 						}
 					}}
 				>
@@ -66,7 +78,7 @@
 						<span class="group-data-[collapsible=icon]:hidden">{mainItem.title}</span>
 						{#if mainItem.subItems}
 							<Button variant="ghost" class="ml-auto hover:bg-transparent hover:text-white group-data-[collapsible=icon]:hidden">
-								{#if expanded}
+								{#if expandedItems.has(mainItem.title)}
 									<ChevronUp class="w-5 h-5" />
 								{:else}
 									<ChevronDown class="w-5 h-5" />
@@ -77,7 +89,7 @@
 				</a>
 			</Sidebar.MenuItem>
 
-			{#if mainItem.subItems && expanded}
+			{#if mainItem.subItems && expandedItems.has(mainItem.title)}
 			<div transition:slide class="group-data-[collapsible=icon]:hidden">
 				{#each mainItem.subItems as subItem}
 					<Sidebar.MenuItem>

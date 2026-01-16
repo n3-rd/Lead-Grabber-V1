@@ -1,0 +1,408 @@
+<script lang="ts">
+	import { ChevronDown, Phone, MessageSquare, Mail, Image as ImageIcon, Copy, Filter, Download, SlidersHorizontal } from 'lucide-svelte';
+	import { toast } from 'svelte-sonner';
+
+	let activeTab = $state<'buy' | 'orders'>('buy');
+	let country = $state('United States of America +1');
+	let features = $state('');
+	let searchBy = $state('Area Code');
+	let areaCode = $state('');
+	let selectedNumbers = $state<Set<string>>(new Set());
+
+	// Mock data for phone numbers
+	const phoneNumbers = [
+		{ number: '+1 705 243 8416', location: 'PETERBOROUGH, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
+		{ number: '+1 705 243 8417', location: 'BARRIE, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
+		{ number: '+1 705 243 8418', location: 'BARRIE, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
+		{ number: '+1 705 243 8419', location: 'PETERBOROUGH, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
+		{ number: '+1 705 243 8420', location: 'BARRIE, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
+		{ number: '+1 705 243 8421', location: 'PETERBOROUGH, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
+		{ number: '+1 705 243 8422', location: 'BARRIE, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
+		{ number: '+1 705 243 8423', location: 'TORONTO, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
+		{ number: '+1 705 243 8424', location: 'OTTAWA, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
+		{ number: '+1 705 243 8425', location: 'HAMILTON, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
+		{ number: '+1 705 243 8426', location: 'LONDON, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
+		{ number: '+1 705 243 8427', location: 'WINDSOR, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
+		{ number: '+1 705 243 8428', location: 'KINGSTON, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
+		{ number: '+1 705 243 8429', location: 'THUNDER BAY, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
+		{ number: '+1 705 243 8430', location: 'SUDBURY, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' }
+	];
+
+	// Mock data for number orders
+	const numberOrders = [
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789abc', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789abc', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789def', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789def', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789ghi', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789ghi', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789jkl', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789jkl', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789mno', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789mno', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789pqr', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789pqr', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789stu', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789stu', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789vwx', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789vwx', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789yza', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789yza', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789bcd', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789bcd', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789efg', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789efg', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789hij', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789hij', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789klm', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789klm', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789nop', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789nop', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789qrs', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789qrs', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789tuv', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789tuv', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789wxy', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789wxy', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789zab', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789zab', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789cde', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789cde', actor: 'r.dredhart@canada.com', numberType: 'Local' },
+		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789fgh', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789fgh', actor: 'r.dredhart@canada.com', numberType: 'Local' }
+	];
+
+	function toggleNumber(number: string) {
+		if (selectedNumbers.has(number)) {
+			selectedNumbers.delete(number);
+		} else {
+			selectedNumbers.add(number);
+		}
+		selectedNumbers = selectedNumbers;
+	}
+
+	function handleAddToCart(number: string) {
+		// TODO: Implement add to cart
+		console.log('Add to cart:', number);
+	}
+
+	function handleSearch() {
+		// TODO: Implement search
+		console.log('Search:', { country, features, searchBy, areaCode });
+	}
+
+	function copyOrderId(id: string) {
+		navigator.clipboard.writeText(id);
+		toast.success('Order ID copied to clipboard');
+	}
+
+	function truncateId(id: string): string {
+		return id.substring(0, 12) + '...';
+	}
+
+	function handleFilters() {
+		// TODO: Implement filters
+		console.log('Filters clicked');
+	}
+
+	function handleExport() {
+		// TODO: Implement export
+		console.log('Export clicked');
+	}
+</script>
+
+<div class="min-h-screen bg-[#ECEEF3] p-4">
+	<!-- Header -->
+	<div class="mb-4 rounded-[3px] bg-white px-4 py-3">
+		<h1 class="font-['Poppins'] text-[23px] font-semibold leading-[30px] text-[#747474]">
+			Buy Numbers
+		</h1>
+	</div>
+
+	<!-- Main Content Card -->
+	<div class="rounded-lg bg-white p-6">
+		<!-- Tabs -->
+		<div class="mb-6 border-b border-[#949494]">
+			<div class="flex gap-6">
+				<button
+					class="relative pb-2 font-['Poppins'] text-lg font-medium leading-[21px] transition-colors {activeTab === 'buy'
+						? 'text-[#577AB7]'
+						: 'text-[#A0A0A0]'}"
+					onclick={() => activeTab = 'buy'}
+				>
+					Buy Number
+					{#if activeTab === 'buy'}
+						<div class="absolute bottom-0 left-0 h-[6px] w-[122px] bg-[#577AB7]"></div>
+					{/if}
+				</button>
+				<button
+					class="relative pb-2 font-['Poppins'] text-lg font-medium leading-[21px] transition-colors {activeTab === 'orders'
+						? 'text-[#577AB7]'
+						: 'text-[#A0A0A0]'}"
+					onclick={() => activeTab = 'orders'}
+				>
+					Number Orders
+					{#if activeTab === 'orders'}
+						<div class="absolute bottom-0 left-0 h-[6px] w-[149px] bg-[#577AB7]"></div>
+					{/if}
+				</button>
+			</div>
+		</div>
+
+		{#if activeTab === 'buy'}
+			<!-- Filter Section -->
+			<div class="mb-6 rounded-b border border-t-0 border-[#BEBEBE] p-6">
+				<div class="mb-4 grid grid-cols-4 gap-4">
+					<!-- Country -->
+					<div class="flex flex-col gap-2">
+						<div class="flex items-center gap-2">
+							<label for="country" class="font-['Poppins'] text-base font-medium leading-[19px] text-[#757575]">
+								Country
+							</label>
+							<span class="font-['Poppins'] text-[15px] italic font-normal leading-[18px] text-[#4F4F4F]">
+								Required
+							</span>
+						</div>
+						<div class="relative">
+							<select
+								id="country"
+								bind:value={country}
+								class="h-[47px] w-full appearance-none rounded-[2px] border border-[#969696] bg-white px-3 pr-10 font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080] outline-none"
+							>
+								<option>United States of America +1</option>
+							</select>
+							<ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#808080]" />
+						</div>
+					</div>
+
+					<!-- Features -->
+					<div class="flex flex-col gap-2">
+						<label for="features" class="font-['Poppins'] text-base font-medium leading-[19px] text-[#757575]">
+							Features
+						</label>
+						<div class="relative">
+							<select
+								id="features"
+								bind:value={features}
+								class="h-[47px] w-full appearance-none rounded-[2px] border border-[#969696] bg-white px-3 pr-10 font-['Poppins'] text-sm font-normal leading-[17px] text-[rgba(128,128,128,0.47)] outline-none"
+							>
+								<option value="">Any features</option>
+							</select>
+							<ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#808080]" />
+						</div>
+					</div>
+
+					<!-- Search by -->
+					<div class="flex flex-col gap-2">
+						<label for="searchBy" class="font-['Poppins'] text-base font-medium leading-[19px] text-[#757575]">
+							Search by
+						</label>
+						<div class="relative">
+							<select
+								id="searchBy"
+								bind:value={searchBy}
+								class="h-[47px] w-full appearance-none rounded-[2px] border border-[#969696] bg-white px-3 pr-10 font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080] outline-none"
+							>
+								<option>Area Code</option>
+							</select>
+							<ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#808080]" />
+						</div>
+					</div>
+
+					<!-- Area Code -->
+					<div class="flex flex-col gap-2">
+						<label for="areaCode" class="font-['Poppins'] text-base font-medium leading-[19px] text-[#757575]">
+							Area Code
+						</label>
+						<div class="relative">
+							<select
+								id="areaCode"
+								bind:value={areaCode}
+								class="h-[47px] w-full appearance-none rounded-[2px] border border-[#969696] bg-white px-3 pr-10 font-['Poppins'] text-sm font-normal leading-[17px] text-[rgba(128,128,128,0.47)] outline-none"
+							>
+								<option value="">Select...</option>
+							</select>
+							<ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#808080]" />
+						</div>
+					</div>
+				</div>
+
+				<!-- Search Button -->
+				<button
+					onclick={handleSearch}
+					class="h-[36px] w-[157px] rounded-[6px] bg-[#577AB7] font-['Poppins'] text-[15px] font-medium leading-[18px] text-white transition-colors hover:bg-[#4a6ba5]"
+				>
+					Search Numbers
+				</button>
+			</div>
+
+			<!-- Results Table -->
+			<div class="rounded-b border border-t-0 border-[#BEBEBE] p-6">
+				<h2 class="mb-4 font-['Poppins'] text-lg font-semibold leading-[21px] text-[#777777]">
+					Number Results
+				</h2>
+
+				<!-- Table -->
+				<div class="max-h-[421px] overflow-y-auto">
+					<table class="w-full">
+						<thead class="sticky top-0 bg-white z-10">
+							<tr class="border-b border-[rgba(193,193,193,0.96)]">
+								<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+									Number
+								</th>
+								<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+									Location/Rate Center
+								</th>
+								<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+									Number Type
+								</th>
+								<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+									Features
+								</th>
+								<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+									Upfront Price
+								</th>
+								<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+									Monthly Price
+								</th>
+								<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each phoneNumbers as num, index}
+								<tr class="border-b border-[rgba(193,193,193,0.4)]">
+									<td class="py-3">
+										<div class="flex items-center gap-3">
+											<input
+												type="checkbox"
+												checked={selectedNumbers.has(num.number)}
+												onchange={() => toggleNumber(num.number)}
+												class="h-[18px] w-[17px] rounded-[1px] border-[0.8px] border-[#949494] bg-[rgba(217,217,217,0.08)]"
+											/>
+											<span class="font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#808080]">
+												{num.number}
+											</span>
+										</div>
+									</td>
+									<td class="py-3 font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#808080]">
+										{num.location}
+									</td>
+									<td class="py-3 font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#808080]">
+										{num.type}
+									</td>
+									<td class="py-3">
+										<div class="flex gap-2">
+											<Phone class="h-4 w-4 text-[#577AB7]" />
+											<MessageSquare class="h-4 w-4 text-[#577AB7]" />
+											<Mail class="h-4 w-4 text-[#577AB7]" />
+											<ImageIcon class="h-4 w-4 text-[#577AB7]" />
+										</div>
+									</td>
+									<td class="py-3 font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#808080]">
+										{num.upfront}
+									</td>
+									<td class="py-3 font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#808080]">
+										{num.monthly}
+									</td>
+									<td class="py-3">
+										<button
+											onclick={() => handleAddToCart(num.number)}
+											class="h-[26px] w-[95px] rounded-[6px] bg-[#577AB7] font-['Poppins'] text-[13px] font-medium leading-[15px] text-white transition-colors hover:bg-[#4a6ba5]"
+										>
+											Add to Cart
+										</button>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		{:else}
+			<!-- Number Orders Tab Content -->
+			<div class="rounded-b border border-t-0 border-[#BEBEBE] p-6">
+				<!-- Filters and Export Buttons -->
+				<div class="mb-4 flex justify-end gap-3">
+					<button
+						onclick={handleFilters}
+						class="flex h-[28px] items-center gap-2 rounded-[3px] border-[0.5px] border-black bg-[#ECEFF3] px-3 font-['Poppins'] text-sm font-normal leading-[17px] text-[#757575] transition-colors hover:bg-[#E0E5EA]"
+					>
+						<SlidersHorizontal class="h-[18px] w-[18px]" />
+						Filters
+					</button>
+					<button
+						onclick={handleExport}
+						class="flex h-[28px] items-center gap-2 rounded-[3px] border-[0.5px] border-black bg-[#ECEFF3] px-3 font-['Poppins'] text-sm font-normal leading-[17px] text-[#757575] transition-colors hover:bg-[#E0E5EA]"
+					>
+						<Download class="h-5 w-5" />
+						Export
+					</button>
+				</div>
+
+				<!-- Table -->
+				<div class="max-h-[649px] overflow-y-auto overflow-x-auto border border-[#BEBEBE] rounded-b">
+					<table class="w-full min-w-[1069px]">
+						<thead class="sticky top-0 bg-white z-10">
+							<tr class="border-b border-[rgba(193,193,193,0.96)]">
+								<th class="pb-3 text-left font-['Poppins'] text-base font-semibold leading-[19px] text-[#757575]">
+									Date
+								</th>
+								<th class="pb-3 text-left font-['Poppins'] text-base font-semibold leading-[19px] text-[#757575]">
+									Status
+								</th>
+								<th class="pb-3 text-left font-['Poppins'] text-base font-semibold leading-[19px] text-[#757575]">
+									Country
+								</th>
+								<th class="pb-3 text-left font-['Poppins'] text-base font-semibold leading-[19px] text-[#757575]">
+									Order ID
+								</th>
+								<th class="pb-3 text-left font-['Poppins'] text-base font-semibold leading-[19px] text-[#757575]">
+									SubOrder ID
+								</th>
+								<th class="pb-3 text-left font-['Poppins'] text-base font-semibold leading-[19px] text-[#757575]">
+									Actor
+								</th>
+								<th class="pb-3 text-left font-['Poppins'] text-base font-semibold leading-[19px] text-[#757575]">
+									Number Typ
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each numberOrders as order}
+								<tr class="border-b border-[rgba(193,193,193,0.4)]">
+									<td class="py-3 font-['Poppins'] text-[15px] font-normal leading-[23px] text-[#808080]">
+										{order.date}
+									</td>
+									<td class="py-3">
+										<div class="flex items-center gap-2">
+											<div class="h-[6px] w-[5px] rounded-full bg-[#04CB15]"></div>
+											<span class="font-['Poppins'] text-[15px] font-normal leading-[23px] text-[#808080]">
+												{order.status}
+											</span>
+										</div>
+									</td>
+									<td class="py-3 font-['Poppins'] text-[15px] font-normal leading-[23px] text-[#808080]">
+										{order.country}
+									</td>
+									<td class="py-3">
+										<div class="flex items-center gap-2">
+											<span class="font-['Poppins'] text-[15px] font-normal leading-[23px] text-[#808080]">
+												{truncateId(order.orderId)}
+											</span>
+											<button
+												onclick={() => copyOrderId(order.orderId)}
+												class="cursor-pointer text-[#6C6C6C] hover:text-[#808080]"
+											>
+												<Copy class="h-4 w-4" />
+											</button>
+										</div>
+									</td>
+									<td class="py-3">
+										<div class="flex items-center gap-2">
+											<span class="font-['Poppins'] text-[15px] font-normal leading-[23px] text-[#808080]">
+												{truncateId(order.subOrderId)}
+											</span>
+											<button
+												onclick={() => copyOrderId(order.subOrderId)}
+												class="cursor-pointer text-[#6C6C6C] hover:text-[#808080]"
+											>
+												<Copy class="h-4 w-4" />
+											</button>
+										</div>
+									</td>
+									<td class="py-3 font-['Poppins'] text-[15px] font-normal leading-[23px] text-[#808080]">
+										{order.actor}
+									</td>
+									<td class="py-3 font-['Poppins'] text-[15px] font-normal leading-[23px] text-[#808080]">
+										{order.numberType}
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		{/if}
+	</div>
+</div>

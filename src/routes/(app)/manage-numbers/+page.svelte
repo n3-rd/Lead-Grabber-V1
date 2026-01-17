@@ -217,6 +217,7 @@
 						<Search class="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-[#999999]" />
 					</div>
 					<button
+						onclick={() => goto('/manage-numbers/verify')}
 						class="h-[38px] rounded-[4px] bg-[#577AB7] px-4 font-['Poppins'] text-base font-medium leading-[19px] text-white transition-colors hover:bg-[#4a6ba5]"
 					>
 						Verify Number

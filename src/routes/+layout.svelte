@@ -153,7 +153,7 @@
 	/>
 </svelte:head>
 <Toaster richColors />
-<div class="root-layout overflow-hidden">
+<div class="root-layout h-screen overflow-hidden flex flex-col">
 	{#if children}
 		{@render children()}
 	{/if}

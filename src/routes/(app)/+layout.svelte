@@ -21,19 +21,19 @@
 		: null;
 </script>
 
-<Sidebar.Provider>
+<Sidebar.Provider class="!h-full !flex-1 !min-h-0">
 	{#await AppSidebar then Sidebar}
 		{#if Sidebar}
 			<svelte:component this={Sidebar} {user} />
 		{/if}
 	{/await}
 
-	<Sidebar.Inset class="min-w-0 overflow-x-auto">
-		<main class="bg-background px-4 overflow-x-auto min-w-0">
-			<div class="flex items-center gap-4 mb-4 pt-4">
+	<Sidebar.Inset class="min-w-0 flex flex-col !h-full !min-h-0 overflow-hidden">
+		<div class="bg-background px-4 overflow-x-auto min-w-0 flex-1 flex flex-col min-h-0">
+			<div class="flex items-center gap-4 mb-4 pt-4 flex-shrink-0">
 				<Sidebar.Trigger />
 			</div>
-			<div class="flex w-full justify-between bg-white px-9 py-5">
+			<div class="flex w-full justify-between bg-white px-9 py-5 flex-shrink-0">
 				<div class="flex items-center gap-4">
 					<img src="/img/profile.png" alt="" class="profile h-12 w-12" />
 					<div class="flex-col">
@@ -55,13 +55,29 @@
 					</Button>
 				</div>
 			</div>
-			<slot />
-		</main>
+			<div class="flex-1 overflow-y-auto min-h-0">
+				<slot />
+			</div>
+		</div>
 	</Sidebar.Inset>
 </Sidebar.Provider>
 
 <style>
 	main {
 		@apply bg-root-background;
+	}
+	
+	:global(.root-layout > *),
+	:global([data-sidebar="sidebar"]) {
+		height: 100% !important;
+		min-height: 0 !important;
+	}
+	
+	:global([data-sidebar="inset"]) {
+		height: 100% !important;
+		min-height: 0 !important;
+		display: flex !important;
+		flex-direction: column !important;
+		overflow: hidden !important;
 	}
 </style>

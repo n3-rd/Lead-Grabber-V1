@@ -4,7 +4,7 @@ import type { Actions } from './$types';
 
 export const load = async ({ locals }) => {
     const user = locals.user;
-    
+
     if (!user) {
         throw redirect(303, '/login');
     }
@@ -27,7 +27,7 @@ export const load = async ({ locals }) => {
         // Check if form_data is already an object
         const form = existingForms.items[0] ? {
             ...existingForms.items[0],
-            form_data: typeof existingForms.items[0].form_data === 'string' 
+            form_data: typeof existingForms.items[0].form_data === 'string'
                 ? JSON.parse(existingForms.items[0].form_data)
                 : existingForms.items[0].form_data
         } : null;
@@ -50,7 +50,7 @@ export const actions = {
         try {
             const data = await request.formData();
             const formDataJson = data.get('formData');
-            
+
             if (!formDataJson || typeof formDataJson !== 'string') {
                 return fail(400, {
                     success: false,
@@ -69,12 +69,12 @@ export const actions = {
             }
 
             const formDataToSave = {
-                form_data: JSON.stringify({
+                form_data: {
                     settings: parsedData.settings,
                     formElements: parsedData.formElements
-                }),
+                },
                 owner: user.id,
-                Name: parsedData.settings.heading
+                name: parsedData.settings.heading
             };
 
             const existingForms = await pb.collection('leadforms').getList(1, 1, {

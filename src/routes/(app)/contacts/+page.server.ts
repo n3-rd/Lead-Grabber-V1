@@ -5,12 +5,12 @@ import { getContactsByCompany } from '$lib/utils/contacts';
 
 export const load: PageServerLoad = async ({ locals }) => {
     const user = locals.user;
-    
+
     if (!user) {
         throw redirect(303, '/login');
     }
 
-    const contacts = await getContactsByCompany(user.company_id);
+    const contacts = await getContactsByCompany(user.company);
 
     return {
         contacts
@@ -20,7 +20,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
     deleteContact: async ({ request, locals }) => {
         const user = locals.user;
-        if (!user?.company_id) {
+        if (!user?.company) {
             return fail(401, { error: 'Unauthorized' });
         }
 

@@ -14,16 +14,16 @@ interface ContactData {
  * @returns Array of contacts
  */
 export async function getContactsByCompany(companyId: string, limit: number = 50) {
-	try {
-		const contacts = await pb.collection('contacts').getList(1, limit, {
-			filter: `company_id = "${companyId}"`,
-			sort: '-created'
-		});
-		return contacts.items;
-	} catch (error) {
-		console.error('Error fetching contacts:', error);
-		return [];
-	}
+  try {
+    const contacts = await pb.collection('contacts').getList(1, limit, {
+      filter: `company = "${companyId}"`,
+      sort: '-updated'
+    });
+    return contacts.items;
+  } catch (error) {
+    console.error('Error fetching contacts:', error);
+    return [];
+  }
 }
 
 /**
@@ -33,13 +33,13 @@ export async function getContactsByCompany(companyId: string, limit: number = 50
  * @returns Filtered array of contacts
  */
 export function filterContacts(contacts: Array<any>, query: string): typeof contacts {
-	if (!query) return contacts;
-	const lowerQuery = query.toLowerCase();
-	return contacts.filter(
-		(c: any) =>
-			c.name?.toLowerCase().includes(lowerQuery) ||
-			c.phone?.includes(query)
-	);
+  if (!query) return contacts;
+  const lowerQuery = query.toLowerCase();
+  return contacts.filter(
+    (c: any) =>
+      c.name?.toLowerCase().includes(lowerQuery) ||
+      c.phone?.includes(query)
+  );
 }
 
 export async function createOrUpdateContact(data: ContactData) {
@@ -53,10 +53,10 @@ export async function createOrUpdateContact(data: ContactData) {
     if (data.email) filters.push(`email="${data.email}"`);
     if (data.phone) filters.push(`phone="${data.phone}"`);
     if (data.name) filters.push(`name="${data.name}"`);
-    
+
     // Modified filter to check for combinations of identifiers
-    const filterString = filters.length > 0 
-      ? `(${filters.join(' || ')}) && company_id="${data.company_id}"` 
+    const filterString = filters.length > 0
+      ? `(${filters.join(' || ')}) && company="${data.company_id}"`
       : '';
 
     // Try to find existing contact
@@ -64,15 +64,15 @@ export async function createOrUpdateContact(data: ContactData) {
     if (filterString) {
       try {
         // Check for existing contact with same name AND phone, or same email
-        const namePhoneFilter = data.name && data.phone 
-          ? `(name="${data.name}" && phone="${data.phone}") && company_id="${data.company_id}"`
+        const namePhoneFilter = data.name && data.phone
+          ? `(name="${data.name}" && phone="${data.phone}") && company="${data.company_id}"`
           : '';
-        
+
         // First try to find by name+phone combination
         if (namePhoneFilter) {
           contact = await pb.collection('contacts').getFirstListItem(namePhoneFilter);
         }
-        
+
         // If not found by name+phone, try other identifiers
         if (!contact) {
           contact = await pb.collection('contacts').getFirstListItem(filterString);
@@ -82,7 +82,7 @@ export async function createOrUpdateContact(data: ContactData) {
       }
     }
 
-    const now = new Date().toISOString().split('.')[0]+"Z";
+    const now = new Date().toISOString().split('.')[0] + "Z";
 
     // Update existing or create new contact
     if (contact) {
@@ -101,7 +101,7 @@ export async function createOrUpdateContact(data: ContactData) {
     } else {
       // Create new contact
       const contactData = {
-        company_id: data.company_id,
+        company: data.company_id,
         name: data.name || 'Anonymous',
         email: data.email || '',
         phone: data.phone || '',

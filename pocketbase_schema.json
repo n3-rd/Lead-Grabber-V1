@@ -1126,6 +1126,105 @@
                 "required": true,
                 "system": true,
                 "type": "text"
+            },
+            {
+                "cascadeDelete": false,
+                "collectionId": "_pb_users_auth_",
+                "hidden": false,
+                "id": "relation2809058197",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "user",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "cascadeDelete": false,
+                "collectionId": "pbc_3740038821",
+                "hidden": false,
+                "id": "relation1337919823",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "company",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "hidden": false,
+                "id": "select1466534506",
+                "maxSelect": 1,
+                "name": "role",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "select",
+                "values": [
+                    "owner",
+                    "admin",
+                    "member"
+                ]
+            },
+            {
+                "hidden": false,
+                "id": "json770559087",
+                "maxSize": 2000000,
+                "name": "permissions",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "json"
+            },
+            {
+                "hidden": false,
+                "id": "select2063623452",
+                "maxSelect": 1,
+                "name": "status",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "select",
+                "values": [
+                    "active",
+                    "inactive",
+                    "suspended"
+                ]
+            },
+            {
+                "hidden": false,
+                "id": "date2745685176",
+                "max": "",
+                "min": "",
+                "name": "joined_at",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
+            },
+            {
+                "hidden": false,
+                "id": "date2990389176",
+                "max": "",
+                "min": "",
+                "name": "created",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
+            },
+            {
+                "hidden": false,
+                "id": "date3332085495",
+                "max": "",
+                "min": "",
+                "name": "updated",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
             }
         ],
         "indexes": [],
@@ -1206,6 +1305,26 @@
                 "required": false,
                 "system": false,
                 "type": "text"
+            },
+            {
+                "hidden": false,
+                "id": "autodate2990389176",
+                "name": "created",
+                "onCreate": true,
+                "onUpdate": false,
+                "presentable": false,
+                "system": true,
+                "type": "autodate"
+            },
+            {
+                "hidden": false,
+                "id": "autodate3332085495",
+                "name": "updated",
+                "onCreate": true,
+                "onUpdate": true,
+                "presentable": false,
+                "system": true,
+                "type": "autodate"
             }
         ],
         "indexes": [],
@@ -1234,6 +1353,138 @@
                 "required": true,
                 "system": true,
                 "type": "text"
+            },
+            {
+                "exceptDomains": null,
+                "hidden": false,
+                "id": "email3885137012",
+                "name": "email",
+                "onlyDomains": null,
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "email"
+            },
+            {
+                "cascadeDelete": false,
+                "collectionId": "pbc_3740038821",
+                "hidden": false,
+                "id": "relation1337919823",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "company",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "cascadeDelete": false,
+                "collectionId": "_pb_users_auth_",
+                "hidden": false,
+                "id": "relation1109389909",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "invited_by",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "cascadeDelete": false,
+                "collectionId": "_pb_users_auth_",
+                "hidden": false,
+                "id": "rel_user_invite",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "user_id",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "hidden": false,
+                "id": "select1466534506",
+                "maxSelect": 1,
+                "name": "role",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "select",
+                "values": [
+                    "admin",
+                    "member"
+                ]
+            },
+            {
+                "hidden": false,
+                "id": "select2063623452",
+                "maxSelect": 1,
+                "name": "status",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "select",
+                "values": [
+                    "accepted",
+                    "pending",
+                    "declined"
+                ]
+            },
+            {
+                "hidden": false,
+                "id": "date261981154",
+                "max": "",
+                "min": "",
+                "name": "expires_at",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
+            },
+            {
+                "hidden": false,
+                "id": "date3905672450",
+                "max": "",
+                "min": "",
+                "name": "accepted_at",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
+            },
+            {
+                "hidden": false,
+                "id": "date3687246540",
+                "max": "",
+                "min": "",
+                "name": "declined_at",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
+            },
+            {
+                "hidden": false,
+                "id": "autodate2990389176",
+                "name": "created",
+                "onCreate": true,
+                "onUpdate": false,
+                "presentable": false,
+                "system": true,
+                "type": "autodate"
+            },
+            {
+                "hidden": false,
+                "id": "autodate3332085495",
+                "name": "updated",
+                "onCreate": true,
+                "onUpdate": true,
+                "presentable": false,
+                "system": true,
+                "type": "autodate"
             }
         ],
         "indexes": [],
@@ -1262,6 +1513,57 @@
                 "required": true,
                 "system": true,
                 "type": "text"
+            },
+            {
+                "cascadeDelete": false,
+                "collectionId": "_pb_users_auth_",
+                "hidden": false,
+                "id": "relation3479234172",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "owner",
+                "presentable": false,
+                "required": true,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text1579384326",
+                "max": 0,
+                "min": 0,
+                "name": "name",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
+            },
+            {
+                "hidden": false,
+                "id": "select2063623452",
+                "maxSelect": 1,
+                "name": "status",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "select",
+                "values": [
+                    "active",
+                    "inactive"
+                ]
+            },
+            {
+                "hidden": false,
+                "id": "json1980826233",
+                "maxSize": 2000000,
+                "name": "leadbox_data",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "json"
             }
         ],
         "indexes": [],
@@ -1290,6 +1592,43 @@
                 "required": true,
                 "system": true,
                 "type": "text"
+            },
+            {
+                "cascadeDelete": false,
+                "collectionId": "_pb_users_auth_",
+                "hidden": false,
+                "id": "relation3479234172",
+                "maxSelect": 1,
+                "minSelect": 0,
+                "name": "owner",
+                "presentable": false,
+                "required": true,
+                "system": false,
+                "type": "relation"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text1579384326",
+                "max": 0,
+                "min": 0,
+                "name": "name",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": true,
+                "system": false,
+                "type": "text"
+            },
+            {
+                "hidden": false,
+                "id": "json970127220",
+                "maxSize": 2000000,
+                "name": "form_data",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "json"
             }
         ],
         "indexes": [],
@@ -1318,6 +1657,25 @@
                 "required": true,
                 "system": true,
                 "type": "text"
+            },
+            {
+                "hidden": false,
+                "id": "file3834550803",
+                "maxSelect": 1,
+                "maxSize": 0,
+                "mimeTypes": [
+                    "image/png",
+                    "image/vnd.mozilla.apng",
+                    "image/jpeg",
+                    "image/webp"
+                ],
+                "name": "logo",
+                "presentable": false,
+                "protected": false,
+                "required": false,
+                "system": false,
+                "thumbs": [],
+                "type": "file"
             }
         ],
         "indexes": [],
@@ -1481,6 +1839,28 @@
                 "required": false,
                 "system": false,
                 "type": "json"
+            },
+            {
+                "hidden": false,
+                "id": "date3332085495",
+                "max": "",
+                "min": "",
+                "name": "updated",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
+            },
+            {
+                "hidden": false,
+                "id": "date2990389176",
+                "max": "",
+                "min": "",
+                "name": "created",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
             }
         ],
         "indexes": [

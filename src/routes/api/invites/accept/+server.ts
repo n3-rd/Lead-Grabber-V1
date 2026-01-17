@@ -3,27 +3,27 @@ import { pb } from '$lib/pocketbase';
 
 export const POST: RequestHandler = async ({ request }) => {
   const { inviteId, userId } = await request.json();
-  
+
   const invite = await pb.collection('invites').getOne(inviteId);
-  
+
   if (invite.status !== 'pending') {
     return new Response(JSON.stringify({ error: 'Invalid invite' }), { status: 400 });
   }
-  
+
   try {
     // Create company member with invited role and permissions
     await pb.collection('company_members').create({
-      user_id: userId,
-      company_id: invite.company_id,
+      user: userId,
+      company: invite.company_id,
       role: invite.role,
       permissions: invite.permissions,
       status: 'active',
       joined_at: new Date().toISOString()
     });
 
-    // Update the user's company_id
+    // Update the user's company
     await pb.collection('users').update(userId, {
-      company_id: invite.company_id
+      company: invite.company_id
     });
 
     // Update invite status
@@ -36,7 +36,7 @@ export const POST: RequestHandler = async ({ request }) => {
   } catch (error) {
     console.error('Error accepting invite:', error);
     return new Response(
-      JSON.stringify({ error: 'Failed to accept invitation' }), 
+      JSON.stringify({ error: 'Failed to accept invitation' }),
       { status: 500 }
     );
   }

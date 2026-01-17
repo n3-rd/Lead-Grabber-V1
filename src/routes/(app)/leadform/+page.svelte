@@ -199,7 +199,7 @@
 	}
 </script>
 
-{#if user.company_id && user.company_id !== ''}
+{#if user.company && user.company !== ''}
 	<div class="flex h-[90vh] flex-col gap-3 bg-gray-100 p-4">
 		<div class="flex items-center justify-between">
 			<div class="h1 text-2xl font-semibold">Leadform</div>

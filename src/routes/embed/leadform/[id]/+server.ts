@@ -25,14 +25,14 @@ export async function GET({ params, request, locals }) {
       throw error(404, 'Form not found');
     }
 
-    const formData = typeof form.form_data === 'string' 
+    const formData = typeof form.form_data === 'string'
       ? JSON.parse(form.form_data)
       : form.form_data;
 
     const jsCode = buildLeadformScript({
       id: params.id,
       formData,
-      companyId: company.company_id,
+      companyId: company.company,
       baseUrl: PUBLIC_BASE_URL
     });
 

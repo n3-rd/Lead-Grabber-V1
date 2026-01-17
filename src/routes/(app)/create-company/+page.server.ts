@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     }
 
     // Check if user already has a company
-    if (user.company_id) {
+    if (user.company) {
         throw redirect(303, '/dashboard');
     }
 
@@ -53,9 +53,9 @@ export const actions: Actions = {
 
             // Update the user's record with the company ID
             await pb.collection('users').update(user.id, {
-                company_id: company.id
+                company: company.id
             });
-            
+
             // Create company member record for owner
             await pb.collection('company_members').create({
                 user: user.id,
@@ -68,7 +68,7 @@ export const actions: Actions = {
 
             // Refresh auth data
             await locals.pb.collection('users').authRefresh();
-            
+
             // Return success response instead of redirect
             return {
                 success: true,

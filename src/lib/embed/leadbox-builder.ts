@@ -14,7 +14,7 @@ function escapeForJs(str: string): string {
 
 export function buildLeadboxScript(config: LeadboxConfig): string {
   const { id, leadboxData, companyId, baseUrl } = config;
-  
+
   // Prepare data for injection
   const dataJson = JSON.stringify({ ...leadboxData, leadBoxOpen: false });
   const iconsJson = JSON.stringify(icons);
@@ -87,7 +87,8 @@ export function buildLeadboxScript(config: LeadboxConfig): string {
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       try {
-        const response = await fetch(baseUrl + '/api/messages', {
+        const apiBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+        const response = await fetch(apiBase + '/api/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(messageData),
@@ -140,7 +141,13 @@ export function buildLeadboxScript(config: LeadboxConfig): string {
       secondaryButtonHtml = '<div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: 0.5rem;"><button class="clearsky-secondary-button">' + secondaryText + (leadboxData.secondaryButton.showIcon ? createChannelIcon(leadboxData.secondaryButton.icon) : '') + '</button></div>';
     }
 
-    const logoImg = (leadboxData.logoImage || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    let logoUrl = leadboxData.logoImage || '';
+    if (logoUrl.startsWith('/')) {
+        // Remove trailing slash from baseUrl if present to avoid double slashes, though generally harmless in browsers
+        const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+        logoUrl = base + logoUrl;
+    }
+    const logoImg = logoUrl.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     
     return '<div class="clearsky-box clearsky-animate-in"><div class="clearsky-header"><p style="font-size: 1.125rem;">Text with us.</p></div><div class="clearsky-content"><div class="clearsky-logo"><img src="' + logoImg + '" alt="Company Logo" class="w-[164px] h-[82px] object-contain absolute top-[-40px] z-10" /></div>' + textOnlyHtml + '<div class="clearsky-terms">Use subject to terms • Lead&Terms</div></div></div>' + secondaryButtonHtml + createClosedLeadbox();
   }

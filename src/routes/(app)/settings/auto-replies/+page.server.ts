@@ -6,7 +6,7 @@ import type { PageServerLoad } from './$types';
 export const actions: Actions = {
   saveAutoReply: async ({ request, locals }) => {
     const user = locals.user;
-    if (!user?.company_id) {
+    if (!user?.company) {
       return fail(401, { error: 'Unauthorized' });
     }
 
@@ -14,9 +14,9 @@ export const actions: Actions = {
       const data = await request.formData();
       const autoReplyData = JSON.parse(data.get('autoReplyData') as string);
 
-      const company = await pb.collection('companies').getOne(user.company_id);
-      const settings = typeof company.settings === 'string' 
-        ? JSON.parse(company.settings) 
+      const company = await pb.collection('companies').getOne(user.company);
+      const settings = typeof company.settings === 'string'
+        ? JSON.parse(company.settings)
         : company.settings || {};
 
       settings.autoReply = {
@@ -28,7 +28,7 @@ export const actions: Actions = {
         businessHours: autoReplyData.businessHours
       };
 
-      await pb.collection('companies').update(user.company_id, {
+      await pb.collection('companies').update(user.company, {
         settings: JSON.stringify(settings)
       });
 
@@ -42,12 +42,12 @@ export const actions: Actions = {
 
 export const load: PageServerLoad = async ({ locals }) => {
   const user = locals.user;
-  if (!user?.company_id) return { autoReply: null };
+  if (!user?.company) return { autoReply: null };
 
   try {
-    const company = await pb.collection('companies').getOne(user.company_id);
-    const settings = typeof company.settings === 'string' 
-      ? JSON.parse(company.settings) 
+    const company = await pb.collection('companies').getOne(user.company);
+    const settings = typeof company.settings === 'string'
+      ? JSON.parse(company.settings)
       : company.settings || {};
 
     return {

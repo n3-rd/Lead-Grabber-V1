@@ -89,7 +89,7 @@ export const actions = {
     default: async ({ request, locals, params }) => {
         try {
             const invite = await pb.collection('invites').getOne(params.id);
-            
+
             if (invite.status !== 'pending') {
                 return fail(400, { error: 'Invalid invite' });
             }
@@ -98,7 +98,7 @@ export const actions = {
             const name = formData.get('name')?.toString();
             const password = formData.get('password')?.toString();
             const passwordConfirm = formData.get('passwordConfirm')?.toString();
-            
+
             let user = locals.user;
 
             // If no user is logged in, create a new account
@@ -120,19 +120,19 @@ export const actions = {
                         passwordConfirm,
                         emailVisibility: true,
                     };
-                    
+
                     const newUser = await pb.collection('users').create(userData);
-                    
+
                     // Log in the new user
                     const authData = await pb.collection('users').authWithPassword(
                         invite.email,
                         password
                     );
-                    
+
                     user = authData.record;
                 } catch (error) {
                     console.error('Error creating user:', error);
-                    return fail(500, { 
+                    return fail(500, {
                         error: error.response?.data?.message || 'Failed to create account'
                     });
                 }
@@ -140,17 +140,17 @@ export const actions = {
 
             // Create company member
             await pb.collection('company_members').create({
-                user_id: user.id,
-                company_id: invite.company_id,
+                user: user.id,
+                company: invite.company_id,
                 role: invite.role,
                 permissions: invite.permissions,
                 status: 'active',
                 joined_at: new Date().toISOString()
             });
 
-            // Update the user's company_id
+            // Update the user's company
             await pb.collection('users').update(user.id, {
-                company_id: invite.company_id
+                company: invite.company_id
             });
 
             // Update invite status

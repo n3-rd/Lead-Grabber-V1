@@ -47,10 +47,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
 
     // Check if already a team member
-    const company = await pb.collection('companies').getOne(user.company_id, {
+    const company = await pb.collection('companies').getOne(user.company, {
       expand: 'team_members'
     });
-    
+
     if (company.expand?.team_members?.some((m: Record<string, unknown>) => m.id === existingUser.id)) {
       return json({ success: false, error: 'User is already a team member' }, { status: 400 });
     }
@@ -58,7 +58,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     // Create invite record
     const invite = await pb.collection('invites').create({
       email,
-      company_id: user.company_id,
+      company_id: user.company,
       role,
       status: 'pending',
       invited_by: user.id,
@@ -79,7 +79,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     });
 
     return json({ success: true });
-    
+
   } catch (error) {
     console.error('Error sending invite:', error);
     return json({ success: false, error: 'Failed to send invitation' }, { status: 500 });

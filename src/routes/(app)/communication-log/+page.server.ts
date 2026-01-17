@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ locals, depends }) => {
         const logs = await pb.collection('communication_logs').getList(1, 50, {
             sort: '-created',
             expand: 'user_id,customer_id',
-            filter: `company_id = "${locals.user.company_id}"`
+            filter: `company_id = "${locals.user.company}"`
         });
 
         return {

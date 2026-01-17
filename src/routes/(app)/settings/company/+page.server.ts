@@ -13,33 +13,33 @@ export const load: PageServerLoad = async ({ locals }) => {
 
     try {
         // First check if user has a company_id
-        if (!user.company_id) {
+        if (!user.company) {
             console.error('User has no company_id:', user);
             throw redirect(303, '/create-company');
         }
 
         // Get user's company directly using their company_id
-        const company = await pb.collection('companies').getOne(user.company_id, {
+        const company = await pb.collection('companies').getOne(user.company, {
             expand: 'team_members'
         });
 
         // Get company members with expanded user data
         const members = await pb.collection('company_members').getList(1, 50, {
-            filter: `company_id = "${user.company_id}" && status = "active"`,
-            expand: 'user_id',
+            filter: `company = "${user.company}" && status = "active"`,
+            expand: 'user',
             sort: '-created'
         });
 
         console.log('members', members);
 
         if (!members.items.length) {
-            console.warn('No members found for company:', user.company_id);
+            console.warn('No members found for company:', user.company);
         }
 
         return {
             company: {
                 ...company,
-                settings: typeof company.settings === 'string' 
+                settings: typeof company.settings === 'string'
                     ? JSON.parse(company.settings)
                     : company.settings || {
                         branding: { primary_color: '#000000' },
@@ -48,7 +48,7 @@ export const load: PageServerLoad = async ({ locals }) => {
             },
             members: members.items.map(member => ({
                 id: member.id,
-                user: member.expand?.user_id,
+                user: member.expand?.user,
                 role: member.role,
                 joined_at: member.joined_at
             }))
@@ -56,9 +56,9 @@ export const load: PageServerLoad = async ({ locals }) => {
     } catch (error) {
         console.error('Error loading company:', error);
         // If company not found or other error, clear the company_id and redirect
-        if (error.status === 404 || !user.company_id) {
+        if (error.status === 404 || !user.company) {
             await pb.collection('users').update(user.id, {
-                company_id: null
+                company: null
             });
             throw redirect(303, '/create-company');
         }
@@ -73,7 +73,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
     updateCompany: async ({ request, locals }) => {
         const user = locals.user;
-        if (!user?.company_id) {
+        if (!user?.company) {
             return fail(401, { error: 'Unauthorized' });
         }
 
@@ -87,7 +87,7 @@ export const actions: Actions = {
             const webNotifications = formData.get('webNotifications') === 'true';
 
             // Get current company
-            const company = await pb.collection('companies').getOne(user.company_id);
+            const company = await pb.collection('companies').getOne(user.company);
 
             // Check if user is owner or admin
             if (company.owner !== user.id) {
@@ -122,7 +122,7 @@ export const actions: Actions = {
 
     inviteMember: async ({ request, locals }) => {
         const user = locals.user;
-        if (!user?.company_id) {
+        if (!user?.company) {
             return fail(401, { error: 'Unauthorized' });
         }
 
@@ -141,7 +141,7 @@ export const actions: Actions = {
             }
 
             // Get company and check if user has permission to invite
-            const company = await pb.collection('companies').getOne(user.company_id, {
+            const company = await pb.collection('companies').getOne(user.company, {
                 expand: 'team_members'
             });
 
@@ -155,7 +155,7 @@ export const actions: Actions = {
             // Create invite record
             const invite = await pb.collection('invites').create({
                 email,
-                company_id: user.company_id,
+                company: user.company,
                 role,
                 status: 'pending',
                 invited_by: user.id,

@@ -13,7 +13,7 @@ function escapeForJs(str: string): string {
 
 export function buildLeadformScript(config: LeadformConfig): string {
   const { id, formData, companyId, baseUrl } = config;
-  
+
   const formDataJson = JSON.stringify(formData);
   const buttonColor = formData.settings?.buttonColor || '#3B5BDB';
   const stylesJson = JSON.stringify(leadformStyles.replace(/var\(--button-color\)/g, buttonColor));

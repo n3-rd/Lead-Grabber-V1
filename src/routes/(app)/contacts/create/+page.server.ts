@@ -20,7 +20,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 export const actions: Actions = {
 	default: async ({ request, locals }) => {
 		const user = locals.user;
-		if (!user?.company_id) {
+		if (!user?.company) {
 			return fail(401, { error: 'Unauthorized' });
 		}
 
@@ -35,7 +35,7 @@ export const actions: Actions = {
 
 		try {
 			const contactData = {
-				company_id: user.company_id,
+				company: user.company,
 				name: name || 'Anonymous',
 				email: email || '',
 				phone: phone || ''

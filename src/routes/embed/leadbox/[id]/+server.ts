@@ -25,14 +25,14 @@ export async function GET({ params, request, locals }) {
       throw error(404, 'Leadbox not found');
     }
 
-    const leadboxData = typeof leadbox.leadbox_data === 'string' 
+    const leadboxData = typeof leadbox.leadbox_data === 'string'
       ? JSON.parse(leadbox.leadbox_data)
       : leadbox.leadbox_data;
 
     const jsCode = buildLeadboxScript({
       id: params.id,
       leadboxData,
-      companyId: company.company_id,
+      companyId: company.company,
       baseUrl: PUBLIC_BASE_URL
     });
 

@@ -4,40 +4,10 @@ import type { RequestHandler } from './$types';
 import { TWILIO_ENABLED } from '$env/static/private';
 import { createOrUpdateContact } from '$lib/utils/contacts';
 import { normalizePhoneNumber } from '$lib/utils/phone';
+import { logCommunication, type CommunicationLogEntry } from '$lib/utils/communication-log';
+import { getAutoReplyMessage, getDefaultAutoReplySettings } from '$lib/utils/auto-reply';
 
-function getAutoReplyMessage(
-  source: string,
-  autoReplySettings: any,
-  currentHour: number
-): string | null {
-  if (!autoReplySettings?.textAutoReply || !autoReplySettings?.businessHours) {
-    return null;
-  }
 
-  try {
-    const hours = isBusinessHours(currentHour, autoReplySettings.businessHours);
-    const day = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-    
-    if (source === 'leadform') {
-      if (hours.isClosed) {
-        return `${autoReplySettings.leadformAfterHoursMessage} We are closed on ${day}s.`;
-      }
-      return hours.isOpen 
-        ? autoReplySettings.leadformBusinessHoursMessage 
-        : autoReplySettings.leadformAfterHoursMessage;
-    }
-    
-    if (hours.isClosed) {
-      return `${autoReplySettings.afterHoursMessage} We are closed on ${day}s.`;
-    }
-    return hours.isOpen 
-      ? autoReplySettings.businessHoursMessage 
-      : autoReplySettings.afterHoursMessage;
-  } catch (error) {
-    console.error('Error in getAutoReplyMessage:', error);
-    return null;
-  }
-}
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
   const corsHeaders = {
@@ -56,7 +26,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
   try {
     const messageData = await request.json();
     let record; // Declare record variable
-    
+
     if (!messageData.company_id) {
       return json(
         { success: false, error: 'Company ID is required' },
@@ -121,7 +91,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
               }
             })
           };
-          
+
           const company = await pb.collection('companies').create(companyData);
           messageData.company_id = company.id;
         } catch (userErr) {
@@ -143,35 +113,35 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
         );
       }
     }
-    
+
     // Normalize phone number if available
     if (messageData.customer_phone) {
       const normalizedPhone = normalizePhoneNumber(messageData.customer_phone);
-      
+
       // Update both the thread_id and customer_phone for consistency
       if (normalizedPhone) {
         messageData.customer_phone = normalizedPhone;
-        
+
         // If no thread_id is provided, use the phone number
         if (!messageData.thread_id) {
           messageData.thread_id = normalizedPhone;
         }
       }
     }
-    
+
     // Create the message in PocketBase
     // Try to find existing thread by thread_id or customer_phone
     let existingThread = null;
-    
+
     try {
       if (messageData.thread_id) {
         existingThread = await pb.collection('messages').getFirstListItem(`thread_id="${messageData.thread_id}"`).catch(() => null);
       }
-      
+
       // If not found by thread_id and we have a phone number, try to find by phone
       if (!existingThread && messageData.customer_phone) {
         existingThread = await pb.collection('messages').getFirstListItem(`customer_phone="${messageData.customer_phone}"`).catch(() => null);
-        
+
         // If found by phone, update the thread_id to match the phone for future consistency
         if (existingThread && !existingThread.thread_id.includes(messageData.customer_phone)) {
           await pb.collection('messages').update(existingThread.id, {
@@ -197,7 +167,8 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
       record = await pb.collection('messages').update(existingThread.id, {
         messages: updatedMessages,
         status: messageData.status,
-        assigned_to: messageData.assigned_to
+        assigned_to: messageData.assigned_to,
+        urgency: messageData.urgency // Add urgency
       });
     } else {
       // Create new thread
@@ -205,7 +176,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
       if (messageData.customer_phone && !messageData.thread_id) {
         messageData.thread_id = messageData.customer_phone;
       }
-      
+
       record = await pb.collection('messages').create({
         ...messageData,
         messages: [{
@@ -217,20 +188,44 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
         }]
       });
     }
-    
+
+    // Log the communication
+    const logEntry: CommunicationLogEntry = {
+      type: messageData.source === 'leadform' ? 'leadform' : 'web',
+      direction: 'inbound', // Assuming mostly inbound here, or derive from is_agent_reply
+      status: 'success',
+      source: messageData.customer_email || messageData.customer_phone || 'Web',
+      destination: 'Inbox',
+      company_id: messageData.company_id,
+      summary: messageData.message.substring(0, 50) + '...',
+      content: messageData.message,
+      metadata: {
+        thread_id: record.thread_id,
+        urgency: messageData.urgency
+      }
+    };
+
+    // If it is an agent reply, direction is outbound
+    if (messageData.is_agent_reply) {
+      logEntry.direction = 'outbound';
+      logEntry.user_id = messageData.user_id;
+    }
+
+    await logCommunication(logEntry);
+
     // Send auto-reply via Twilio if enabled and phone number exists
     if (TWILIO_ENABLED === 'true' && messageData.customer_phone) {
       try {
         console.log('Attempting to send Twilio auto-reply...');
         const company = await pb.collection('companies').getOne(messageData.company_id);
         console.log('Company settings:', company.settings);
-        
-        const autoReplySettings = typeof company.settings === 'string' 
+
+        const autoReplySettings = typeof company.settings === 'string'
           ? JSON.parse(company.settings)?.autoReply || getDefaultAutoReplySettings()
           : company.settings?.autoReply || getDefaultAutoReplySettings();
-        
+
         console.log('Auto reply settings:', autoReplySettings);
-        
+
         if (autoReplySettings) {
           const message = getAutoReplyMessage(
             messageData.source,
@@ -271,7 +266,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
         // Don't throw the error - just log it since auto-reply is not critical
       }
     }
-    
+
     return json(
       { success: true, message: record },
       {
@@ -294,7 +289,7 @@ function isBusinessHours(currentHour: number, businessHours: any) {
   // Get current day name in lowercase
   const day = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
   const daySettings = businessHours?.[day];
-  
+
   // If the day is marked as closed (not open or no hours), return false
   if (!daySettings?.isOpen || !daySettings.hours) {
     return {
@@ -302,13 +297,13 @@ function isBusinessHours(currentHour: number, businessHours: any) {
       isClosed: true  // Explicitly indicate it's a closed day
     };
   }
-  
+
   const [start, end] = daySettings.hours.split(' - ').map(time => {
     const [hour, period] = time.split(' ');
     const [h] = hour.split(':');
     return period === 'PM' ? (parseInt(h) % 12) + 12 : parseInt(h);
   });
-  
+
   return {
     isOpen: currentHour >= start && currentHour < end,
     isClosed: false
@@ -325,22 +320,3 @@ export const OPTIONS: RequestHandler = async () => {
     }
   });
 };
-
-function getDefaultAutoReplySettings() {
-  return {
-    textAutoReply: false,
-    businessHoursMessage: 'Thanks for contacting us. Our team will respond shortly.',
-    afterHoursMessage: 'Thanks for contacting us. We are currently closed but will respond during business hours.',
-    leadformBusinessHoursMessage: 'Thanks for submitting the form. Our team will respond shortly.',
-    leadformAfterHoursMessage: 'Thanks for submitting the form. We are currently closed but will respond during business hours.',
-    businessHours: {
-      sunday: { isOpen: false, hours: null },
-      monday: { isOpen: true, hours: '8:00 AM - 6:00 PM' },
-      tuesday: { isOpen: true, hours: '8:00 AM - 6:00 PM' },
-      wednesday: { isOpen: true, hours: '8:00 AM - 6:00 PM' },
-      thursday: { isOpen: true, hours: '8:00 AM - 6:00 PM' },
-      friday: { isOpen: true, hours: '8:00 AM - 6:00 PM' },
-      saturday: { isOpen: false, hours: null }
-    }
-  };
-}

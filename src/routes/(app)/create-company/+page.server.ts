@@ -10,11 +10,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     }
 
     // Check if user already has a company
-    const companies = await pb.collection('companies').getList(1, 1, {
-        filter: `owner = "${user.id}"`,
-    });
-
-    if (companies.items.length > 0) {
+    if (user.company_id) {
         throw redirect(303, '/dashboard');
     }
 

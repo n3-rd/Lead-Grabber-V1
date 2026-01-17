@@ -2,18 +2,19 @@ import { pb } from '$lib/pocketbase';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import twilio from 'twilio';
+import { logCommunication } from '$lib/utils/communication-log';
 const MessagingResponse = twilio.twiml.MessagingResponse;
 
 export const POST: RequestHandler = async ({ request }) => {
   console.log('🔔 Webhook endpoint reached');
-  
+
   try {
     let from: string | undefined;
     let body: string | undefined;
     let inReplyTo: string | undefined;
 
     const contentType = request.headers.get('content-type');
-    
+
     if (contentType?.includes('application/json')) {
       const jsonData = await request.json();
       from = jsonData.From?.toString();
@@ -81,6 +82,23 @@ export const POST: RequestHandler = async ({ request }) => {
       });
 
       console.log('✅ Message saved:', savedMessage.id);
+
+      // Log the inbound SMS communication (Twilio)
+      await logCommunication({
+        type: 'sms',
+        direction: 'inbound',
+        status: 'success',
+        source: from,
+        destination: 'Twilio Number', // Could be dynamic if we parsed 'To'
+        company_id: thread.company_id,
+        customer_id: undefined, // Could determine from thread
+        summary: body.substring(0, 50) + '...',
+        content: body,
+        metadata: {
+          thread_id: thread.id,
+          provider: 'twilio'
+        }
+      });
 
       // Return TwiML response
       const twiml = new MessagingResponse();

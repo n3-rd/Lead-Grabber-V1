@@ -3,6 +3,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { pb } from '$lib/pocketbase';
 import { normalizePhoneNumber } from '$lib/utils/phone';
+import { logCommunication } from '$lib/utils/communication-log';
 
 // Define the hardcoded company ID
 const HARDCODED_COMPANY_ID = '6h4zpjhqip1d50b';
@@ -17,14 +18,14 @@ export const POST: RequestHandler = async ({ request }) => {
     // Log the raw request body for debugging
     const rawBody = await request.text();
     console.log('Webhook raw body:', rawBody);
-    
+
     // Parse the webhook payload
     const payload = JSON.parse(rawBody);
     console.log('Webhook payload:', payload);
-    
+
     // Check if this is a Telnyx event webhook or direct inbound message
     let messageData;
-    
+
     if (payload.data?.event_type === 'message.received') {
       // This is a webhook event format
       console.log('Processing webhook event:', payload.data.event_type);
@@ -37,25 +38,25 @@ export const POST: RequestHandler = async ({ request }) => {
       console.log('Unknown webhook format or not an inbound message:', payload);
       return json({ success: true }); // Always return success to Telnyx
     }
-    
+
     // Now extract the message details regardless of format
     const phoneNumber = messageData.from?.phone_number || messageData.from;
     const content = messageData.text;
     const media = messageData.media || [];
-    
+
     if (!phoneNumber) {
       console.error('Missing phone number in webhook:', messageData);
       return json({ success: false, error: 'Missing phone number' });
     }
-    
+
     // Normalize phone number
     const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
     console.log('Normalized phone number:', normalizedPhoneNumber);
-    
+
     // Generate a thread ID - use only the customer's phone number
     const threadId = normalizedPhoneNumber;
     console.log('Generated threadId:', threadId);
-    
+
     try {
       // Try to find existing thread by thread_id or customer_phone
       let existingUser;
@@ -73,7 +74,7 @@ export const POST: RequestHandler = async ({ request }) => {
         // No existing thread found, which is fine - we'll create one
         console.log('No existing thread found for:', normalizedPhoneNumber);
       }
-      
+
       if (existingUser) {
         // Update existing thread with new message
         const updatedUser = await pb.collection('messages').update(existingUser.id, {
@@ -85,7 +86,7 @@ export const POST: RequestHandler = async ({ request }) => {
           }],
           status: 'new'
         });
-        
+
         console.log('Updated existing thread:', updatedUser.id);
       } else {
         // Extract name from message if possible (like your example "Hello, I'm new customer, Jack")
@@ -94,10 +95,10 @@ export const POST: RequestHandler = async ({ request }) => {
         if (nameMatch && nameMatch[1]) {
           customerName = nameMatch[1];
         }
-        
+
         // Create new thread with hardcoded company ID
         console.log('Creating new thread with hardcoded company ID:', HARDCODED_COMPANY_ID);
-        
+
         try {
           const newThread = await pb.collection('messages').create({
             thread_id: threadId,
@@ -111,25 +112,42 @@ export const POST: RequestHandler = async ({ request }) => {
             }],
             status: 'new',
             company_id: HARDCODED_COMPANY_ID,
-            source: 'sms', 
+            source: 'sms',
             color: 'bg-primary',
             initials: customerName.substring(0, 2).toUpperCase(),
             form_data: {},
             source_url: ''
           });
-          
+
           console.log('Created new thread:', newThread.id);
         } catch (error) {
           // Log detailed error information
           console.error('Failed to create thread, error:', error);
-          
-          return json({ 
-            success: false, 
+
+          return json({
+            success: false,
             error: 'Failed to create message thread. Check server logs for details.'
           }, { status: 500 });
         }
       }
-      
+
+      // Log the inbound SMS communication
+      await logCommunication({
+        type: 'sms',
+        direction: 'inbound',
+        status: 'success',
+        source: phoneNumber,
+        destination: messageData.to || 'Inbox',
+        company_id: HARDCODED_COMPANY_ID,
+        customer_id: existingUser?.id, // Link to message thread if found
+        summary: content.substring(0, 50) + '...',
+        content: content,
+        metadata: {
+          thread_id: threadId,
+          telnyx_event: payload.data?.event_type
+        }
+      });
+
       return json({ success: true });
     } catch (dbError) {
       console.error('Database error:', dbError);

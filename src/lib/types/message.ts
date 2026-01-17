@@ -23,4 +23,5 @@ export interface Message {
       content_type: string;
     }[];
   }[];
+  urgency?: 'green' | 'yellow' | 'red';
 } 

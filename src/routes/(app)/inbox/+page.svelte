@@ -47,8 +47,9 @@ import HeaderTag from "$lib/components/header-tag.svelte";
         timestamp: string;
       }[]>([]);
 
+      
       // Remove the unsubscribe variable declaration and replace with polling interval
-      let pollInterval: number;
+      let unsubscribe: () => void;
 
       // Add these state variables near the top with other state declarations
       let isLoadingMessages = $state(true);
@@ -90,22 +91,35 @@ import HeaderTag from "$lib/components/header-tag.svelte";
           await loadMessages();
           await loadCompanyMembers();
           
-          // Increase polling interval to 15 seconds
-          pollInterval = window.setInterval(async () => {
-            const latestMessage = messages[0];
-            if (latestMessage) {
-              // Use $data to access reactive props inside the interval
-              const newRecords = await pb.collection('messages').getList(1, 5, {
-                sort: '-created',
-                filter: `company_id = "${user?.company_id}" && created > "${latestMessage.created}"`,
-                expand: 'customer_id'
-              });
+          // Subscribe to realtime updates
+          unsubscribe = await pb.collection('messages').subscribe('*', async ({ action, record }) => {
+            if (record.company_id !== user?.company_id) return;
+            
+            const formattedRecord = formatMessage(record);
+            
+            if (action === 'create') {
+              // Add new message to the top
+              messages = [formattedRecord, ...messages];
+              if (selectedTab !== 'all' && selectedTab !== 'unassigned' && selectedTab !== 'me') {
+                  // If we are filtering, we might need to re-run filter or just appending to main messages list will handle it via effect?
+                  // The effect depends on `messages`. Since we update `messages`, `filteredMessages` will update.
+              }
+            } else if (action === 'update') {
+              // Update existing message
+              messages = messages.map(m => m.id === record.id ? formattedRecord : m);
               
-              if (newRecords.items.length > 0) {
-                messages = [...newRecords.items.map(formatMessage), ...messages];
+              // If this is the currently selected thread, update the chat view
+              if (selectedMessage && selectedMessage.thread_id === record.thread_id) {
+                 await loadChatMessages(record.thread_id);
+              }
+            } else if (action === 'delete') {
+              messages = messages.filter(m => m.id !== record.id);
+              if (selectedMessage?.id === record.id) {
+                selectedMessage = null;
+                showMessages = false;
               }
             }
-          }, 15000);
+          });
 
         } catch (err) {
           console.error('Error in onMount:', err);
@@ -114,9 +128,7 @@ import HeaderTag from "$lib/components/header-tag.svelte";
 
       // Add onDestroy cleanup
       onDestroy(() => {
-        if (pollInterval) {
-          clearInterval(pollInterval);
-        }
+        unsubscribe?.();
       });
 
       // Add loadMessages function
@@ -209,6 +221,7 @@ import HeaderTag from "$lib/components/header-tag.svelte";
           assigned_to: msg.assigned_to,
           initials,
           color,
+          urgency: msg.urgency,
           // Additional properties for UI display
           name,
           message: messageText,
@@ -474,8 +487,19 @@ import HeaderTag from "$lib/components/header-tag.svelte";
                                     </div>
                                 </div>
                                 <div class="flex-grow">
-                                    <div class="flex items-center justify-between">
-                                        <h4 class="text-lg font-medium">{(msg as any).name}</h4>
+                                        <div class="flex items-center gap-2">
+                                          <h4 class="text-lg font-medium">{(msg as any).name}</h4>
+                                          {#if msg.urgency === 'red'}
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Urgent</span>
+                                          {:else if msg.urgency === 'yellow'}
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Medium</span>
+                                          {:else if msg.urgency === 'green'}
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Low</span>
+                                          {:else if msg.urgency}
+                                              <!-- Fallback for other values just in case -->
+                                              <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{msg.urgency}</span>
+                                          {/if}
+                                        </div>
                                         <span class="font-medium">{(msg as any).time}</span>
                                     </div>
                                     <p class="font-light line-clamp-2">{(msg as any).message}</p>
@@ -485,7 +509,6 @@ import HeaderTag from "$lib/components/header-tag.svelte";
                                         </div>
                                     {/if}
                                 </div>
-                            </div>
                         {/each}
                         
                         {#if filteredMessages.length === 0}

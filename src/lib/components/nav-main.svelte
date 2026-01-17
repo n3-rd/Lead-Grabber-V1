@@ -36,7 +36,7 @@
 				{ title: "Auto Replies", url: "/settings/auto-replies", icon: Reply, href: "/settings/auto-replies" },
 				{ title: "Shortcuts", url: "/settings/shortcuts", icon: SquareSlash, href: "/settings/shortcuts" },
 				...(isCompany ? [] : [{ title: "Create Company", url: "/create-company", icon: Building, href: "/create-company" }]),
-				...(isCompany ? [{ title: "Company", url: "/settings/company", icon: Building, href: "/settings/company" }] : []),
+				...(isCompany ? [{ title: "Company Settings", url: "/settings/company", icon: Building, href: "/settings/company" }] : []),
 				{ title: "Knowledge Base", url: "/knowledge-base", icon: BookOpen, href: "/knowledge-base" },
 			]
 		 },

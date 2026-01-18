@@ -21,5 +21,6 @@ declare global {
     POCKETBASE_URL: string;
     NODE_ENV: string;
     PUBLIC_BASE_URL: string;
+    PUBLIC_ENV: string;
   }
 } 

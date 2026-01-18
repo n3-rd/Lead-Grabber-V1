@@ -2,8 +2,14 @@ import { pb } from '$lib/pocketbase';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { sendEmail } from '$lib/email';
-import { PUBLIC_BASE_URL } from '$env/static/public';
+import { PUBLIC_BASE_URL, PUBLIC_ENV } from '$env/static/public';
 import { TWILIO_PHONE_NUMBER } from '$env/static/private';
+
+function normalizeUrl(baseUrl: string, path: string): string {
+    const normalizedBase = baseUrl.replace(/\/+$/, '');
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    return `${normalizedBase}${normalizedPath}`;
+}
 
 export const load: PageServerLoad = async ({ locals }) => {
     const user = locals.user;
@@ -36,6 +42,11 @@ export const load: PageServerLoad = async ({ locals }) => {
             console.warn('No members found for company:', user.company);
         }
 
+        // Get current user's role from company_members
+        const currentUserMember = members.items.find(m => m.user === user.id);
+        const userRole = currentUserMember?.role || 'member';
+        const isAdminOrOwner = userRole === 'admin' || userRole === 'owner' || company.owner === user.id;
+
         return {
             company: {
                 ...company,
@@ -51,7 +62,9 @@ export const load: PageServerLoad = async ({ locals }) => {
                 user: member.expand?.user,
                 role: member.role,
                 joined_at: member.joined_at
-            }))
+            })),
+            userRole,
+            isAdminOrOwner
         };
     } catch (error) {
         console.error('Error loading company:', error);
@@ -90,8 +103,15 @@ export const actions: Actions = {
             const company = await pb.collection('companies').getOne(user.company);
 
             // Check if user is owner or admin
-            if (company.owner !== user.id) {
-                return fail(403, { error: 'Only company owners can update company settings' });
+            const userMember = await pb.collection('company_members').getFirstListItem(
+                `user = "${user.id}" && company = "${user.company}" && status = "active"`
+            ).catch(() => null);
+
+            const isOwner = company.owner === user.id;
+            const isAdmin = userMember?.role === 'admin';
+
+            if (!isOwner && !isAdmin) {
+                return fail(403, { error: 'Only company owners and admins can update company settings' });
             }
 
             const updateData: any = {
@@ -163,17 +183,23 @@ export const actions: Actions = {
                 expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
             });
 
-            // Send invite email
-            await sendEmail({
-                to: email,
-                subject: `Invitation to join ${company.name}`,
-                html: `
-                    <h1>You've been invited to join ${company.name}</h1>
-                    <p>${user.name} has invited you to join their team.</p>
-                    <p>Click the link below to accept the invitation:</p>
-                    <a href="${PUBLIC_BASE_URL}/invite/accept/${invite.id}">Accept Invitation</a>
-                `
-            });
+            const inviteLink = normalizeUrl(PUBLIC_BASE_URL, `/invite/accept/${invite.id}`);
+            
+            // Send invite email in production, log link in development
+            if (PUBLIC_ENV === 'production') {
+                await sendEmail({
+                    to: email,
+                    subject: `Invitation to join ${company.name}`,
+                    html: `
+                        <h1>You've been invited to join ${company.name}</h1>
+                        <p>${user.name} has invited you to join their team.</p>
+                        <p>Click the link below to accept the invitation:</p>
+                        <a href="${inviteLink}">Accept Invitation</a>
+                    `
+                });
+            } else {
+                console.log(`[DEV] Invite link for ${email}: ${inviteLink}`);
+            }
 
             return { success: true };
         } catch (error) {

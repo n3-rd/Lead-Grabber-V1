@@ -6,7 +6,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     try {
         // Get invite data first to show info even if not logged in
         const invite = await pb.collection('invites').getOne(params.id, {
-            expand: 'company_id,invited_by'
+            expand: 'company,invited_by'
         });
 
         // Validate invite status and expiry regardless of login state
@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
             throw error(400, 'This invitation has expired');
         }
 
-        if (!invite.expand?.company_id || !invite.expand?.invited_by) {
+        if (!invite.expand?.company || !invite.expand?.invited_by) {
             throw error(400, 'Invalid invitation data');
         }
 
@@ -30,9 +30,9 @@ export const load: PageServerLoad = async ({ params, locals }) => {
                     email: invite.email,
                     role: invite.role,
                     company: {
-                        id: invite.expand.company_id.id,
-                        name: invite.expand.company_id.name,
-                        logo: invite.expand.company_id.logo
+                        id: invite.expand.company.id,
+                        name: invite.expand.company.name,
+                        logo: invite.expand.company.logo
                     },
                     invitedBy: {
                         name: invite.expand.invited_by.name
@@ -50,9 +50,9 @@ export const load: PageServerLoad = async ({ params, locals }) => {
                     email: invite.email,
                     role: invite.role,
                     company: {
-                        id: invite.expand.company_id.id,
-                        name: invite.expand.company_id.name,
-                        logo: invite.expand.company_id.logo
+                        id: invite.expand.company.id,
+                        name: invite.expand.company.name,
+                        logo: invite.expand.company.logo
                     },
                     invitedBy: {
                         name: invite.expand.invited_by.name
@@ -141,7 +141,7 @@ export const actions = {
             // Create company member
             await pb.collection('company_members').create({
                 user: user.id,
-                company: invite.company_id,
+                company: invite.company,
                 role: invite.role,
                 permissions: invite.permissions,
                 status: 'active',
@@ -150,7 +150,7 @@ export const actions = {
 
             // Update the user's company
             await pb.collection('users').update(user.id, {
-                company: invite.company_id
+                company: invite.company
             });
 
             // Update invite status

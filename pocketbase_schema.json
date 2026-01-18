@@ -311,6 +311,28 @@
                     "admin",
                     "agent"
                 ]
+            },
+            {
+                "hidden": false,
+                "id": "date2990389176",
+                "max": "",
+                "min": "",
+                "name": "created",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
+            },
+            {
+                "hidden": false,
+                "id": "date3332085495",
+                "max": "",
+                "min": "",
+                "name": "updated",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
             }
         ],
         "indexes": [
@@ -962,6 +984,19 @@
                 "type": "number"
             },
             {
+                "cascadeDelete": false,
+                "collectionId": "_pb_users_auth_",
+                "hidden": false,
+                "id": "rel_assigned_members",
+                "maxSelect": 10,
+                "minSelect": 0,
+                "name": "assigned_members",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "relation"
+            },
+            {
                 "hidden": false,
                 "id": "json_metadata",
                 "maxSize": 2000000,
@@ -1564,6 +1599,28 @@
                 "required": false,
                 "system": false,
                 "type": "json"
+            },
+            {
+                "hidden": false,
+                "id": "date2990389176",
+                "max": "",
+                "min": "",
+                "name": "created",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
+            },
+            {
+                "hidden": false,
+                "id": "date78153237",
+                "max": "",
+                "min": "",
+                "name": "udated",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "date"
             }
         ],
         "indexes": [],

@@ -6,6 +6,7 @@
 		open?: boolean;
 		endpointName?: string;
 		agents?: string[];
+		preSelectedAgents?: string[];
 		onAssign?: (selectedAgents: string[]) => void;
 	}
 
@@ -13,6 +14,7 @@
 		open = $bindable(false),
 		endpointName = "Kurt Ravioli Builder",
 		agents = ["Marcus George", "Betty Mcgregor", "Gregory Malonzo", "Jared YU"],
+		preSelectedAgents = [],
 		onAssign
 	}: Props = $props();
 
@@ -39,6 +41,15 @@
 		open = false;
 		selectedAgents = new Set();
 	}
+
+	// Initialize selected agents when dialog opens or preSelectedAgents changes
+	$effect(() => {
+		if (open && preSelectedAgents.length > 0) {
+			selectedAgents = new Set(preSelectedAgents);
+		} else if (!open) {
+			selectedAgents = new Set();
+		}
+	});
 </script>
 
 <Dialog.Root bind:open>

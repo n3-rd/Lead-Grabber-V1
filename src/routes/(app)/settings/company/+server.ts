@@ -2,7 +2,13 @@ import { pb } from '$lib/pocketbase';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { sendEmail } from '$lib/email'; // Create this utility
-import { PUBLIC_BASE_URL } from '$env/static/public';
+import { PUBLIC_BASE_URL, PUBLIC_ENV } from '$env/static/public';
+
+function normalizeUrl(baseUrl: string, path: string): string {
+  const normalizedBase = baseUrl.replace(/\/+$/, '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${normalizedBase}${normalizedPath}`;
+}
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   const user = locals.user;
@@ -58,7 +64,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     // Create invite record
     const invite = await pb.collection('invites').create({
       email,
-      company_id: user.company,
+      company: user.company,
       role,
       status: 'pending',
       invited_by: user.id,
@@ -66,17 +72,23 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
     });
 
-    // Send invite email
-    await sendEmail({
-      to: email,
-      subject: `Invitation to join ${company.name}`,
-      html: `
-        <h1>You've been invited to join ${company.name}</h1>
-        <p>${user.name} has invited you to join their team.</p>
-        <p>Click the link below to accept the invitation:</p>
-        <a href="${PUBLIC_BASE_URL}/invite/accept/${invite.id}">Accept Invitation</a>
-      `
-    });
+    const inviteLink = normalizeUrl(PUBLIC_BASE_URL, `/invite/accept/${invite.id}`);
+    
+    // Send invite email in production, log link in development
+    if (PUBLIC_ENV === 'production') {
+      await sendEmail({
+        to: email,
+        subject: `Invitation to join ${company.name}`,
+        html: `
+          <h1>You've been invited to join ${company.name}</h1>
+          <p>${user.name} has invited you to join their team.</p>
+          <p>Click the link below to accept the invitation:</p>
+          <a href="${inviteLink}">Accept Invitation</a>
+        `
+      });
+    } else {
+      console.log(`[DEV] Invite link for ${email}: ${inviteLink}`);
+    }
 
     return json({ success: true });
 

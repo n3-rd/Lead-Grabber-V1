@@ -14,6 +14,15 @@ export const load: PageServerLoad = async ({ locals }) => {
         throw redirect(303, '/dashboard');
     }
 
+    // Check if user is already a member of any company (invited users)
+    const existingMembership = await pb.collection('company_members').getFirstListItem(
+        `user = "${user.id}" && status = "active"`
+    ).catch(() => null);
+
+    if (existingMembership) {
+        throw redirect(303, '/dashboard');
+    }
+
     return {};
 };
 

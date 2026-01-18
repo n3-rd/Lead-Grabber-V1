@@ -15,6 +15,7 @@
 	import { pb, getFileUrl } from '$lib/pocketbase';
 	import RoleBadge from '$lib/components/RoleBadge.svelte';
 	import { formatDate } from '$lib/utils/date';
+	import { goto } from '$app/navigation';
 
 	interface CompanyMember {
 		id: string;
@@ -58,6 +59,8 @@
 		data: {
 			company: Company | null;
 			members: Member[];
+			userRole?: string;
+			isAdminOrOwner?: boolean;
 		};
 	}>();
 	let company = data.company;
@@ -219,13 +222,19 @@
 			return;
 		}
 
+		const currentUser = pb.authStore.record;
+		if (!currentUser) {
+			toast.error('You must be logged in to invite members');
+			return;
+		}
+
 		try {
 			await pb.collection('invites').create({
 				email,
 				company: company.id,
 				role,
 				status: 'pending',
-				invited_by: user.id,
+				invited_by: currentUser.id,
 				expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 			});
 			toast.success('Invitation sent successfully');
@@ -275,12 +284,14 @@
 		</div>
 
 		<div class="w-full flex-1 overflow-hidden rounded-xl bg-white p-6">
-			<Tabs.Root value="customization" class="flex h-full flex-col">
+			<Tabs.Root value={data.isAdminOrOwner ? "customization" : "members"} class="flex h-full flex-col">
 				<div class="mb-6 flex items-center gap-4">
 					<h2 class="text-xl font-semibold text-primary">Company Profile</h2>
 					<div class="flex gap-4 text-gray-500">
 						<Tabs.List>
-							<Tabs.Trigger value="customization">Customization</Tabs.Trigger>
+							{#if data.isAdminOrOwner}
+								<Tabs.Trigger value="customization">Customization</Tabs.Trigger>
+							{/if}
 							<Tabs.Trigger value="members">Team Members</Tabs.Trigger>
 						</Tabs.List>
 					</div>
@@ -288,7 +299,8 @@
 
 				<p class="mb-8 text-gray-500">Manage your company profile and team members</p>
 
-				<Tabs.Content value="customization" class="flex-1 overflow-y-auto">
+				{#if data.isAdminOrOwner}
+					<Tabs.Content value="customization" class="flex-1 overflow-y-auto">
 					<form
 						method="POST"
 						action="?/updateCompany"
@@ -411,15 +423,18 @@
 							</Button>
 						</div>
 					</form>
-				</Tabs.Content>
+					</Tabs.Content>
+				{/if}
 
 				<Tabs.Content value="members" class="flex-1 overflow-y-auto">
 					<div class="space-y-6">
 						<div class="flex items-center justify-end">
-							<Button variant="outline" class="gap-2" onclick={() => (showInviteDialog = true)}>
-								<Users class="h-4 w-4" />
-								Invite Member
-							</Button>
+							{#if data.isAdminOrOwner}
+								<Button variant="outline" class="gap-2" onclick={() => (showInviteDialog = true)}>
+									<Users class="h-4 w-4" />
+									Invite Member
+								</Button>
+							{/if}
 						</div>
 
 						<div class="space-y-4">
@@ -477,9 +492,15 @@
 																	{/if}
 																</div>
 																<div class="ml-4">
-																	<div class="text-sm font-medium text-gray-900">
+																	<button
+																		class="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline text-left"
+																		onclick={(e) => {
+																			e.stopPropagation();
+																			goto(`/users/${member.user?.id}`);
+																		}}
+																	>
 																		{member.user?.name ?? 'Unknown'}
-																	</div>
+																	</button>
 																	<div class="text-sm text-gray-500">
 																		{member.user?.email ?? 'No email'}
 																	</div>
@@ -493,12 +514,14 @@
 															{formatDate(member.joined_at)}
 														</td>
 														<td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-															<button
-																class="text-indigo-600 hover:text-indigo-900"
-																onclick={() => handleEditMember(member)}
-															>
-																Edit
-															</button>
+															{#if data.isAdminOrOwner}
+																<button
+																	class="text-indigo-600 hover:text-indigo-900"
+																	onclick={() => handleEditMember(member)}
+																>
+																	Edit
+																</button>
+															{/if}
 														</td>
 													</tr>
 												{/each}

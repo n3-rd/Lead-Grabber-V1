@@ -354,16 +354,16 @@
 				return;
 			}
 
-			const company = await pb.collection('companies').getOne(user.company, {
-				expand: 'team_members'
+			const members = await pb.collection('company_members').getList(1, 50, {
+				filter: `company = "${user.company}" && status = "active"`,
+				expand: 'user',
+				sort: '-created'
 			});
 
-			if (company.expand?.team_members) {
-				companyMembers = company.expand.team_members.map((member: any) => ({
-					id: member.id,
-					name: member.name
-				}));
-			}
+			companyMembers = members.items.map((member: any) => ({
+				id: member.user, // Use user ID, not member record ID
+				name: member.expand?.user?.name || member.expand?.user?.email || 'Unknown'
+			}));
 		} catch (err) {
 			console.error('Error loading company members:', err);
 		}
@@ -541,8 +541,16 @@
 								<p class="line-clamp-2 font-light">{(msg as any).message}</p>
 								{#if msg.assigned_to}
 									<div class="mt-1 text-sm text-gray-500">
-										Assigned to: {companyMembers.find((m) => m.id === msg.assigned_to)?.name ||
-											'Unknown'}
+										Assigned to: 
+										<button
+											class="text-blue-600 hover:text-blue-800 hover:underline"
+											onclick={(e) => {
+												e.stopPropagation();
+												goto(`/users/${msg.assigned_to}`);
+											}}
+										>
+											{companyMembers.find((m) => m.id === msg.assigned_to)?.name || 'Unknown'}
+										</button>
 									</div>
 								{/if}
 							</div>

@@ -14,6 +14,8 @@
 	import CommunicationSummaryDialog from '$lib/components/communication-summary-dialog.svelte';
 	import NotificationsDialog from '$lib/components/notifications/notifications-dialog.svelte';
 	import AssignAgentDialog from '$lib/components/assign-agent-dialog.svelte';
+	import { toast } from 'svelte-sonner';
+	import { invalidateAll } from '$app/navigation';
 
 	let selectedFilter = $state('All');
 	const filters = ['All', 'Email', 'SMS', 'Voice', 'Web', 'Facebook', 'Chatbot', 'Leadform'];
@@ -23,8 +25,20 @@
 	let notificationsDialogOpen = $state(false);
 	let assignDialogOpen = $state(false);
 	let selectedEndpoint = $state<string | null>(null);
+	let selectedCommId = $state<string | null>(null);
+	let preSelectedAgents = $state<string[]>([]);
 
-	let { data } = $props();
+	let { data } = $props<{
+		data: {
+			logs: any[];
+			members?: Array<{
+				id: string;
+				name: string;
+				email: string;
+				role: string;
+			}>;
+		};
+	}>();
 
 	// Transform API data to UI format
 	let communications = $derived(
@@ -36,6 +50,12 @@
 				year: 'numeric'
 			});
 			const time = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+			// Get assigned member names from expanded assigned_members
+			const assignedMembers = log.expand?.assigned_members || [];
+			const assignedMemberNames = assignedMembers.map((member: any) => 
+				member?.name || member?.email || ''
+			).filter(Boolean);
 
 			return {
 				date,
@@ -53,6 +73,7 @@
 				summary: log.summary || log.content || 'No content',
 				commId: log.id,
 				status: log.direction === 'inbound' ? 'in' : 'out',
+				assignedMemberNames,
 				raw: log
 			};
 		}) || []
@@ -218,6 +239,14 @@
 								class="text-left font-sans text-xs font-normal leading-[1.29] text-[#0023D7] underline hover:no-underline"
 								onclick={() => {
 									selectedEndpoint = comm.endpoint;
+									selectedCommId = comm.commId;
+									// Get all assigned members for logs with this endpoint
+									const logsWithEndpoint = communications.filter(c => c.endpoint === comm.endpoint);
+									const allAssignedNames = new Set<string>();
+									logsWithEndpoint.forEach(log => {
+										(log.assignedMemberNames || []).forEach((name: string) => allAssignedNames.add(name));
+									});
+									preSelectedAgents = Array.from(allAssignedNames);
 									assignDialogOpen = true;
 								}}
 							>
@@ -317,8 +346,42 @@
 <AssignAgentDialog
 	bind:open={assignDialogOpen}
 	endpointName={selectedEndpoint || ''}
-	onAssign={(selectedAgents) => {
-		console.log('Assigned agents:', selectedAgents, 'to endpoint:', selectedEndpoint);
-		// Handle assignment logic here
+	agents={data.members?.map(m => m.name) || []}
+	preSelectedAgents={preSelectedAgents}
+	onAssign={async (selectedAgentNames) => {
+		if (!selectedEndpoint || !data.members) return;
+
+		// Map agent names back to member IDs
+		const selectedMemberIds = data.members
+			.filter(m => selectedAgentNames.includes(m.name))
+			.map(m => m.id);
+
+		if (selectedMemberIds.length === 0) {
+			toast.error('No members selected');
+			return;
+		}
+
+		try {
+			const response = await fetch('/api/communication-logs/assign', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					endpoint: selectedEndpoint,
+					memberIds: selectedMemberIds
+				})
+			});
+
+			const result = await response.json();
+
+			if (result.success) {
+				toast.success(result.message || 'Members assigned successfully');
+				await invalidateAll();
+			} else {
+				toast.error(result.error || 'Failed to assign members');
+			}
+		} catch (error) {
+			console.error('Error assigning members:', error);
+			toast.error('Failed to assign members');
+		}
 	}}
 />

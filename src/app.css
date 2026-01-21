@@ -70,7 +70,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-root-background text-foreground overflow-hidden;
+    @apply bg-root-background text-foreground overflow-x-hidden;
   }
   input, select {
     @apply bg-white;

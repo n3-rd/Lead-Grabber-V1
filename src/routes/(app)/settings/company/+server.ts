@@ -1,7 +1,7 @@
 import { pb } from '$lib/pocketbase';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { sendEmail } from '$lib/email'; // Create this utility
+import { sendInviteEmail } from '$lib/server/brevo';
 import { PUBLIC_BASE_URL, PUBLIC_ENV } from '$env/static/public';
 
 function normalizeUrl(baseUrl: string, path: string): string {
@@ -72,21 +72,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
     });
 
-    const inviteLink = normalizeUrl(PUBLIC_BASE_URL, `/invite/accept/${invite.id}`);
-    
-    // Send invite email in production, log link in development
+    // Send invite email using Brevo
     if (PUBLIC_ENV === 'production') {
-      await sendEmail({
-        to: email,
-        subject: `Invitation to join ${company.name}`,
-        html: `
-          <h1>You've been invited to join ${company.name}</h1>
-          <p>${user.name} has invited you to join their team.</p>
-          <p>Click the link below to accept the invitation:</p>
-          <a href="${inviteLink}">Accept Invitation</a>
-        `
+      await sendInviteEmail({
+        email,
+        inviteId: invite.id,
+        companyName: company.name,
+        invitedByName: user.name || user.email
       });
     } else {
+      const inviteLink = normalizeUrl(PUBLIC_BASE_URL, `/invite/accept/${invite.id}`);
       console.log(`[DEV] Invite link for ${email}: ${inviteLink}`);
     }
 

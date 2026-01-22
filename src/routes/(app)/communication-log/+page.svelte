@@ -275,11 +275,12 @@
 						<!-- SUMMARY -->
 						<div class="w-[120px]">
 							<button
-								class="font-sans text-sm font-normal leading-[1.29] text-[#0023D7] underline hover:no-underline"
+								class="font-sans text-sm font-normal leading-[1.29] text-[#0023D7] underline hover:no-underline truncate block w-full text-left"
 								onclick={() => {
 									selectedComm = comm;
 									summaryDialogOpen = true;
 								}}
+								title={comm.summary}
 							>
 								{comm.summary}
 							</button>
@@ -328,16 +329,10 @@
 		category={selectedComm.purpose.split(' | ')[0] || 'Sales'}
 		subCategory={selectedComm.purpose.split(' | ')[1] || 'Inquiry'}
 		email={selectedComm.source}
-		subject="Book Appointment time"
-		summary="Sarah wants an appointment to test drive the Ford 150 2026. between 2:00 and 3:30 on Friday Dec 12th."
-		tasks={[
-			"Confirm Mark's Doe schedule availability",
-			'Send email appointment accept to Sarah',
-			"Update Mark Doe's appointment book",
-			"Update Sarah's profile",
-			'Send reminder to Sarah',
-			'Following appointment send CRM update request.'
-		]}
+		subject={selectedComm.raw?.metadata?.subject || selectedComm.raw?.subject || 'No subject'}
+		body={selectedComm.raw?.content || ''}
+		summary={selectedComm.summary}
+		tasks={selectedComm.raw?.metadata?.tasks || []}
 	/>
 {/if}
 

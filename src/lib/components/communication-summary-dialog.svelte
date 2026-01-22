@@ -90,29 +90,29 @@
 				</span>
 
 				<!-- Inner White Box -->
-				<div class="bg-[#FFFDFD] rounded p-4 flex flex-col gap-3">
+				<div class="bg-[#FFFDFD] rounded p-4 flex flex-col gap-3 min-h-0 overflow-y-auto">
 					<!-- Email, Subject, Body Labels and Values -->
 					<div class="flex flex-col gap-2">
 						<div class="flex items-start gap-4">
 							<span
-								class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] whitespace-nowrap"
+								class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] whitespace-nowrap flex-shrink-0"
 							>
 								Email Address:
 							</span>
 							<span
-								class="font-sans font-medium text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)]"
+								class="font-sans font-medium text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] break-words min-w-0"
 							>
 								{email}
 							</span>
 						</div>
 						<div class="flex items-start gap-4">
 							<span
-								class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] whitespace-nowrap"
+								class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] whitespace-nowrap flex-shrink-0"
 							>
 								Subject Line:
 							</span>
 							<span
-								class="font-sans font-medium text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)]"
+								class="font-sans font-medium text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] break-words min-w-0"
 							>
 								{subject}
 							</span>
@@ -120,12 +120,12 @@
 						{#if body}
 							<div class="flex items-start gap-4">
 								<span
-									class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] whitespace-nowrap"
+									class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] whitespace-nowrap flex-shrink-0"
 								>
 									Body:
 								</span>
 								<span
-									class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)]"
+									class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] break-words min-w-0"
 								>
 									{body}
 								</span>
@@ -141,7 +141,7 @@
 							Summary
 						</span>
 						<p
-							class="font-sans font-normal text-xs leading-[141%] text-[rgba(86,86,86,0.78)]"
+							class="font-sans font-normal text-xs leading-[141%] text-[rgba(86,86,86,0.78)] break-words whitespace-pre-wrap"
 						>
 							{summary}
 						</p>

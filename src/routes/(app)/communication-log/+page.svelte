@@ -52,10 +52,13 @@
 			const time = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
 			// Get assigned member names from expanded assigned_members
-			const assignedMembers = log.expand?.assigned_members || [];
-			const assignedMemberNames = assignedMembers.map((member: any) => 
-				member?.name || member?.email || ''
-			).filter(Boolean);
+			// assigned_members is a relation to users, so when expanded we get user objects
+			const assignedMembers = Array.isArray(log.expand?.assigned_members) 
+				? log.expand.assigned_members 
+				: (log.expand?.assigned_members ? [log.expand.assigned_members] : []);
+			const assignedMemberNames = assignedMembers
+				.map((user: any) => user?.name || user?.email || '')
+				.filter(Boolean);
 
 			return {
 				date,
@@ -240,13 +243,8 @@
 								onclick={() => {
 									selectedEndpoint = comm.endpoint;
 									selectedCommId = comm.commId;
-									// Get all assigned members for logs with this endpoint
-									const logsWithEndpoint = communications.filter(c => c.endpoint === comm.endpoint);
-									const allAssignedNames = new Set<string>();
-									logsWithEndpoint.forEach(log => {
-										(log.assignedMemberNames || []).forEach((name: string) => allAssignedNames.add(name));
-									});
-									preSelectedAgents = Array.from(allAssignedNames);
+									// Get assigned members only for this specific log
+									preSelectedAgents = comm.assignedMemberNames || [];
 									assignDialogOpen = true;
 								}}
 							>
@@ -344,7 +342,7 @@
 	agents={data.members?.map(m => m.name) || []}
 	preSelectedAgents={preSelectedAgents}
 	onAssign={async (selectedAgentNames) => {
-		if (!selectedEndpoint || !data.members) return;
+		if (!data.members) return;
 
 		// Map agent names back to member IDs
 		const selectedMemberIds = data.members
@@ -357,13 +355,23 @@
 		}
 
 		try {
+			// If a specific log ID is selected, assign only that log
+			// Otherwise, fall back to endpoint-based assignment
+			const requestBody = selectedCommId
+				? { logIds: [selectedCommId], memberIds: selectedMemberIds }
+				: selectedEndpoint
+					? { endpoint: selectedEndpoint, memberIds: selectedMemberIds }
+					: null;
+
+			if (!requestBody) {
+				toast.error('No log or endpoint selected');
+				return;
+			}
+
 			const response = await fetch('/api/communication-logs/assign', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					endpoint: selectedEndpoint,
-					memberIds: selectedMemberIds
-				})
+				body: JSON.stringify(requestBody)
 			});
 
 			const result = await response.json();

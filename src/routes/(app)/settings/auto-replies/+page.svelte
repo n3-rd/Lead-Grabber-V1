@@ -9,20 +9,59 @@
     
     // Initialize state from saved data or defaults
     let textAutoReply = $state(data?.autoReply?.textAutoReply ?? false);
-    let businessHoursMessage = $state(data?.autoReply?.businessHoursMessage ?? 'Thanks for contacting Canadian Trade-Ex. Our team will respond shortly.');
-    let afterHoursMessage = $state(data?.autoReply?.afterHoursMessage ?? 'Thanks for contacting us. Canadian Trade-Ex is closed at the moment, but we\'ll get back to you during open hours starting at 8:00 AM Monday.');
-    let leadformBusinessHoursMessage = $state(data?.autoReply?.leadformBusinessHoursMessage ?? 'Thanks for contacting Canadian Trade-Ex. Our team will respond shortly.');
-    let leadformAfterHoursMessage = $state(data?.autoReply?.leadformAfterHoursMessage ?? 'Thanks for contacting us. Canadian Trade-Ex is closed at the moment, but we\'ll get back to you during open hours starting at 8:00 AM Monday.');
+    let businessHoursMessage = $state(data?.autoReply?.businessHoursMessage ?? 'Hello, thank you for messaging us. Our team will respond shortly.');
+    let afterHoursMessage = $state(data?.autoReply?.afterHoursMessage ?? 'Hello, we are not available at the moment, but we will get in touch with you by {date}.');
+    let leadformBusinessHoursMessage = $state(data?.autoReply?.leadformBusinessHoursMessage ?? 'Hello, thank you for submitting the form. Our team will respond shortly.');
+    let leadformAfterHoursMessage = $state(data?.autoReply?.leadformAfterHoursMessage ?? 'Hello, we are not available at the moment, but we will get in touch with you by {date}.');
     
-    let businessHours = $state({
-        sunday: { isOpen: false, hours: null, showTimePicker: false, startHour: 8, startPeriod: 'AM', endHour: 6, endPeriod: 'PM' },
-        monday: { isOpen: true, hours: '8:00 AM - 6:00 PM', showTimePicker: false, startHour: 8, startPeriod: 'AM', endHour: 6, endPeriod: 'PM' },
-        tuesday: { isOpen: true, hours: '8:00 AM - 6:00 PM', showTimePicker: false, startHour: 8, startPeriod: 'AM', endHour: 6, endPeriod: 'PM' },
-        wednesday: { isOpen: true, hours: '8:00 AM - 6:00 PM', showTimePicker: false, startHour: 8, startPeriod: 'AM', endHour: 6, endPeriod: 'PM' },
-        thursday: { isOpen: true, hours: '8:00 AM - 6:00 PM', showTimePicker: false, startHour: 8, startPeriod: 'AM', endHour: 6, endPeriod: 'PM' },
-        friday: { isOpen: true, hours: '8:00 AM - 6:00 PM', showTimePicker: false, startHour: 8, startPeriod: 'AM', endHour: 6, endPeriod: 'PM' },
-        saturday: { isOpen: true, hours: null, showTimePicker: false, startHour: 8, startPeriod: 'AM', endHour: 6, endPeriod: 'PM' }
-    });
+    // Helper function to parse hours string and extract time components
+    function parseHours(hours: string | null) {
+        if (!hours) {
+            return { startHour: 8, startMinute: 0, startPeriod: 'AM', endHour: 6, endMinute: 0, endPeriod: 'PM' };
+        }
+        const match = hours.match(/(\d+):(\d+)\s+(AM|PM)\s+-\s+(\d+):(\d+)\s+(AM|PM)/);
+        if (match) {
+            return {
+                startHour: parseInt(match[1]),
+                startMinute: parseInt(match[2]),
+                startPeriod: match[3],
+                endHour: parseInt(match[4]),
+                endMinute: parseInt(match[5]),
+                endPeriod: match[6]
+            };
+        }
+        return { startHour: 8, startMinute: 0, startPeriod: 'AM', endHour: 6, endMinute: 0, endPeriod: 'PM' };
+    }
+
+    // Initialize business hours from saved data
+    const savedBusinessHours = data?.autoReply?.businessHours || {};
+    const defaultBusinessHours = {
+        sunday: { isOpen: false, hours: null },
+        monday: { isOpen: true, hours: '8:00 AM - 6:00 PM' },
+        tuesday: { isOpen: true, hours: '8:00 AM - 6:00 PM' },
+        wednesday: { isOpen: true, hours: '8:00 AM - 6:00 PM' },
+        thursday: { isOpen: true, hours: '8:00 AM - 6:00 PM' },
+        friday: { isOpen: true, hours: '8:00 AM - 6:00 PM' },
+        saturday: { isOpen: false, hours: null }
+    };
+
+    let businessHours = $state(
+        Object.entries({ ...defaultBusinessHours, ...savedBusinessHours }).reduce((acc, [day, settings]: [string, any]) => {
+            const parsed = parseHours(settings.hours);
+            acc[day] = {
+                isOpen: settings.isOpen ?? false,
+                hours: settings.hours ?? null,
+                showTimePicker: false,
+                startHour: parsed.startHour,
+                startMinute: parsed.startMinute,
+                startPeriod: parsed.startPeriod,
+                endHour: parsed.endHour,
+                endMinute: parsed.endMinute,
+                endPeriod: parsed.endPeriod
+            };
+            return acc;
+        }, {} as Record<string, any>)
+    );
 </script>
 
 <div class="h-[90vh] flex flex-col gap-3 p-4 bg-gray-100">
@@ -76,53 +115,75 @@
                                     </Button>
                                     
                                     {#if settings.showTimePicker}
-                                        <div class="absolute top-full mt-2 bg-white border rounded-lg shadow-lg p-4 z-10">
+                                        <div class="absolute top-full mt-2 bg-white border rounded-lg shadow-lg p-4 z-10 min-w-[300px]">
                                             <div class="flex gap-4">
                                                 <!-- Start Time -->
-                                                <div>
-                                                    <label class="text-sm font-medium mb-2">Start Time</label>
-                                                    <select 
-                                                        class="border rounded p-1 text-sm"
-                                                        bind:value={settings.startHour}
-                                                    >
-                                                        {#each Array.from({ length: 12 }, (_, i) => i + 1) as hour}
-                                                            <option value={hour}>{hour}</option>
-                                                        {/each}
-                                                    </select>
-                                                    <select 
-                                                        class="border rounded p-1 text-sm ml-1"
-                                                        bind:value={settings.startPeriod}
-                                                    >
-                                                        <option value="AM">AM</option>
-                                                        <option value="PM">PM</option>
-                                                    </select>
+                                                <div class="flex-1">
+                                                    <div class="text-sm font-medium mb-2 block">Start Time</div>
+                                                    <div class="flex gap-1 items-center">
+                                                        <select 
+                                                            class="border rounded p-1 text-sm"
+                                                            bind:value={settings.startHour}
+                                                        >
+                                                            {#each Array.from({ length: 12 }, (_, i) => i + 1) as hour}
+                                                                <option value={hour}>{hour}</option>
+                                                            {/each}
+                                                        </select>
+                                                        <span>:</span>
+                                                        <select 
+                                                            class="border rounded p-1 text-sm w-16"
+                                                            bind:value={settings.startMinute}
+                                                        >
+                                                            {#each Array.from({ length: 4 }, (_, i) => i * 15) as minute}
+                                                                <option value={minute}>{String(minute).padStart(2, '0')}</option>
+                                                            {/each}
+                                                        </select>
+                                                        <select 
+                                                            class="border rounded p-1 text-sm ml-1"
+                                                            bind:value={settings.startPeriod}
+                                                        >
+                                                            <option value="AM">AM</option>
+                                                            <option value="PM">PM</option>
+                                                        </select>
+                                                    </div>
                                                 </div>
                                                 
                                                 <!-- End Time -->
-                                                <div>
-                                                    <label class="text-sm font-medium mb-2">End Time</label>
-                                                    <select 
-                                                        class="border rounded p-1 text-sm"
-                                                        bind:value={settings.endHour}
-                                                    >
-                                                        {#each Array.from({ length: 12 }, (_, i) => i + 1) as hour}
-                                                            <option value={hour}>{hour}</option>
-                                                        {/each}
-                                                    </select>
-                                                    <select 
-                                                        class="border rounded p-1 text-sm ml-1"
-                                                        bind:value={settings.endPeriod}
-                                                    >
-                                                        <option value="AM">AM</option>
-                                                        <option value="PM">PM</option>
-                                                    </select>
+                                                <div class="flex-1">
+                                                    <div class="text-sm font-medium mb-2 block">End Time</div>
+                                                    <div class="flex gap-1 items-center">
+                                                        <select 
+                                                            class="border rounded p-1 text-sm"
+                                                            bind:value={settings.endHour}
+                                                        >
+                                                            {#each Array.from({ length: 12 }, (_, i) => i + 1) as hour}
+                                                                <option value={hour}>{hour}</option>
+                                                            {/each}
+                                                        </select>
+                                                        <span>:</span>
+                                                        <select 
+                                                            class="border rounded p-1 text-sm w-16"
+                                                            bind:value={settings.endMinute}
+                                                        >
+                                                            {#each Array.from({ length: 4 }, (_, i) => i * 15) as minute}
+                                                                <option value={minute}>{String(minute).padStart(2, '0')}</option>
+                                                            {/each}
+                                                        </select>
+                                                        <select 
+                                                            class="border rounded p-1 text-sm ml-1"
+                                                            bind:value={settings.endPeriod}
+                                                        >
+                                                            <option value="AM">AM</option>
+                                                            <option value="PM">PM</option>
+                                                        </select>
+                                                    </div>
                                                 </div>
                                             </div>
                                             
                                             <Button 
                                                 class="mt-4 w-full"
                                                 onclick={() => {
-                                                    settings.hours = `${settings.startHour}:00 ${settings.startPeriod} - ${settings.endHour}:00 ${settings.endPeriod}`;
+                                                    settings.hours = `${settings.startHour}:${String(settings.startMinute).padStart(2, '0')} ${settings.startPeriod} - ${settings.endHour}:${String(settings.endMinute).padStart(2, '0')} ${settings.endPeriod}`;
                                                     settings.showTimePicker = false;
                                                 }}
                                             >
@@ -159,7 +220,13 @@
                         afterHoursMessage,
                         leadformBusinessHoursMessage,
                         leadformAfterHoursMessage,
-                        businessHours
+                        businessHours: Object.entries(businessHours).reduce((acc, [day, settings]: [string, any]) => {
+                            acc[day] = {
+                                isOpen: settings.isOpen,
+                                hours: settings.hours
+                            };
+                            return acc;
+                        }, {} as Record<string, { isOpen: boolean; hours: string | null }>)
                     })} 
                 />
                 
@@ -197,7 +264,7 @@
                         rows="2"
                         bind:value={businessHoursMessage}
                         disabled={!textAutoReply}
-                    />
+                    ></textarea>
                 </div>
 
                 <div class="border rounded-lg p-4">
@@ -217,7 +284,8 @@
                         rows="3"
                         bind:value={afterHoursMessage}
                         disabled={!textAutoReply}
-                    />
+                    ></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Tip: Use {"{date}"} to automatically insert the next business day (e.g., "we'll get in touch by {"{date}"}")</p>
                 </div>
             </div>
 
@@ -239,9 +307,9 @@
                     <textarea
                         class="w-full p-2 text-gray-700 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50 disabled:text-gray-500"
                         rows="2"
-                        bind:value={businessHoursMessage}
+                        bind:value={leadformBusinessHoursMessage}
                         disabled={!textAutoReply}
-                    />
+                    ></textarea>
                 </div>
 
                 <div class="border rounded-lg p-4">
@@ -259,9 +327,10 @@
                     <textarea
                         class="w-full p-2 text-gray-700 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50 disabled:text-gray-500"
                         rows="3"
-                        bind:value={afterHoursMessage}
+                        bind:value={leadformAfterHoursMessage}
                         disabled={!textAutoReply}
-                    />
+                    ></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Tip: Use {"{date}"} to automatically insert the next business day (e.g., "we'll get in touch by {"{date}"}")</p>
                 </div>
             </div>
         </div>

@@ -1,7 +1,7 @@
 import { pb } from '$lib/pocketbase';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { TWILIO_ENABLED } from '$env/static/private';
+import { PUBLIC_ENV } from '$env/static/public';
 import { createOrUpdateContact } from '$lib/utils/contacts';
 import { normalizePhoneNumber } from '$lib/utils/phone';
 import { logCommunication, type CommunicationLogEntry } from '$lib/utils/communication-log';
@@ -75,10 +75,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
               },
               autoReply: {
                 textAutoReply: false,
-                businessHoursMessage: 'Thanks for contacting us. Our team will respond shortly.',
-                afterHoursMessage: 'Thanks for contacting us. We are currently closed but will respond during business hours.',
-                leadformBusinessHoursMessage: 'Thanks for submitting the form. Our team will respond shortly.',
-                leadformAfterHoursMessage: 'Thanks for submitting the form. We are currently closed but will respond during business hours.',
+                businessHoursMessage: 'Hello, thank you for messaging us. Our team will respond shortly.',
+                afterHoursMessage: 'Hello, we are not available at the moment, but we will get in touch with you by {date}.',
+                leadformBusinessHoursMessage: 'Hello, thank you for submitting the form. Our team will respond shortly.',
+                leadformAfterHoursMessage: 'Hello, we are not available at the moment, but we will get in touch with you by {date}.',
                 businessHours: {
                   sunday: { isOpen: false, hours: null },
                   monday: { isOpen: true, hours: '8:00 AM - 6:00 PM' },
@@ -213,10 +213,15 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 
     await logCommunication(logEntry);
 
-    // Send auto-reply via Twilio if enabled and phone number exists
-    if (TWILIO_ENABLED === 'true' && messageData.customer_phone) {
+    // Check and send auto-reply if phone number exists
+    if (messageData.customer_phone) {
       try {
-        console.log('Attempting to send Twilio auto-reply...');
+        const TWILIO_ENABLED = process.env.TWILIO_ENABLED;
+        console.log('Checking auto-reply...');
+        console.log('PUBLIC_ENV:', PUBLIC_ENV);
+        console.log('TWILIO_ENABLED:', TWILIO_ENABLED);
+        console.log('Customer phone:', messageData.customer_phone);
+        
         const company = await pb.collection('companies').getOne(messageData.company_id);
         console.log('Company settings:', company.settings);
 
@@ -224,7 +229,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
           ? JSON.parse(company.settings)?.autoReply || getDefaultAutoReplySettings()
           : company.settings?.autoReply || getDefaultAutoReplySettings();
 
-        console.log('Auto reply settings:', autoReplySettings);
+        console.log('Auto reply settings:', JSON.stringify(autoReplySettings, null, 2));
 
         if (autoReplySettings) {
           const message = getAutoReplyMessage(
@@ -233,38 +238,100 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
             new Date().getHours()
           );
 
-          console.log('Auto reply message:', message);
+          console.log('Auto reply message generated:', message);
 
           if (message) {
-            console.log('Sending Twilio message to:', messageData.customer_phone);
-            const twilioResponse = await fetch('/api/twilio', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                message,
-                phoneNumber: messageData.customer_phone,
-                threadId: messageData.thread_id
-              })
-            });
-
-            const twilioResult = await twilioResponse.json();
-            console.log('Twilio API response:', twilioResult);
-
-            if (!twilioResult.success) {
-              console.error('Twilio API returned error:', twilioResult.error);
+            // In development, always output to console
+            if (PUBLIC_ENV === 'development') {
+              console.log('\n========================================');
+              console.log('📱 AUTO-REPLY (DEVELOPMENT MODE)');
+              console.log('========================================');
+              console.log('To:', messageData.customer_phone);
+              console.log('Source:', messageData.source);
+              console.log('Message:', message);
+              console.log('========================================\n');
             } else {
-              console.log('Twilio message sent successfully!');
+              // Production: Try Twilio first, then fall back to Telnyx
+              let sent = false;
+              
+              // Try Twilio if enabled
+              if (TWILIO_ENABLED === 'true') {
+                try {
+                  console.log('Attempting to send auto-reply via Twilio to:', messageData.customer_phone);
+                  const twilioResponse = await fetch('/api/twilio', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      message,
+                      phoneNumber: messageData.customer_phone,
+                      threadId: messageData.thread_id
+                    })
+                  });
+
+                  const twilioResult = await twilioResponse.json();
+                  console.log('Twilio API response:', twilioResult);
+
+                  if (twilioResult.success) {
+                    console.log('✅ Auto-reply sent successfully via Twilio!');
+                    sent = true;
+                  } else {
+                    console.error('Twilio API returned error:', twilioResult.error);
+                    console.log('Falling back to Telnyx...');
+                  }
+                } catch (twilioError) {
+                  console.error('Error sending via Twilio:', twilioError);
+                  console.log('Falling back to Telnyx...');
+                }
+              }
+              
+              // Fall back to Telnyx if Twilio not enabled or failed
+              if (!sent) {
+                try {
+                  const TELNYX_API_KEY = process.env.TELNYX_API_KEY;
+                  if (TELNYX_API_KEY) {
+                    console.log('Attempting to send auto-reply via Telnyx to:', messageData.customer_phone);
+                    const telnyxResponse = await fetch('/api/telnyx', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        message,
+                        phoneNumber: messageData.customer_phone
+                      })
+                    });
+
+                    const telnyxResult = await telnyxResponse.json();
+                    console.log('Telnyx API response:', telnyxResult);
+
+                    if (telnyxResult.success) {
+                      console.log('✅ Auto-reply sent successfully via Telnyx!');
+                      sent = true;
+                    } else {
+                      console.error('Telnyx API returned error:', telnyxResult.error);
+                    }
+                  } else {
+                    console.log('TELNYX_API_KEY not configured - cannot send via Telnyx');
+                  }
+                } catch (telnyxError) {
+                  console.error('Error sending via Telnyx:', telnyxError);
+                }
+              }
+              
+              if (!sent) {
+                console.warn('⚠️ Auto-reply message generated but could not be sent via Twilio or Telnyx');
+              }
             }
           } else {
-            console.log('No auto-reply message generated - skipping Twilio send');
+            console.log('No auto-reply message generated (getAutoReplyMessage returned null)');
           }
         } else {
           console.log('No auto-reply settings found for company');
         }
-      } catch (twilioError) {
-        console.error('Error sending Twilio auto-reply:', twilioError);
+      } catch (autoReplyError) {
+        console.error('Error processing auto-reply:', autoReplyError);
         // Don't throw the error - just log it since auto-reply is not critical
       }
+    } else {
+      console.log('No customer_phone provided - skipping auto-reply check');
     }
 
     return json(
@@ -285,30 +352,6 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
   }
 };
 
-function isBusinessHours(currentHour: number, businessHours: any) {
-  // Get current day name in lowercase
-  const day = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-  const daySettings = businessHours?.[day];
-
-  // If the day is marked as closed (not open or no hours), return false
-  if (!daySettings?.isOpen || !daySettings.hours) {
-    return {
-      isOpen: false,
-      isClosed: true  // Explicitly indicate it's a closed day
-    };
-  }
-
-  const [start, end] = daySettings.hours.split(' - ').map(time => {
-    const [hour, period] = time.split(' ');
-    const [h] = hour.split(':');
-    return period === 'PM' ? (parseInt(h) % 12) + 12 : parseInt(h);
-  });
-
-  return {
-    isOpen: currentHour >= start && currentHour < end,
-    isClosed: false
-  };
-}
 
 // Add OPTIONS handler for CORS preflight
 export const OPTIONS: RequestHandler = async () => {

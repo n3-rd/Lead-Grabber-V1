@@ -19,6 +19,7 @@
 
 	let selectedFilter = $state('All');
 	const filters = ['All', 'Email', 'SMS', 'Voice', 'Web', 'Facebook', 'Chatbot', 'Leadform'];
+	let searchQuery = $state('');
 
 	let summaryDialogOpen = $state(false);
 	let selectedComm = $state<(typeof communications)[0] | null>(null);
@@ -83,11 +84,24 @@
 	);
 
 	let filteredCommunications = $derived(
-		selectedFilter === 'All'
+		(selectedFilter === 'All'
 			? communications
 			: communications.filter(
 					(c: any) => c.typeIcon?.toLowerCase() === selectedFilter.toLowerCase()
 				)
+		).filter((c: any) => {
+			if (!searchQuery.trim()) return true;
+			const query = searchQuery.toLowerCase();
+			return (
+				c.source?.toLowerCase().includes(query) ||
+				c.endpoint?.toLowerCase().includes(query) ||
+				c.summary?.toLowerCase().includes(query) ||
+				c.commId?.toLowerCase().includes(query) ||
+				c.typeIcon?.toLowerCase().includes(query) ||
+				c.date?.toLowerCase().includes(query) ||
+				c.time?.toLowerCase().includes(query)
+			);
+		})
 	);
 
 	function getStatusColor(status: string): string {
@@ -130,6 +144,7 @@
 				<input
 					type="text"
 					placeholder="Search communications..."
+					bind:value={searchQuery}
 					class="flex-1 font-sans text-sm font-light leading-[1.29] text-[rgba(85,85,85,0.53)] outline-none placeholder:text-[rgba(85,85,85,0.53)]"
 				/>
 				<div class="h-4 w-px bg-[#ADADAD]"></div>

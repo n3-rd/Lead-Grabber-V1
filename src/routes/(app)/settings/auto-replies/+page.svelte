@@ -14,6 +14,18 @@
     let leadformBusinessHoursMessage = $state(data?.autoReply?.leadformBusinessHoursMessage ?? 'Hello, thank you for submitting the form. Our team will respond shortly.');
     let leadformAfterHoursMessage = $state(data?.autoReply?.leadformAfterHoursMessage ?? 'Hello, we are not available at the moment, but we will get in touch with you by {date}.');
     
+    let businessHoursTextarea: HTMLTextAreaElement;
+    let afterHoursTextarea: HTMLTextAreaElement;
+    let leadformBusinessHoursTextarea: HTMLTextAreaElement;
+    let leadformAfterHoursTextarea: HTMLTextAreaElement;
+    
+    function focusTextarea(textarea: HTMLTextAreaElement) {
+        if (textarea && !textarea.disabled) {
+            textarea.focus();
+            textarea.select();
+        }
+    }
+    
     // Helper function to parse hours string and extract time components
     function parseHours(hours: string | null) {
         if (!hours) {
@@ -253,13 +265,14 @@
                         <Button 
                             variant="ghost" 
                             class="p-1 hover:bg-transparent"
-                            onclick={() => {/* Add edit functionality */}}
+                            onclick={() => focusTextarea(businessHoursTextarea)}
                             disabled={!textAutoReply}
                         >
                             <Edit class="h-4 w-4" />
                         </Button>
                     </div>
                     <textarea
+                        bind:this={businessHoursTextarea}
                         class="w-full p-2 text-gray-700 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50 disabled:text-gray-500"
                         rows="2"
                         bind:value={businessHoursMessage}
@@ -273,13 +286,14 @@
                         <Button 
                             variant="ghost" 
                             class="p-1 hover:bg-transparent"
-                            onclick={() => {/* Add edit functionality */}}
+                            onclick={() => focusTextarea(afterHoursTextarea)}
                             disabled={!textAutoReply}
                         >
                             <Edit class="h-4 w-4" />
                         </Button>
                     </div>
                     <textarea
+                        bind:this={afterHoursTextarea}
                         class="w-full p-2 text-gray-700 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50 disabled:text-gray-500"
                         rows="3"
                         bind:value={afterHoursMessage}
@@ -298,13 +312,14 @@
                         <Button 
                             variant="ghost" 
                             class="p-1 hover:bg-transparent"
-                            onclick={() => {/* Add edit functionality */}}
+                            onclick={() => focusTextarea(leadformBusinessHoursTextarea)}
                             disabled={!textAutoReply}
                         >
                             <Edit class="h-4 w-4" />
                         </Button>
                     </div>
                     <textarea
+                        bind:this={leadformBusinessHoursTextarea}
                         class="w-full p-2 text-gray-700 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50 disabled:text-gray-500"
                         rows="2"
                         bind:value={leadformBusinessHoursMessage}
@@ -318,13 +333,14 @@
                         <Button 
                             variant="ghost" 
                             class="p-1 hover:bg-transparent"
-                            onclick={() => {/* Add edit functionality */}}
+                            onclick={() => focusTextarea(leadformAfterHoursTextarea)}
                             disabled={!textAutoReply}
                         >
                             <Edit class="h-4 w-4" />
                         </Button>
                     </div>
                     <textarea
+                        bind:this={leadformAfterHoursTextarea}
                         class="w-full p-2 text-gray-700 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50 disabled:text-gray-500"
                         rows="3"
                         bind:value={leadformAfterHoursMessage}

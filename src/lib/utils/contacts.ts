@@ -1,4 +1,5 @@
 import { pb } from '$lib/pocketbase';
+import { normalizePhoneNumber } from '$lib/utils/phone';
 
 interface ContactData {
   company_id: string;
@@ -48,53 +49,100 @@ export async function createOrUpdateContact(data: ContactData) {
   }
 
   try {
-    // Build filter based on available contact info
-    const filters = [];
-    if (data.email) filters.push(`email="${data.email}"`);
-    if (data.phone) filters.push(`phone="${data.phone}"`);
-    if (data.name) filters.push(`name="${data.name}"`);
+    const now = new Date().toISOString().split('.')[0] + "Z";
+    let contact = null;
 
-    // Modified filter to check for combinations of identifiers
-    const filterString = filters.length > 0
-      ? `(${filters.join(' || ')}) && company="${data.company_id}"`
-      : '';
+    // Normalize phone number if provided
+    const normalizedPhone = data.phone ? normalizePhoneNumber(data.phone) : null;
 
-    // Try to find existing contact
-    let contact;
-    if (filterString) {
+    // Priority 1: Match by phone number (normalized) - this is the most reliable identifier
+    if (normalizedPhone) {
       try {
-        // Check for existing contact with same name AND phone, or same email
-        const namePhoneFilter = data.name && data.phone
-          ? `(name="${data.name}" && phone="${data.phone}") && company="${data.company_id}"`
-          : '';
+        // Fetch all contacts for this company that have phone numbers
+        const allContacts = await pb.collection('contacts').getFullList({
+          filter: `company = "${data.company_id}" && phone != ""`,
+        });
 
-        // First try to find by name+phone combination
-        if (namePhoneFilter) {
-          contact = await pb.collection('contacts').getFirstListItem(namePhoneFilter);
+        // Find contact with matching normalized phone number
+        for (const c of allContacts) {
+          if (c.phone) {
+            const existingNormalized = normalizePhoneNumber(c.phone);
+            if (existingNormalized === normalizedPhone) {
+              contact = c;
+              break;
+            }
+          }
         }
+      } catch (err) {
+        // No contacts found or error - continue
+      }
+    }
 
-        // If not found by name+phone, try other identifiers
-        if (!contact) {
-          contact = await pb.collection('contacts').getFirstListItem(filterString);
-        }
+    // Priority 2: Match by email (if no phone match found)
+    if (!contact && data.email) {
+      try {
+        contact = await pb.collection('contacts').getFirstListItem(
+          `email="${data.email}" && company="${data.company_id}"`
+        );
       } catch (err) {
         // Contact not found
       }
     }
 
-    const now = new Date().toISOString().split('.')[0] + "Z";
-
     // Update existing or create new contact
     if (contact) {
-      // Update only if new data is provided
+      // Merge into existing contact - keep original name, add new name to past_names
       const updates: any = {
         updated: now
       };
-      if (data.name && data.name !== contact.name) updates.name = data.name;
-      if (data.email && data.email !== contact.email) updates.email = data.email;
-      if (data.phone && data.phone !== contact.phone) updates.phone = data.phone;
+      
+      // Handle name merging: keep original name, add new name to past_names if different
+      if (data.name && data.name !== contact.name && data.name !== 'Anonymous') {
+        // Only add to past_names if the existing contact has a name and it's different
+        if (contact.name && contact.name !== 'Anonymous' && contact.name !== data.name) {
+          // Get existing past_names array or initialize empty array
+          let pastNames: string[] = [];
+          if (contact.past_names) {
+            try {
+              pastNames = Array.isArray(contact.past_names) 
+                ? contact.past_names 
+                : typeof contact.past_names === 'string' 
+                  ? JSON.parse(contact.past_names) 
+                  : [];
+            } catch (e) {
+              pastNames = [];
+            }
+          }
+          
+          // Add new name to past_names if it's not already there and not the current name
+          if (!pastNames.includes(data.name) && data.name !== contact.name) {
+            pastNames.push(data.name);
+            updates.past_names = pastNames;
+          }
+        } else if ((!contact.name || contact.name === 'Anonymous') && data.name) {
+          // If existing contact has no name or is Anonymous, update the name
+          updates.name = data.name;
+        }
+        // Otherwise, keep the original name (don't update)
+      }
+      
+      // Update email if provided and different
+      if (data.email && data.email !== contact.email) {
+        updates.email = data.email;
+      }
+      
+      // Update phone if normalized version is different
+      if (normalizedPhone && contact.phone) {
+        const existingNormalized = normalizePhoneNumber(contact.phone);
+        if (existingNormalized !== normalizedPhone) {
+          // Keep the more complete format (with + if available)
+          updates.phone = normalizedPhone.startsWith('+') ? normalizedPhone : contact.phone;
+        }
+      } else if (normalizedPhone && !contact.phone) {
+        updates.phone = normalizedPhone;
+      }
 
-      if (Object.keys(updates).length > 0) {
+      if (Object.keys(updates).length > 1) { // More than just 'updated'
         return await pb.collection('contacts').update(contact.id, updates);
       }
       return contact;
@@ -104,7 +152,7 @@ export async function createOrUpdateContact(data: ContactData) {
         company: data.company_id,
         name: data.name || 'Anonymous',
         email: data.email || '',
-        phone: data.phone || '',
+        phone: normalizedPhone || data.phone || '',
         created: now,
         updated: now
       };

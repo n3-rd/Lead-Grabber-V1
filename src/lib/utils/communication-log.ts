@@ -1,6 +1,6 @@
 import { pb } from '$lib/pocketbase';
 
-export type CommunicationType = 'email' | 'sms' | 'voice' | 'web' | 'facebook' | 'chatbot' | 'leadform';
+export type CommunicationType = 'email' | 'sms' | 'voice' | 'web' | 'facebook' | 'chatbot' | 'leadform' | 'leadbox';
 export type CommunicationDirection = 'inbound' | 'outbound';
 export type CommunicationStatus = 'success' | 'failed' | 'pending' | 'missed' | 'completed';
 

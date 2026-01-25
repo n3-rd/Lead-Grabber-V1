@@ -8,9 +8,12 @@
 	let searchBy = $state('Area Code');
 	let areaCode = $state('');
 	let selectedNumbers = $state<Set<string>>(new Set());
+	let phoneNumbers = $state<any[]>([]);
+	let isLoading = $state(false);
+	let cart = $state<Set<string>>(new Set());
 
-	// Mock data for phone numbers
-	const phoneNumbers = [
+	// Mock data for phone numbers (fallback)
+	const mockPhoneNumbers = [
 		{ number: '+1 705 243 8416', location: 'PETERBOROUGH, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
 		{ number: '+1 705 243 8417', location: 'BARRIE, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
 		{ number: '+1 705 243 8418', location: 'BARRIE, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
@@ -28,8 +31,10 @@
 		{ number: '+1 705 243 8430', location: 'SUDBURY, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' }
 	];
 
-	// Mock data for number orders
-	const numberOrders = [
+	let numberOrders = $state<any[]>([]);
+
+	// Mock data for number orders (fallback)
+	const mockNumberOrders = [
 		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789abc', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789abc', actor: 'r.dredhart@canada.com', numberType: 'Local' },
 		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789def', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789def', actor: 'r.dredhart@canada.com', numberType: 'Local' },
 		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789ghi', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789ghi', actor: 'r.dredhart@canada.com', numberType: 'Local' },
@@ -61,14 +66,107 @@
 		selectedNumbers = selectedNumbers;
 	}
 
-	function handleAddToCart(number: string) {
-		// TODO: Implement add to cart
-		console.log('Add to cart:', number);
+	async function loadOrders() {
+		try {
+			const response = await fetch('/api/telnyx/numbers/orders');
+			const result = await response.json();
+			if (result.success) {
+				numberOrders = result.orders;
+			}
+		} catch (error) {
+			console.error('Error loading orders:', error);
+		}
 	}
 
-	function handleSearch() {
-		// TODO: Implement search
-		console.log('Search:', { country, features, searchBy, areaCode });
+	$effect(() => {
+		if (activeTab === 'orders') {
+			loadOrders();
+		}
+	});
+
+	function handleAddToCart(number: string) {
+		const newCart = new Set(cart);
+		if (newCart.has(number)) {
+			newCart.delete(number);
+		} else {
+			newCart.add(number);
+		}
+		cart = newCart;
+		toast.success(newCart.has(number) ? 'Added to cart' : 'Removed from cart');
+	}
+
+	async function handleSearch() {
+		if (!areaCode && searchBy === 'Area Code') {
+			toast.error('Please enter an area code');
+			return;
+		}
+
+		isLoading = true;
+		try {
+			const countryCode = country.includes('+1') ? 'US' : country.split('+')[1]?.substring(0, 2) || 'US';
+			const params = new URLSearchParams({
+				country_code: countryCode
+			});
+
+			if (areaCode) {
+				params.append('area_code', areaCode);
+			}
+
+			if (features) {
+				params.append('features', features);
+			}
+
+			const response = await fetch(`/api/telnyx/numbers/search?${params.toString()}`);
+			const result = await response.json();
+
+			if (result.success) {
+				phoneNumbers = result.numbers;
+				toast.success(`Found ${result.numbers.length} numbers`);
+			} else {
+				toast.error(result.error || 'Failed to search numbers');
+				phoneNumbers = [];
+			}
+		} catch (error) {
+			console.error('Search error:', error);
+			toast.error('Error searching numbers');
+			phoneNumbers = [];
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	async function handleBuySelected() {
+		if (cart.size === 0) {
+			toast.error('Please select numbers to buy');
+			return;
+		}
+
+		isLoading = true;
+		try {
+			const response = await fetch('/api/telnyx/numbers/buy', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					phone_numbers: Array.from(cart)
+				})
+			});
+
+			const result = await response.json();
+
+			if (result.success) {
+				toast.success(`Successfully purchased ${cart.size} number(s)`);
+				cart = new Set();
+				phoneNumbers = [];
+				await loadOrders();
+			} else {
+				toast.error(result.error || 'Failed to purchase numbers');
+			}
+		} catch (error) {
+			console.error('Buy error:', error);
+			toast.error('Error purchasing numbers');
+		} finally {
+			isLoading = false;
+		}
 	}
 
 	function copyOrderId(id: string) {
@@ -210,10 +308,20 @@
 				<!-- Search Button -->
 				<button
 					onclick={handleSearch}
-					class="h-[36px] w-[157px] rounded-[6px] bg-[#577AB7] font-['Poppins'] text-[15px] font-medium leading-[18px] text-white transition-colors hover:bg-[#4a6ba5]"
+					disabled={isLoading}
+					class="h-[36px] w-[157px] rounded-[6px] bg-[#577AB7] font-['Poppins'] text-[15px] font-medium leading-[18px] text-white transition-colors hover:bg-[#4a6ba5] disabled:opacity-50"
 				>
-					Search Numbers
+					{isLoading ? 'Searching...' : 'Search Numbers'}
 				</button>
+				{#if cart.size > 0}
+					<button
+						onclick={handleBuySelected}
+						disabled={isLoading}
+						class="h-[36px] rounded-[6px] bg-green-600 font-['Poppins'] text-[15px] font-medium leading-[18px] text-white transition-colors hover:bg-green-700 disabled:opacity-50 px-4"
+					>
+						Buy {cart.size} Selected
+					</button>
+				{/if}
 			</div>
 
 			<!-- Results Table -->
@@ -250,14 +358,27 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each phoneNumbers as num, index}
-								<tr class="border-b border-[rgba(193,193,193,0.4)]">
+							{#if isLoading}
+								<tr>
+									<td colspan="7" class="py-8 text-center text-gray-500">
+										Loading...
+									</td>
+								</tr>
+							{:else if phoneNumbers.length === 0}
+								<tr>
+									<td colspan="7" class="py-8 text-center text-gray-500">
+										No numbers found. Click "Search Numbers" to find available numbers.
+									</td>
+								</tr>
+							{:else}
+								{#each phoneNumbers as num, index}
+									<tr class="border-b border-[rgba(193,193,193,0.4)]">
 									<td class="py-3">
 										<div class="flex items-center gap-3">
 											<input
 												type="checkbox"
-												checked={selectedNumbers.has(num.number)}
-												onchange={() => toggleNumber(num.number)}
+												checked={cart.has(num.number)}
+												onchange={() => handleAddToCart(num.number)}
 												class="h-[18px] w-[17px] rounded-[1px] border-[0.8px] border-[#949494] bg-[rgba(217,217,217,0.08)]"
 											/>
 											<span class="font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#808080]">
@@ -288,13 +409,16 @@
 									<td class="py-3">
 										<button
 											onclick={() => handleAddToCart(num.number)}
-											class="h-[26px] w-[95px] rounded-[6px] bg-[#577AB7] font-['Poppins'] text-[13px] font-medium leading-[15px] text-white transition-colors hover:bg-[#4a6ba5]"
+											class="h-[26px] w-[95px] rounded-[6px] {cart.has(num.number)
+												? 'bg-green-600'
+												: 'bg-[#577AB7]'} font-['Poppins'] text-[13px] font-medium leading-[15px] text-white transition-colors hover:bg-[#4a6ba5]"
 										>
-											Add to Cart
+											{cart.has(num.number) ? 'In Cart' : 'Add to Cart'}
 										</button>
 									</td>
-								</tr>
-							{/each}
+									</tr>
+								{/each}
+							{/if}
 						</tbody>
 					</table>
 				</div>
@@ -349,8 +473,15 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each numberOrders as order}
-								<tr class="border-b border-[rgba(193,193,193,0.4)]">
+							{#if numberOrders.length === 0}
+								<tr>
+									<td colspan="7" class="py-8 text-center text-gray-500">
+										No orders found.
+									</td>
+								</tr>
+							{:else}
+								{#each numberOrders as order}
+									<tr class="border-b border-[rgba(193,193,193,0.4)]">
 									<td class="py-3 font-['Poppins'] text-[15px] font-normal leading-[23px] text-[#808080]">
 										{order.date}
 									</td>
@@ -397,8 +528,9 @@
 									<td class="py-3 font-['Poppins'] text-[15px] font-normal leading-[23px] text-[#808080]">
 										{order.numberType}
 									</td>
-								</tr>
-							{/each}
+									</tr>
+								{/each}
+							{/if}
 						</tbody>
 					</table>
 				</div>

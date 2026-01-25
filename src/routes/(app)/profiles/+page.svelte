@@ -1,69 +1,40 @@
 <script lang="ts">
 	import { Search, Mic, MoreVertical, Pencil, Trash2 } from "lucide-svelte";
 	import { goto } from "$app/navigation";
+	import { filterContacts } from '$lib/utils/contacts';
+	import { enhance } from '$app/forms';
 
+	let { data } = $props();
 	let searchQuery = $state("");
 
-	interface Profile {
-		id: string;
-		name: string;
-		phone: string;
-		email: string;
+	const profiles = $derived(data.profiles || []);
+
+	const filteredProfiles = $derived(filterContacts(profiles, searchQuery));
+
+	function handleProfileClick(profile: any) {
+		goto(`/profiles/${profile.id}`);
 	}
 
-
-	const profiles: Profile[] = [
-		{
-			id: "1",
-			name: "George Washington",
-			phone: "706-451-5344",
-			email: "georgewas@email.com"
-		},
-		{
-			id: "2",
-			name: "Sarah Lee",
-			phone: "705-4123-6346",
-			email: "sarahlee@gmail.com"
-		},
-		{
-			id: "3",
-			name: "Peter Griffin",
-			phone: "705-6433-2564",
-			email: "petergriffin@gmail.com"
-		},
-		{
-			id: "4",
-			name: "Michael Scofield",
-			phone: "705-9755-1953",
-			email: "michaelscofield@gmail.com"
-		},
-		{
-			id: "5",
-			name: "Joe Swanson",
-			phone: "705-9012-0124",
-			email: "joeswanson@gmail.com"
-		},
-		{
-			id: "6",
-			name: "Adam West",
-			phone: "705-7812-3321",
-			email: "adamwest@gmail.com"
+	async function handleDelete(profileId: string, e: Event) {
+		e.stopPropagation();
+		if (!confirm('Are you sure you want to delete this profile?')) {
+			return;
 		}
-	];
 
-	const filteredProfiles = $derived(
-		searchQuery.trim() === ""
-			? profiles
-			: profiles.filter(
-					(p) =>
-						p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-						p.phone.includes(searchQuery) ||
-						p.email.toLowerCase().includes(searchQuery.toLowerCase())
-				)
-	);
-
-	function handleProfileClick(profile: Profile) {
-		goto(`/profiles/${profile.id}`);
+		const form = document.createElement('form');
+		form.method = 'POST';
+		form.action = '?/deleteProfile';
+		
+		const input = document.createElement('input');
+		input.type = 'hidden';
+		input.name = 'profileId';
+		input.value = profileId;
+		form.appendChild(input);
+		
+		document.body.appendChild(form);
+		await enhance(() => ({ result: { type: 'success' } }), { form });
+		form.submit();
+		document.body.removeChild(form);
 	}
 </script>
 
@@ -137,7 +108,7 @@
 							<button 
 								class="w-5 h-5 text-red-500 hover:text-red-700 transition-colors" 
 								aria-label="Delete"
-								onclick={(e) => e.stopPropagation()}
+								onclick={(e) => handleDelete(profile.id, e)}
 							>
 								<Trash2 class="w-5 h-5" />
 							</button>

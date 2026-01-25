@@ -4,7 +4,7 @@
 		'AI Chat Bot Demo',
 		'AI Automation',
 		'Conversational AI',
-		'Communication Hub'
+		'Communication Log'
 	];
 
 	const bottomRowDemos = [

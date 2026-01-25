@@ -133,7 +133,7 @@
 	function handleCreateNewContact() {
 		closeContextMenu();
 		const phoneParam = dialInput ? `?phone=${encodeURIComponent(dialInput)}` : '';
-		goto(`/contacts/create${phoneParam}`);
+		goto(`/profiles/create${phoneParam}`);
 	}
 
 	function handleAddToExistingContact() {

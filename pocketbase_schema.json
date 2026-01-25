@@ -842,7 +842,8 @@
                     "web",
                     "facebook",
                     "chatbot",
-                    "leadform"
+                    "leadform",
+                    "leadbox"
                 ]
             },
             {
@@ -1340,6 +1341,66 @@
                 "required": false,
                 "system": false,
                 "type": "text"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text_address",
+                "max": 0,
+                "min": 0,
+                "name": "address",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text_landline",
+                "max": 0,
+                "min": 0,
+                "name": "landline",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
+            },
+            {
+                "autogeneratePattern": "",
+                "hidden": false,
+                "id": "text_cell",
+                "max": 0,
+                "min": 0,
+                "name": "cell",
+                "pattern": "",
+                "presentable": false,
+                "primaryKey": false,
+                "required": false,
+                "system": false,
+                "type": "text"
+            },
+            {
+                "hidden": false,
+                "id": "bool_sms_permission",
+                "name": "smsPermission",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "bool"
+            },
+            {
+                "hidden": false,
+                "id": "json_past_names",
+                "name": "past_names",
+                "presentable": false,
+                "required": false,
+                "system": false,
+                "type": "json"
             },
             {
                 "hidden": false,

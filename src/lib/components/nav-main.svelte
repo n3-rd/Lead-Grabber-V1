@@ -40,12 +40,6 @@
 			icon: FileText,
 			href: '/communication-log'
 		},
-		{
-			title: 'Communication Hub',
-			url: '/communication-hub',
-			icon: MessageCircle,
-			href: '/communication-hub'
-		},
 		{ title: 'Important Notifications', url: '/notifications', icon: Bell, href: '/notifications' },
 		{ title: 'Inbox', url: '/inbox', icon: Home, href: '/inbox' },
 		{ title: 'Profiles', url: '/profiles', icon: UserCircle, href: '/profiles' },

@@ -232,7 +232,7 @@
 					<p class="text-base font-bold leading-relaxed text-[#001F3C]">
 						A quick summary, transformation of your business starts with Phase 1. Cost is $75.00/mo
 						(first 40) includes a website and 4 hours of support. Phase 2 includes AI modules
-						(Communication Hub, AI Assistant, AI automation, View Room) costs $75.00/mo. Phase 3
+						(Communication Log, AI Assistant, AI automation, View Room) costs $75.00/mo. Phase 3
 						sector specific modules, Founders will be able to add one additional module without
 						cost.
 					</p>

@@ -2,6 +2,7 @@
 	import { Search, Mic, MapPin, Mail, Phone, ChevronDown, X, SquarePen, MessageSquare, Globe, Facebook, Bot, FileText } from "lucide-svelte";
 	import { goto } from "$app/navigation";
 	import { page } from "$app/stores";
+	import CommunicationTable from "$lib/components/CommunicationTable.svelte";
 
 	interface Connection {
 		id: string;
@@ -44,98 +45,14 @@
 		summaryLink: string;
 	}
 
-	// Mock profiles data - in real app, fetch from server using $page.params.id
-	const profiles: Profile[] = [
-		{
-			id: "1",
-			name: "George Washington",
-			phone: "706-451-5344",
-			email: "georgewas@email.com",
-			address: "123 Pine St. Timmins P4N 6A2",
-			landline: "706-231-3142",
-			cell: "706-451-5344",
-			smsPermission: false,
-			connections: [
-				{
-					id: "conn1",
-					name: "Peter Griffin",
-					address: "123 Pine St. Timmins P4N 6A2",
-					landline: "706-231-3142",
-					cell: "706-451-5344",
-					email: "georgewas@email.com",
-					smsPermission: false
-				}
-			]
-		},
-		{
-			id: "2",
-			name: "Sarah Lee",
-			phone: "705-4123-6346",
-			email: "sarahlee@gmail.com",
-			address: "456 Oak Ave. Toronto M5V 2K1",
-			landline: "705-321-9876",
-			cell: "705-4123-6346",
-			smsPermission: true,
-			connections: []
-		},
-		{
-			id: "3",
-			name: "Peter Griffin",
-			phone: "705-6433-2564",
-			email: "petergriffin@gmail.com",
-			address: "31 Spooner St. Quahog RI 02907",
-			landline: "705-555-0123",
-			cell: "705-6433-2564",
-			smsPermission: true,
-			connections: []
-		},
-		{
-			id: "4",
-			name: "Michael Scofield",
-			phone: "705-9755-1953",
-			email: "michaelscofield@gmail.com",
-			address: "789 Elm St. Chicago IL 60601",
-			landline: "705-444-7890",
-			cell: "705-9755-1953",
-			smsPermission: true,
-			connections: []
-		},
-		{
-			id: "5",
-			name: "Joe Swanson",
-			phone: "705-9012-0124",
-			email: "joeswanson@gmail.com",
-			address: "33 Spooner St. Quahog RI 02907",
-			landline: "705-555-0456",
-			cell: "705-9012-0124",
-			smsPermission: false,
-			connections: []
-		},
-		{
-			id: "6",
-			name: "Adam West",
-			phone: "705-7812-3321",
-			email: "adamwest@gmail.com",
-			address: "1 Mayor Lane, Quahog RI 02907",
-			landline: "705-555-0789",
-			cell: "705-7812-3321",
-			smsPermission: true,
-			connections: []
-		}
-	];
+	let { data } = $props();
 
-	const communications: Communication[] = [
-		{ id: "1", date: "Dec 01 2024", time: "9:33 PM", type: "email", direction: "In", source: "markdoe@clear...", endpoint: "Sarah Lee", purpose: null, summary: null, commId: null, status: "red" },
-		{ id: "2", date: "Dec 01 2024", time: "2:15 PM", type: "sms", direction: "Out", source: "Sarah Lee", endpoint: "705-4123-6346", purpose: "Follow-up", summary: "Summary", commId: "COM-00124", status: "green" },
-		{ id: "3", date: "Nov 30 2024", time: "11:45 AM", type: "voice", direction: "In", source: "Unknown", endpoint: "705-4123-6346", purpose: "Sales | Inquiry", summary: "Summary", commId: "COM-00125", status: "blue" },
-		{ id: "4", date: "Nov 30 2024", time: "10:22 AM", type: "email", direction: "Out", source: "sarahlee@gmail.com", endpoint: "johnlee@clearsky.c...", purpose: "Sales | Inquiry", summary: "Summary", commId: "COM-00126", status: "green" },
-		{ id: "5", date: "Nov 29 2024", time: "4:08 PM", type: "web", direction: "In", source: "Website Form", endpoint: "Contact Form", purpose: "Support | Issue", summary: "Summary", commId: "COM-00127", status: "red" },
-		{ id: "6", date: "Nov 29 2024", time: "1:30 PM", type: "facebook", direction: "In", source: "Facebook Messenger", endpoint: "John Smith", purpose: "Marketing | Lead", summary: "Summary", commId: "COM-00128", status: "green" },
-		{ id: "7", date: "Nov 28 2024", time: "3:45 PM", type: "chatbot", direction: "In", source: "Chatbot", endpoint: "Website Visitor", purpose: "Support | Question", summary: "Summary", commId: "COM-00129", status: "blue" },
-		{ id: "8", date: "Nov 28 2024", time: "9:15 AM", type: "leadform", direction: "In", source: "Lead Form", endpoint: "New Lead", purpose: "Sales | Lead", summary: "Summary", commId: "COM-00130", status: "red" },
-		{ id: "9", date: "Nov 27 2024", time: "5:20 PM", type: "sms", direction: "In", source: "705-4123-6346", endpoint: "Sarah Lee", purpose: "Confirm", summary: null, commId: "COM-00131", status: "green" },
-		{ id: "10", date: "Nov 27 2024", time: "2:10 PM", type: "email", direction: "In", source: "markdoe@clear...", endpoint: "johnlee@clearsky.c...", purpose: "Sales | Inquiry", summary: "Summary", commId: "COM-00132", status: "blue" }
-	];
+	let communications = $state<Communication[]>(data.communications || []);
+	
+	// Update when data changes
+	$effect(() => {
+		communications = data.communications || [];
+	});
 
 	const commSummaries: CommSummary[] = [
 		{ commId: "COM-00124", summaryLink: "Open Summary for COM- 000124" },
@@ -145,31 +62,32 @@
 		{ commId: "COM-00128", summaryLink: "Open Summary for COM- 000128" }
 	];
 
-	const filters = ["All", "Email", "SMS", "Voice", "Web", "Facebook", "Chatbot", "Leadform"];
+	const filters = ["All", "Email", "SMS", "Voice", "Web", "Facebook", "Chatbot", "Leadform", "Leadbox"];
 
 	const profileId = $derived($page.params.id);
-	const selectedProfile = $derived(profiles.find(p => p.id === profileId) || null);
+	const selectedProfile = $derived(data.profile ? {
+		id: data.profile.id,
+		name: data.profile.name || 'Unknown',
+		phone: data.profile.phone || '',
+		email: data.profile.email || '',
+		address: data.profile.address || '',
+		landline: data.profile.landline || data.profile.phone || '',
+		cell: data.profile.cell || data.profile.phone || '',
+		smsPermission: data.profile.smsPermission ?? false,
+		past_names: data.profile.past_names || [],
+		connections: [] // Connections can be added later if needed
+	} : null);
 	
-	let commSearchQuery = $state("");
-	let activeFilter = $state("All");
 	let connectionsExpanded = $state(true);
 	let selectedSummary = $state<Communication | null>(null);
-	let openOptionsMenu = $state<string | null>(null);
 
-	const filteredCommunications = $derived(
-		communications.filter((comm) => {
-			if (activeFilter === "All") return true;
-			return comm.type.toLowerCase() === activeFilter.toLowerCase();
-		})
-	);
+	function handleSummaryClick(comm: Communication) {
+		selectedSummary = comm;
+	}
 
-	function getStatusColor(status: string) {
-		switch (status) {
-			case "red": return "bg-[#FB2C36]";
-			case "green": return "bg-[#00C951]";
-			case "blue": return "bg-[#0077FE]";
-			default: return "bg-[#4A4A4A]";
-		}
+	function handleActionClick(action: string, comm: Communication) {
+		console.log('Action:', action, 'for comm:', comm);
+		// Handle actions like call, sms, email
 	}
 
 </script>
@@ -185,12 +103,14 @@
 			</h1>
 
 			<!-- Address -->
-			<div class="flex items-start gap-2 mb-4">
-				<MapPin class="w-5 h-5 text-[#0F172A] mt-0.5 flex-shrink-0" />
-				<span class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.8)]">
-					{selectedProfile.address}
-				</span>
-			</div>
+			{#if selectedProfile.address}
+				<div class="flex items-start gap-2 mb-4">
+					<MapPin class="w-5 h-5 text-[#0F172A] mt-0.5 flex-shrink-0" />
+					<span class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.8)]">
+						{selectedProfile.address}
+					</span>
+				</div>
+			{/if}
 
 			<!-- Contact Info -->
 			<div class="space-y-2 mb-4">
@@ -206,6 +126,14 @@
 					<span class="font-sans font-medium text-base leading-[1.29] text-[#565656] w-[82px]">Email:</span>
 					<span class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.8)]">{selectedProfile.email}</span>
 				</div>
+				{#if selectedProfile.past_names && Array.isArray(selectedProfile.past_names) && selectedProfile.past_names.length > 0}
+					<div class="flex items-start">
+						<span class="font-sans font-medium text-base leading-[1.29] text-[#565656] w-[82px]">Past names:</span>
+						<span class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.8)]">
+							{selectedProfile.past_names.join(', ')}
+						</span>
+					</div>
+				{/if}
 			</div>
 
 			<!-- SMS Permission -->
@@ -358,141 +286,13 @@
 			</div>
 
 			<!-- Communications Container -->
-			<div class="bg-white border border-[#ABABAB] rounded overflow-hidden min-w-[1282px]">
-				<!-- Filter Tabs & Search -->
-				<div class="flex items-center justify-between p-4 border-b border-[#ABABAB]">
-					<div class="flex items-center gap-2">
-						{#each filters as filter}
-							<button
-								class="px-4 py-2 rounded font-sans font-medium text-base leading-[1.29] transition-colors {activeFilter === filter ? 'bg-[#0F172A] text-white font-bold' : 'text-[#555555] hover:bg-gray-100'}"
-								onclick={() => activeFilter = filter}
-							>
-								{filter}
-							</button>
-						{/each}
-					</div>
-					<div class="w-[349px] h-[43px] bg-white border border-[#ADADAD] rounded flex items-center px-4 gap-2">
-						<Search class="w-4 h-4 text-[#555555]" />
-						<input
-							type="text"
-							bind:value={commSearchQuery}
-							placeholder="Search communications..."
-							class="flex-1 outline-none font-sans font-light text-sm leading-[1.29] text-[rgba(85,85,85,0.53)] placeholder:text-[rgba(85,85,85,0.53)]"
-						/>
-						<Mic class="w-4 h-4 text-[#555555]" />
-					</div>
-				</div>
-
-				<!-- Communications Table -->
-				<div class="w-full">
-					<!-- Table Header -->
-					<div class="h-[46px] bg-[#F3F3F3] rounded-t-[4px] flex items-center px-4">
-						<div class="w-[30px]"></div>
-						<div class="w-[100px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">DATE</div>
-						<div class="w-[80px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">TYPE</div>
-						<div class="w-[130px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">SOURCE</div>
-						<div class="w-[150px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">ENDPOINT</div>
-						<div class="w-[110px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">PURPOSE</div>
-						<div class="w-[90px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">SUMMARY</div>
-						<div class="w-[100px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">COMM ID</div>
-						<div class="flex-1 font-sans font-semibold text-xs leading-[1.29] text-[#555555] text-right">ACTIONS</div>
-					</div>
-
-					<!-- Table Body -->
-					{#each filteredCommunications as comm, index}
-						<div class="h-[80px] bg-[#FBFCFD] border-b border-[#C6C6C6] flex items-center px-4 {index % 2 === 0 ? '' : ''}">
-							<div class="w-[30px]">
-								<div class="w-[18px] h-[18px] rounded-full {getStatusColor(comm.status)}"></div>
-							</div>
-							<div class="w-[100px]">
-								<p class="font-sans font-semibold text-sm leading-[1.29] text-[#555555]">{comm.date}</p>
-								<p class="font-sans font-normal text-xs leading-[1.29] text-[#555555]">{comm.time}</p>
-							</div>
-							<div class="w-[80px] flex items-center gap-1">
-								{#if comm.type === "email"}
-									<Mail class="w-[23px] h-4 text-black" />
-								{:else if comm.type === "sms"}
-									<MessageSquare class="w-[23px] h-4 text-black" />
-								{:else if comm.type === "voice"}
-									<Phone class="w-[23px] h-4 text-black" />
-								{:else if comm.type === "web"}
-									<Globe class="w-[23px] h-4 text-black" />
-								{:else if comm.type === "facebook"}
-									<Facebook class="w-[23px] h-4 text-black" />
-								{:else if comm.type === "chatbot"}
-									<Bot class="w-[23px] h-4 text-black" />
-								{:else if comm.type === "leadform"}
-									<FileText class="w-[23px] h-4 text-black" />
-								{:else}
-									<Mail class="w-[23px] h-4 text-black" />
-								{/if}
-								<span class="font-sans font-medium text-sm leading-[1.29] text-[#555555]">{comm.direction}</span>
-							</div>
-							<div class="w-[130px] font-sans font-medium text-sm leading-[1.29] text-[#555555]">{comm.source}</div>
-							<div class="w-[150px] font-sans font-medium text-sm leading-[1.29] text-[#555555]">{comm.endpoint}</div>
-							<div class="w-[110px]">
-								{#if comm.purpose}
-									{#if comm.purpose === "Confirm"}
-										<button class="px-4 py-1.5 bg-[#577AB7] rounded text-white font-sans font-medium text-sm">Confirm</button>
-									{:else}
-										<span class="font-sans font-medium text-sm leading-[1.29] text-[#555555]">{comm.purpose}</span>
-									{/if}
-								{/if}
-							</div>
-							<div class="w-[90px]">
-								{#if comm.summary}
-									<button
-										onclick={() => selectedSummary = comm}
-										class="font-sans font-normal text-sm leading-[1.29] text-[#0023D7] underline cursor-pointer hover:text-[#001ba3]"
-									>
-										{comm.summary}
-									</button>
-								{/if}
-							</div>
-							<div class="w-[100px] font-sans font-normal text-sm leading-[1.29] text-[#555555]">{comm.commId || ''}</div>
-							<div class="flex-1 flex justify-end relative">
-								<button 
-									class="w-6 h-6 rounded-full border border-[#515151] flex items-center justify-center gap-0.5 hover:bg-gray-100"
-									aria-label="More actions"
-									onclick={(e) => { e.stopPropagation(); openOptionsMenu = openOptionsMenu === comm.id ? null : comm.id; }}
-								>
-									<span class="w-1 h-1 rounded-full bg-[#515151]"></span>
-									<span class="w-1 h-1 rounded-full bg-[#515151]"></span>
-									<span class="w-1 h-1 rounded-full bg-[#515151]"></span>
-								</button>
-								
-								{#if openOptionsMenu === comm.id}
-									<div class="absolute right-0 top-8 w-[200px] bg-white rounded shadow-[0px_4px_4px_rgba(0,0,0,0.25)] border border-[#E5E5E5] z-50">
-										<button 
-											class="w-full px-4 py-2 text-left font-sans text-sm text-[#555555] hover:bg-[#F5F5F5] border-b border-[#E5E5E5]"
-											onclick={() => { selectedSummary = comm; openOptionsMenu = null; }}
-										>
-											View Details
-										</button>
-										<button 
-											class="w-full px-4 py-2 text-left font-sans text-sm text-[#555555] hover:bg-[#F5F5F5] border-b border-[#E5E5E5]"
-											onclick={() => openOptionsMenu = null}
-										>
-											Call
-										</button>
-										<button 
-											class="w-full px-4 py-2 text-left font-sans text-sm text-[#555555] hover:bg-[#F5F5F5] border-b border-[#E5E5E5]"
-											onclick={() => openOptionsMenu = null}
-										>
-											SMS
-										</button>
-										<button 
-											class="w-full px-4 py-2 text-left font-sans text-sm text-red-500 hover:bg-[#F5F5F5]"
-											onclick={() => openOptionsMenu = null}
-										>
-											Email
-										</button>
-									</div>
-								{/if}
-							</div>
-						</div>
-					{/each}
-				</div>
+			<div class="min-w-[1282px]">
+				<CommunicationTable
+					bind:communications={communications}
+					{filters}
+					onSummaryClick={handleSummaryClick}
+					onActionClick={handleActionClick}
+				/>
 			</div>
 		</div>
 	</div>

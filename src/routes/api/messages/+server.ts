@@ -190,13 +190,32 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
     }
 
     // Log the communication
+    // Determine type based on source
+    let commType: 'email' | 'sms' | 'voice' | 'web' | 'facebook' | 'chatbot' | 'leadform' | 'leadbox' = 'web';
+    if (messageData.source === 'leadform') {
+      commType = 'leadform';
+    } else if (messageData.source === 'leadbox') {
+      commType = 'leadbox';
+    } else if (messageData.source === 'sms') {
+      commType = 'sms';
+    } else if (messageData.source === 'email') {
+      commType = 'email';
+    } else if (messageData.source === 'voice') {
+      commType = 'voice';
+    } else if (messageData.source === 'facebook') {
+      commType = 'facebook';
+    } else if (messageData.source === 'chatbot') {
+      commType = 'chatbot';
+    }
+
     const logEntry: CommunicationLogEntry = {
-      type: messageData.source === 'leadform' ? 'leadform' : 'web',
+      type: commType,
       direction: 'inbound', // Assuming mostly inbound here, or derive from is_agent_reply
       status: 'success',
       source: messageData.customer_email || messageData.customer_phone || 'Web',
       destination: 'Inbox',
       company_id: messageData.company_id,
+      customer_id: record.customer_id || undefined, // Link to contact if created/updated
       summary: messageData.message.substring(0, 50) + '...',
       content: messageData.message,
       metadata: {

@@ -42,10 +42,10 @@ export const actions: Actions = {
 				phone: phone || undefined
 			});
 		} catch (error) {
-			console.error('Error creating contact:', error);
-			return fail(500, { error: 'Failed to create contact' });
+			console.error('Error creating profile:', error);
+			return fail(500, { error: 'Failed to create profile' });
 		}
 
-		throw redirect(303, '/contacts');
+		throw redirect(303, '/profiles');
 	}
 };

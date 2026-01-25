@@ -428,6 +428,72 @@
 		}
 	}
 
+	// Handle transfer (same as assign but for communication logs)
+	async function handleTransferMessage(selectedAgentNames: string[]) {
+		if (!selectedMessage || !companyMembers) return;
+
+		// Map agent names back to member IDs
+		const selectedMemberIds = companyMembers
+			.filter(m => selectedAgentNames.includes(m.name))
+			.map(m => m.id);
+
+		if (selectedMemberIds.length === 0) {
+			toast.error('No members selected');
+			return;
+		}
+
+		try {
+			// Update the message
+			await pb.collection('messages').update(selectedMessage.id, {
+				assigned_to: selectedMemberIds[0], // Use first member for message assignment
+				status: 'assigned'
+			});
+
+			// Find related communication logs by thread_id
+			const threadId = selectedMessage.thread_id;
+			if (threadId) {
+				try {
+					// Get all communication logs for the company
+					const allLogs = await pb.collection('communication_logs').getFullList({
+						filter: `company_id = "${user?.company}"`
+					});
+
+					// Filter logs that match the thread_id in metadata
+					const matchingLogs = allLogs.filter(log => {
+						try {
+							const metadata = typeof log.metadata === 'string' 
+								? JSON.parse(log.metadata) 
+								: log.metadata;
+							return metadata?.thread_id === threadId;
+						} catch {
+							return false;
+						}
+					});
+
+					// Update all related logs
+					if (matchingLogs.length > 0) {
+						const logUpdatePromises = matchingLogs.map(log =>
+							pb.collection('communication_logs').update(log.id, {
+								assigned_members: selectedMemberIds
+							})
+						);
+						await Promise.all(logUpdatePromises);
+					}
+				} catch (logError) {
+					console.error('Error updating communication logs:', logError);
+					// Continue even if log update fails
+				}
+			}
+
+			// Reload messages to reflect changes
+			await loadMessages();
+			toast.success('Message transferred successfully');
+		} catch (error) {
+			console.error('Error transferring message:', error);
+			toast.error('Failed to transfer message');
+		}
+	}
+
 	// Add infinite scroll
 	let messagesContainer: HTMLElement;
 	function handleScroll(e: Event) {
@@ -472,7 +538,7 @@
 
 		<div class="actions flex items-center gap-2">
 			<HeaderTag />
-			<HeaderShuffle />
+			<HeaderShuffle selectedMessage={selectedMessage} companyMembers={companyMembers} onTransfer={handleTransferMessage} />
 			<HeaderReminder />
 			<HeaderClose />
 		</div>

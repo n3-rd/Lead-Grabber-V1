@@ -1,21 +1,19 @@
 <script lang="ts">
 	import { ChevronDown, Search, Pencil, Trash2, Phone, MessageSquare, Mail, Image as ImageIcon, Play, FileText, Settings, User, Plus, Download } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 
 	let activeTab = $state<'myNumber' | 'messaging' | 'voice'>('myNumber');
 	let messagingSubTab = $state<'numbers' | 'orders'>('numbers');
 	let searchQuery = $state('');
 	let verifiedSearchQuery = $state('');
 	let selectedNumbers = $state<Set<string>>(new Set());
+	let numbers = $state<any[]>([]);
+	let verifiedNumbers = $state<any[]>([]);
+	let isLoading = $state(false);
 
-	// Mock data for verified numbers
-	const verifiedNumbers = [
-		{ number: '+1 705 274 9564', verifiedAt: '8 Jan 2025 11:38 PM' },
-		{ number: '+1 705 274 9564', verifiedAt: '8 Jan 2025 11:38 PM' }
-	];
-
-	// Mock data for numbers
-	const numbers = [
+	// Mock data for numbers (fallback)
+	const mockNumbers = [
 		{ number: '+1 705 243 8416', status: 'Active', connection: 'ClearSky Software', messagingProfile: 'ClearSky Software' },
 		{ number: '+1 705 243 8417', status: 'Active', connection: 'ClearSky Software', messagingProfile: 'ClearSky Software' },
 		{ number: '+1 705 243 8418', status: 'Active', connection: 'ClearSky Software', messagingProfile: '-' },
@@ -65,14 +63,97 @@
 		console.log('Export');
 	}
 
-	function handleEdit(number: string) {
-		// TODO: Implement edit
-		console.log('Edit:', number);
+	async function loadNumbers() {
+		isLoading = true;
+		try {
+			const params = new URLSearchParams();
+			if (searchQuery) {
+				params.append('search', searchQuery);
+			}
+			const response = await fetch(`/api/telnyx/numbers/list?${params.toString()}`);
+			const result = await response.json();
+			if (result.success) {
+				numbers = result.numbers;
+			} else {
+				toast.error(result.error || 'Failed to load numbers');
+			}
+		} catch (error) {
+			console.error('Error loading numbers:', error);
+			toast.error('Error loading numbers');
+		} finally {
+			isLoading = false;
+		}
 	}
 
-	function handleDelete(number: string) {
-		// TODO: Implement delete
-		console.log('Delete:', number);
+	async function loadVerifiedNumbers() {
+		try {
+			const params = new URLSearchParams();
+			if (verifiedSearchQuery) {
+				params.append('search', verifiedSearchQuery);
+			}
+			const response = await fetch(`/api/telnyx/verified-numbers?${params.toString()}`);
+			const result = await response.json();
+			if (result.success) {
+				verifiedNumbers = result.numbers;
+			}
+		} catch (error) {
+			console.error('Error loading verified numbers:', error);
+		}
+	}
+
+	$effect(() => {
+		if (activeTab === 'myNumber') {
+			loadNumbers();
+		} else if (activeTab === 'voice') {
+			loadVerifiedNumbers();
+		}
+	});
+
+	$effect(() => {
+		if (activeTab === 'myNumber' && searchQuery) {
+			const timeout = setTimeout(() => {
+				loadNumbers();
+			}, 500);
+			return () => clearTimeout(timeout);
+		}
+	});
+
+	$effect(() => {
+		if (activeTab === 'voice' && verifiedSearchQuery) {
+			const timeout = setTimeout(() => {
+				loadVerifiedNumbers();
+			}, 500);
+			return () => clearTimeout(timeout);
+		}
+	});
+
+	async function handleDelete(numberId: string, phoneNumber: string) {
+		if (!confirm(`Are you sure you want to delete ${phoneNumber}?`)) {
+			return;
+		}
+
+		try {
+			const response = await fetch(`/api/telnyx/numbers/${numberId}`, {
+				method: 'DELETE'
+			});
+			const result = await response.json();
+
+			if (result.success) {
+				toast.success('Number deleted successfully');
+				await loadNumbers();
+			} else {
+				toast.error(result.error || 'Failed to delete number');
+			}
+		} catch (error) {
+			console.error('Error deleting number:', error);
+			toast.error('Error deleting number');
+		}
+	}
+
+	function handleEdit(number: any) {
+		// TODO: Open edit modal/dialog
+		console.log('Edit:', number);
+		toast.info('Edit functionality coming soon');
 	}
 </script>
 
@@ -236,6 +317,11 @@
 
 					<!-- Table Rows -->
 					<div class="divide-y divide-[rgba(193,193,193,0.96)]">
+						{#if verifiedNumbers.length === 0}
+							<div class="px-4 py-8 text-center text-gray-500">
+								No verified numbers found.
+							</div>
+						{:else}
 						{#each verifiedNumbers as verified}
 							<div class="grid grid-cols-2 gap-4 px-4 py-3">
 								<div class="font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080]">
@@ -251,6 +337,7 @@
 								</div>
 							</div>
 						{/each}
+						{/if}
 					</div>
 				</div>
 			</div>
@@ -390,6 +477,19 @@
 						</tr>
 					</thead>
 					<tbody>
+						{#if isLoading}
+							<tr>
+								<td colspan="8" class="py-8 text-center text-gray-500">
+									Loading...
+								</td>
+							</tr>
+						{:else if numbers.length === 0}
+							<tr>
+								<td colspan="8" class="py-8 text-center text-gray-500">
+									No numbers found.
+								</td>
+							</tr>
+						{:else}
 						{#each numbers as num}
 							<tr class="border-b border-[rgba(193,193,193,0.4)]">
 								<td class="py-3 pl-4 pr-3">
@@ -419,12 +519,12 @@
 								</td>
 								<td class="py-3">
 									<div class="flex gap-1.5">
-										<MessageSquare class="h-3.5 w-3.5 text-[#577AB7]" />
-										<Phone class="h-3.5 w-3.5 text-[#577AB7]" />
-										<Play class="h-3.5 w-3.5 text-[#577AB7]" />
-										<User class="h-3.5 w-3.5 text-[#577AB7]" />
-										<FileText class="h-3.5 w-3.5 text-[#577AB7]" />
-										<Settings class="h-3.5 w-3.5 text-[#577AB7]" />
+										{#if num.features?.sms}
+											<MessageSquare class="h-3.5 w-3.5 text-[#577AB7]" />
+										{/if}
+										{#if num.features?.voice}
+											<Phone class="h-3.5 w-3.5 text-[#577AB7]" />
+										{/if}
 									</div>
 								</td>
 								<td class="py-3">
@@ -435,14 +535,14 @@
 								<td class="py-3">
 									<div class="flex items-center gap-2">
 										<button
-											onclick={() => handleEdit(num.number)}
+											onclick={() => handleEdit(num)}
 											class="text-[#666666] hover:text-[#577AB7] transition-colors"
 											aria-label="Edit"
 										>
 											<Pencil class="h-4 w-4" />
 										</button>
 										<button
-											onclick={() => handleDelete(num.number)}
+											onclick={() => handleDelete(num.id, num.number)}
 											class="text-[#666666] hover:text-red-500 transition-colors"
 											aria-label="Delete"
 										>
@@ -452,6 +552,7 @@
 								</td>
 							</tr>
 						{/each}
+						{/if}
 					</tbody>
 				</table>
 			</div>

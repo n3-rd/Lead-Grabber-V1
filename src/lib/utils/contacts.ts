@@ -1,5 +1,8 @@
 import { prisma } from '$lib/db'
 import { normalizePhoneNumber } from '$lib/utils/phone'
+import { filterContacts } from './contacts-filter'
+
+export { filterContacts }
 
 interface ContactData {
   company_id: string
@@ -30,20 +33,6 @@ export async function getContactsByCompany(companyId: string, limit: number = 50
     console.error('Error fetching contacts:', error)
     return []
   }
-}
-
-/**
- * Filters contacts by search query (searches name and phone)
- * @param contacts - Array of contacts to filter
- * @param query - Search query string
- * @returns Filtered array of contacts
- */
-export function filterContacts(contacts: Array<any>, query: string): typeof contacts {
-  if (!query) return contacts
-  const lowerQuery = query.toLowerCase()
-  return contacts.filter(
-    (c: any) => c.name?.toLowerCase().includes(lowerQuery) || c.phone?.includes(query)
-  )
 }
 
 export async function createOrUpdateContact(data: ContactData) {

@@ -4,7 +4,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { normalizePhoneNumber } from '$lib/utils/phone';
-	import { filterContacts } from '$lib/utils/contacts';
+	import { filterContacts } from '$lib/utils/contacts-filter';
 
 	let { data } = $props();
 

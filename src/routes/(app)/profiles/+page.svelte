@@ -2,7 +2,7 @@
 	import { Search, Mic, MoreVertical, Pencil, Trash2 } from "lucide-svelte";
 	import { goto } from "$app/navigation";
 	import { invalidateAll } from "$app/navigation";
-	import { filterContacts } from '$lib/utils/contacts';
+	import { filterContacts } from '$lib/utils/contacts-filter';
 	import { Button } from "$lib/components/ui/button";
 	import * as Dialog from "$lib/components/ui/dialog";
 	import { Input } from "$lib/components/ui/input";

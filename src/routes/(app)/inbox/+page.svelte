@@ -16,22 +16,15 @@
 		Tag,
 		UserPlus
 	} from 'lucide-svelte';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { getUserContext } from '$lib/contexts/user';
 	import type { Message } from '$lib/types/message';
 
-	const contextUser = getUserContext();
-	console.log('contextUser', $contextUser);
-	if ($contextUser == null) {
-		goto('/login');
-	}
 	let { data } = $props();
 	let { user } = data;
-	console.log('data', data);
-	if (user === null) {
+	if (user == null) {
 		goto('/login');
 	}
 	if (
@@ -59,9 +52,6 @@
 			timestamp: string;
 		}[]
 	>([]);
-
-	// EventSource for realtime updates
-	let eventSource: EventSource | null = null;
 
 	// Add these state variables near the top with other state declarations
 	let isLoadingMessages = $state(true);
@@ -98,109 +88,10 @@
 
 	onMount(async () => {
 		try {
-			// Initial load of messages
 			await loadMessages();
 			await loadCompanyMembers();
-
-			// Set up Server-Sent Events for realtime updates
-			if (user?.company) {
-				eventSource = new EventSource('/api/messages/realtime');
-
-				eventSource.onmessage = async (event) => {
-					try {
-						const data = JSON.parse(event.data);
-						if (data.type === 'connected') {
-							console.log('Realtime connection established');
-							return;
-						}
-
-						// Handle message updates
-						if (data.action === 'create') {
-							// For new messages, reload the list (but reset page to avoid duplicates)
-							try {
-								const existingMessage = messages.find((m) => m.id === data.messageId);
-								if (!existingMessage) {
-									// Reset to first page and reload
-									page = 1;
-									initialLoad = true;
-									await loadMessages();
-								}
-							} catch (err) {
-								console.error('Error handling new message:', err);
-							}
-						} else if (data.action === 'update') {
-							// Update the specific message in place without reloading all
-							try {
-								const messageIndex = messages.findIndex((m) => m.id === data.messageId);
-								if (messageIndex !== -1) {
-									// Fetch the updated message
-									const currentMessage = messages[messageIndex];
-									const response = await fetch(
-										`/api/messages?threadId=${encodeURIComponent(currentMessage.thread_id)}`
-									);
-									if (response.ok) {
-										const updated = await response.json();
-										// Update in place - replace the message, don't add a new one
-										messages = messages.map((m) =>
-											m.id === updated.id ? formatMessage(updated) : m
-										);
-
-										// If this is the currently selected thread, reload chat
-										if (selectedMessage && selectedMessage.thread_id === updated.threadId) {
-											await loadChatMessages(selectedMessage.thread_id);
-										}
-									}
-								} else if (data.threadId) {
-									// Message not in current list, but we have threadId - fetch it
-									const response = await fetch(
-										`/api/messages?threadId=${encodeURIComponent(data.threadId)}`
-									);
-									if (response.ok) {
-										const updated = await response.json();
-										// Check if it already exists before adding
-										const exists = messages.find((m) => m.id === updated.id);
-										if (!exists) {
-											messages = [formatMessage(updated), ...messages];
-										}
-									}
-								}
-							} catch (err) {
-								console.error('Error fetching updated message:', err);
-							}
-						} else if (data.action === 'delete') {
-							// Remove deleted message
-							messages = messages.filter((m) => m.id !== data.messageId);
-							if (selectedMessage?.id === data.messageId) {
-								selectedMessage = null;
-								showMessages = false;
-							}
-						}
-					} catch (err) {
-						console.error('Error handling realtime event:', err);
-					}
-				};
-
-				eventSource.onerror = (err) => {
-					console.error('EventSource error:', err);
-					// Reconnect after 3 seconds
-					setTimeout(() => {
-						if (eventSource) {
-							eventSource.close();
-							eventSource = new EventSource('/api/messages/realtime');
-						}
-					}, 3000);
-				};
-			}
 		} catch (err) {
 			console.error('Error in onMount:', err);
-		}
-	});
-
-	// Add onDestroy cleanup
-	onDestroy(() => {
-		if (eventSource) {
-			eventSource.close();
-			eventSource = null;
 		}
 	});
 

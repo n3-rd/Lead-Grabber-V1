@@ -83,9 +83,10 @@
 
                     <div>
                         <input
-                            name="password"
-                            type="password"
-                            placeholder="Password"
+name="password"
+								type="password"
+								autocomplete="current-password"
+								placeholder="Password"
                             required
                             use:validators={[required]}
                             class="w-full px-4 py-3 rounded-lg bg-gray-100 border-transparent focus:border-primary/60 focus:bg-white focus:ring-0"

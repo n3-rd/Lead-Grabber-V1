@@ -1,32 +1,41 @@
-import { writable } from 'svelte/store';
-import { pb } from '$lib/pocketbase';
-import type { AuthModel } from 'pocketbase';
+import { writable } from 'svelte/store'
+import type { User } from '@prisma/client'
 
 interface AuthStore {
-    user: AuthModel | null;
-    token: string | null;
+  user: (User & { company: { id: string; name: string | null } | null }) | null
+  token: string | null
 }
-    
+
 function createAuthStore() {
-    const { subscribe, set } = writable<AuthStore>({
-        user: pb.authStore.model,
-        token: pb.authStore.token
-    });
+  const { subscribe, set, update } = writable<AuthStore>({
+    user: null,
+    token: null,
+  })
 
-    pb.authStore.onChange((token, model) => {
-        set({ user: model, token });
-    });
+  // Load from cookie on client side
+  if (typeof window !== 'undefined') {
+    const cookies = document.cookie.split(';').map((c) => c.trim())
+    const pbAuthCookie = cookies.find((c) => c.startsWith('pb_auth='))
+    if (pbAuthCookie) {
+      const token = pbAuthCookie.split('=')[1]
+      // Token will be validated server-side, we just store it here
+      update((store) => ({ ...store, token }))
+    }
+  }
 
-    return {
-        subscribe,
-        setUser: (user: AuthModel | null) => {
-            set({ user, token: pb.authStore.token });
-        },
-        logout: () => {
-            pb.authStore.clear();
-            set({ user: null, token: null });
-        }
-    };
+  return {
+    subscribe,
+    setUser: (user: (User & { company: { id: string; name: string | null } | null }) | null, token: string | null = null) => {
+      set({ user, token })
+    },
+    logout: async () => {
+      // Clear cookie
+      if (typeof window !== 'undefined') {
+        document.cookie = 'pb_auth=; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=0'
+      }
+      set({ user: null, token: null })
+    },
+  }
 }
 
-export const authStore = createAuthStore(); 
+export const authStore = createAuthStore()

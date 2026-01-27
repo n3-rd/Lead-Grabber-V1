@@ -1,8 +1,14 @@
 <script lang="ts">
-	import { Search, Mic, MapPin, Mail, Phone, ChevronDown, X, SquarePen, MessageSquare, Globe, Facebook, Bot, FileText } from "lucide-svelte";
+	import { Search, Mic, MapPin, Mail, Phone, ChevronDown, X, SquarePen, MessageSquare, Globe, Facebook, Bot, FileText, Trash2 } from "lucide-svelte";
 	import { goto } from "$app/navigation";
+	import { invalidateAll } from "$app/navigation";
 	import { page } from "$app/stores";
 	import CommunicationTable from "$lib/components/CommunicationTable.svelte";
+	import { Button } from "$lib/components/ui/button";
+	import * as Dialog from "$lib/components/ui/dialog";
+	import { Input } from "$lib/components/ui/input";
+	import { Label } from "$lib/components/ui/label";
+	import { toast } from "svelte-sonner";
 
 	interface Connection {
 		id: string;
@@ -80,6 +86,45 @@
 	
 	let connectionsExpanded = $state(true);
 	let selectedSummary = $state<Communication | null>(null);
+	let showEditDialog = $state(false);
+	let editForm = $state({ name: '', email: '', phone: '' });
+
+	function openEdit() {
+		if (data.profile) {
+			editForm = {
+				name: data.profile.name ?? '',
+				email: data.profile.email ?? '',
+				phone: data.profile.phone ?? '',
+			};
+			showEditDialog = true;
+		}
+	}
+
+	async function submitEdit() {
+		const form = new FormData();
+		form.set('name', editForm.name);
+		form.set('email', editForm.email);
+		form.set('phone', editForm.phone);
+		const res = await fetch('?/updateProfile', { method: 'POST', body: form });
+		if (res.ok) {
+			showEditDialog = false;
+			toast.success('Profile updated');
+			await invalidateAll();
+		} else {
+			toast.error('Failed to update profile');
+		}
+	}
+
+	async function handleDelete() {
+		if (!confirm('Are you sure you want to delete this profile?')) return;
+		const res = await fetch('?/deleteProfile', { method: 'POST', body: new FormData() });
+		if (res.ok) {
+			toast.success('Profile deleted');
+			goto('/profiles');
+		} else {
+			toast.error('Failed to delete profile');
+		}
+	}
 
 	function handleSummaryClick(comm: Communication) {
 		selectedSummary = comm;
@@ -94,7 +139,7 @@
 
 {#if selectedProfile}
 	<!-- Profile Detail View -->
-	<div class="w-full min-h-full flex" onclick={() => openOptionsMenu = null}>
+	<div class="w-full min-h-full flex">
 		<!-- Left Sidebar -->
 		<div class="w-[325px] min-w-[325px] bg-[#EDF2FA] border-r border-[#7E7E7E] p-6">
 			<!-- Profile Name -->
@@ -200,11 +245,15 @@
 				{/each}
 			{/if}
 
-			<!-- Edit | Add -->
-			<div class="text-right mb-4">
-				<span class="font-sans font-normal text-lg leading-[1.29] text-[#565656] underline cursor-pointer hover:text-[#333]">Edit</span>
-				<span class="font-sans font-normal text-lg leading-[1.29] text-[#565656]"> | </span>
+			<!-- Edit | Add | Delete -->
+			<div class="text-right mb-4 flex items-center justify-end gap-3">
+				<button type="button" class="font-sans font-normal text-lg leading-[1.29] text-[#565656] underline cursor-pointer hover:text-[#333]" onclick={openEdit}>Edit</button>
+				<span class="font-sans font-normal text-lg leading-[1.29] text-[#565656]">|</span>
 				<span class="font-sans font-normal text-lg leading-[1.29] text-[#565656] underline cursor-pointer hover:text-[#333]">Add</span>
+				<span class="font-sans font-normal text-lg leading-[1.29] text-[#565656]">|</span>
+				<button type="button" class="flex items-center gap-1 font-sans font-normal text-lg leading-[1.29] text-red-600 hover:text-red-700 underline cursor-pointer" onclick={handleDelete}>
+					<Trash2 class="w-4 h-4" /> Delete
+				</button>
 			</div>
 
 			<!-- Divider -->
@@ -296,6 +345,33 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- Edit Profile Dialog -->
+	<Dialog.Root bind:open={showEditDialog}>
+		<Dialog.Content class="sm:max-w-[425px]">
+			<Dialog.Header>
+				<Dialog.Title>Edit Profile</Dialog.Title>
+			</Dialog.Header>
+			<div class="grid gap-4 py-4">
+				<div class="grid gap-2">
+					<Label for="edit-name">Name</Label>
+					<Input id="edit-name" bind:value={editForm.name} />
+				</div>
+				<div class="grid gap-2">
+					<Label for="edit-email">Email</Label>
+					<Input id="edit-email" type="email" bind:value={editForm.email} />
+				</div>
+				<div class="grid gap-2">
+					<Label for="edit-phone">Phone</Label>
+					<Input id="edit-phone" type="tel" bind:value={editForm.phone} />
+				</div>
+			</div>
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (showEditDialog = false)}>Cancel</Button>
+				<Button onclick={submitEdit}>Save changes</Button>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
 
 	<!-- Summary Modal -->
 	{#if selectedSummary}

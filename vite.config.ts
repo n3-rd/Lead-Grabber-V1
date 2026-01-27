@@ -4,7 +4,8 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	plugins: [sveltekit()],
 	ssr: {
-		noExternal: ['lucide-svelte']
+		noExternal: ['lucide-svelte'],
+		external: ['bcryptjs']
 	},
 	build: {
 		minify: true,

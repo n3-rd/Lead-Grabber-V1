@@ -1,31 +1,33 @@
-import { DEFAULT_PERMISSIONS } from "@//types/company_member";
+import { prisma } from '$lib/db'
+import { json } from '@sveltejs/kit'
+import type { RequestHandler } from './$types'
 
-import { pb } from "@//pocketbase";
-import { checkPermission } from "@//utils/checkPermission";
-
-export const POST: RequestHandler = async ({ request }) => {
-  const { email, role, companyId } = await request.json();
-  
-  // Only owners and admins can invite new members
-  const hasPermission = await checkPermission(
-    request.locals.user.id,
-    companyId,
-    'members',
-    'create'
-  );
-  
-  if (!hasPermission) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 403 });
+export const GET: RequestHandler = async ({ url, locals }) => {
+  const user = locals.user
+  if (!user?.company) {
+    return json({ error: 'Unauthorized' }, { status: 401 })
   }
-  
-  const invite = await pb.collection('invites').create({
-    email,
-    company_id: companyId,
-    role, // 'admin' or 'member' only - can't invite owners
-    status: 'pending',
-    permissions: DEFAULT_PERMISSIONS[role],
-    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-  });
 
-  return new Response(JSON.stringify({ invite }));
-}; 
+  const companyId = url.searchParams.get('companyId')
+  if (!companyId || companyId !== user.company.id) {
+    return json({ error: 'Unauthorized' }, { status: 403 })
+  }
+
+  try {
+    const invites = await prisma.invite.findMany({
+      where: {
+        companyId: companyId,
+      },
+      orderBy: {
+        created: 'desc',
+      },
+      take: 50,
+    })
+
+    return json({ invites })
+  } catch (error) {
+    console.error('Error fetching invites:', error)
+    return json({ error: 'Failed to fetch invites' }, { status: 500 })
+  }
+}
+

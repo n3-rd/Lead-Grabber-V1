@@ -1,40 +1,70 @@
-import { pb } from '$lib/pocketbase';
-import { error } from '@sveltejs/kit';
-import { PUBLIC_BASE_URL } from "$env/static/public";
-import { buildLeadformScript } from '$lib/embed/leadform-builder';
+import { prisma } from '$lib/db'
+import { error } from '@sveltejs/kit'
+import { PUBLIC_BASE_URL } from '$env/static/public'
+import { buildLeadformScript } from '$lib/embed/leadform-builder'
 
 export async function GET({ params, request, locals }) {
   try {
-    pb.authStore.clear();
+    let form
+    let company
 
-    let form;
-    let company;
     if (params.id === 'default') {
       // Get the most recently created form
-      const forms = await pb.collection('leadforms').getList(1, 1, {
-        sort: '-created'
-      });
-      form = forms.items[0];
-      company = await pb.collection('users').getOne(form.owner)
+      form = await prisma.leadform.findFirst({
+        orderBy: {
+          created: 'desc',
+        },
+        include: {
+          owner: {
+            include: {
+              company: true,
+            },
+          },
+        },
+      })
+      if (form) {
+        company = form.owner
+      }
     } else {
-      form = await pb.collection('leadforms').getOne(params.id);
-      company = await pb.collection('users').getOne(form.owner)
+      form = await prisma.leadform.findUnique({
+        where: { id: params.id },
+        include: {
+          owner: {
+            include: {
+              company: true,
+            },
+          },
+        },
+      })
+      if (form) {
+        company = form.owner
+      }
     }
 
     if (!form) {
-      throw error(404, 'Form not found');
+      throw error(404, 'Form not found')
     }
 
-    const formData = typeof form.form_data === 'string'
-      ? JSON.parse(form.form_data)
-      : form.form_data;
+    if (!company?.company) {
+      throw error(404, 'Company not found')
+    }
+
+    // Parse form_data if it's a string
+    let formData = form.formData
+    if (typeof formData === 'string') {
+      try {
+        formData = JSON.parse(formData)
+      } catch {
+        formData = {}
+      }
+    }
 
     const jsCode = buildLeadformScript({
       id: params.id,
-      formData,
-      companyId: company.company,
-      baseUrl: PUBLIC_BASE_URL
-    });
+      formData: formData || {},
+      companyId: company.company.id,
+      baseUrl: PUBLIC_BASE_URL,
+    })
 
     return new Response(jsCode, {
       headers: {
@@ -42,17 +72,17 @@ export async function GET({ params, request, locals }) {
         'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    });
-  } catch (err) {
-    console.error('Error generating form script:', err);
+        'Expires': '0',
+      },
+    })
+  } catch (err: any) {
+    console.error('Error generating form script:', err)
     return new Response('Error generating form script', {
       status: err.status || 500,
       headers: {
         'Content-Type': 'text/plain',
-        'Access-Control-Allow-Origin': '*'
-      }
-    });
+        'Access-Control-Allow-Origin': '*',
+      },
+    })
   }
 }

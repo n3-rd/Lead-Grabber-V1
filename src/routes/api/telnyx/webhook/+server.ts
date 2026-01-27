@@ -4,6 +4,7 @@ import type { RequestHandler } from './$types';
 import { pb } from '$lib/pocketbase';
 import { normalizePhoneNumber } from '$lib/utils/phone';
 import { logCommunication } from '$lib/utils/communication-log';
+import { createOrUpdateContact } from '$lib/utils/contacts';
 
 // Define the hardcoded company ID
 const HARDCODED_COMPANY_ID = '6h4zpjhqip1d50b';
@@ -75,10 +76,11 @@ export const POST: RequestHandler = async ({ request }) => {
         console.log('No existing thread found for:', normalizedPhoneNumber);
       }
 
+      let customerName: string;
       if (existingUser) {
-        // Update existing thread with new message
+        customerName = existingUser.customer_name ?? 'Unknown Customer';
         const updatedUser = await pb.collection('messages').update(existingUser.id, {
-          messages: [...existingUser.messages, {
+          messages: [...(Array.isArray(existingUser.messages) ? existingUser.messages : []), {
             content,
             timestamp: new Date().toISOString(),
             is_agent_reply: false,
@@ -86,21 +88,12 @@ export const POST: RequestHandler = async ({ request }) => {
           }],
           status: 'new'
         });
-
         console.log('Updated existing thread:', updatedUser.id);
       } else {
-        // Extract name from message if possible (like your example "Hello, I'm new customer, Jack")
-        let customerName = 'Unknown Customer';
         const nameMatch = content.match(/(?:I'm|I am)\s+(?:new\s+customer,\s+)?([A-Za-z]+)/i);
-        if (nameMatch && nameMatch[1]) {
-          customerName = nameMatch[1];
-        }
-
-        // Create new thread with hardcoded company ID
-        console.log('Creating new thread with hardcoded company ID:', HARDCODED_COMPANY_ID);
-
+        customerName = nameMatch?.[1] ?? 'Unknown Customer';
         try {
-          const newThread = await pb.collection('messages').create({
+          await pb.collection('messages').create({
             thread_id: threadId,
             customer_phone: phoneNumber,
             customer_name: customerName,
@@ -118,12 +111,8 @@ export const POST: RequestHandler = async ({ request }) => {
             form_data: {},
             source_url: ''
           });
-
-          console.log('Created new thread:', newThread.id);
         } catch (error) {
-          // Log detailed error information
           console.error('Failed to create thread, error:', error);
-
           return json({
             success: false,
             error: 'Failed to create message thread. Check server logs for details.'
@@ -131,7 +120,12 @@ export const POST: RequestHandler = async ({ request }) => {
         }
       }
 
-      // Log the inbound SMS communication
+      const contact = await createOrUpdateContact({
+        company_id: HARDCODED_COMPANY_ID,
+        phone: normalizedPhoneNumber,
+        name: customerName !== 'Unknown Customer' ? customerName : undefined,
+      });
+
       await logCommunication({
         type: 'sms',
         direction: 'inbound',
@@ -139,7 +133,7 @@ export const POST: RequestHandler = async ({ request }) => {
         source: phoneNumber,
         destination: messageData.to || 'Inbox',
         company_id: HARDCODED_COMPANY_ID,
-        customer_id: existingUser?.id, // Link to message thread if found
+        customer_id: contact?.id ?? undefined,
         summary: content.substring(0, 50) + '...',
         content: content,
         metadata: {

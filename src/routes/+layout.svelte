@@ -3,8 +3,7 @@
 	import { browser } from '$app/environment';
 	import { applyAction, enhance } from '$app/forms';
 	import { setUserContext } from '$lib/contexts/user';
-	import { pb } from '$lib/pocketbase';
-	import { onDestroy, onMount, type Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import { writable } from 'svelte/store';
 	import LoadingBar from '@//components/loading-bar.svelte';
 	import { Toaster } from 'svelte-sonner';
@@ -21,18 +20,6 @@
 	// Initialize user store
 	const user = writable(data.user);
 	setUserContext(user);
-
-	if (browser) {
-		// Load user from cookie (client-side only)
-		pb.authStore.loadFromCookie(document.cookie);
-
-		// Update user store when auth store changes
-		const unsubscribe = pb.authStore.onChange(() => {
-			user.set(pb.authStore.record);
-			document.cookie = pb.authStore.exportToCookie({ httpOnly: false });
-		}, true);
-		onDestroy(unsubscribe);
-	}
 
 	// --- Incoming Call Polling Logic ---
 	let pollInterval: ReturnType<typeof setInterval>;

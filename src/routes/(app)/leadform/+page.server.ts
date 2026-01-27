@@ -1,104 +1,88 @@
-import { pb } from '$lib/pocketbase';
-import { fail, redirect } from '@sveltejs/kit';
-import type { Actions } from './$types';
+import { prisma } from '$lib/db'
+import { fail, redirect } from '@sveltejs/kit'
+import type { Actions, PageServerLoad } from './$types'
 
-export const load = async ({ locals }) => {
-    const user = locals.user;
+export const load: PageServerLoad = async ({ locals }) => {
+	const user = locals.user
+	if (!user) throw redirect(303, '/login')
+	if (!user.company) throw redirect(303, '/create-company')
 
-    if (!user) {
-        throw redirect(303, '/login');
-    }
+	try {
+		const existing = await prisma.leadform.findFirst({
+			where: { ownerId: user.id },
+			orderBy: { updated: 'desc' },
+		})
 
-    try {
-        // Check if user has a company
-        const companies = await pb.collection('companies').getList(1, 1, {
-            filter: `owner = "${user.id}"`,
-        });
+		const form = existing
+			? {
+					id: existing.id,
+					name: existing.name,
+					form_data:
+						existing.formData && typeof existing.formData === 'object' && !Array.isArray(existing.formData)
+							? (existing.formData as { settings?: unknown; formElements?: unknown })
+							: { settings: {}, formElements: [] },
+					created: existing.created.toISOString(),
+					updated: existing.updated.toISOString(),
+				}
+			: null
 
-        if (companies.items.length === 0) {
-            throw redirect(303, '/create-company');
-        }
+		return { user, form }
+	} catch (error) {
+		console.error('Error loading form:', error)
+		return { user, form: null }
+	}
+}
 
-        // Fetch the user's existing form
-        const existingForms = await pb.collection('leadforms').getList(1, 1, {
-            filter: `owner = "${user.id}"`
-        });
+export const actions: Actions = {
+	saveForm: async ({ request, locals }) => {
+		const user = locals.user
+		if (!user) return fail(401, { success: false, message: 'Unauthorized' })
 
-        // Check if form_data is already an object
-        const form = existingForms.items[0] ? {
-            ...existingForms.items[0],
-            form_data: typeof existingForms.items[0].form_data === 'string'
-                ? JSON.parse(existingForms.items[0].form_data)
-                : existingForms.items[0].form_data
-        } : null;
+		try {
+			const form = await request.formData()
+			const formDataJson = form.get('formData')?.toString()
+			if (!formDataJson) return fail(400, { success: false, message: 'Invalid form data' })
 
-        return {
-            user,
-            form
-        };
-    } catch (error) {
-        console.error('Error loading form:', error);
-        return {
-            user,
-            form: null
-        };
-    }
-};
+			const parsedData = JSON.parse(formDataJson) as {
+				settings?: { heading?: string }
+				formElements?: unknown
+			}
 
-export const actions = {
-    saveForm: async ({ request, locals }) => {
-        try {
-            const data = await request.formData();
-            const formDataJson = data.get('formData');
+			const formDataToSave = {
+				formData: {
+					settings: parsedData.settings ?? {},
+					formElements: parsedData.formElements ?? [],
+				},
+				name: parsedData.settings?.heading ?? 'Contact Form',
+			}
 
-            if (!formDataJson || typeof formDataJson !== 'string') {
-                return fail(400, {
-                    success: false,
-                    message: 'Invalid form data'
-                });
-            }
+			const existing = await prisma.leadform.findFirst({
+				where: { ownerId: user.id },
+			})
 
-            const parsedData = JSON.parse(formDataJson);
-            const user = locals.user;
+			let result
+			if (existing) {
+				result = await prisma.leadform.update({
+					where: { id: existing.id },
+					data: formDataToSave,
+				})
+			} else {
+				result = await prisma.leadform.create({
+					data: {
+						...formDataToSave,
+						ownerId: user.id,
+					},
+				})
+			}
 
-            if (!user) {
-                return fail(401, {
-                    success: false,
-                    message: 'Unauthorized'
-                });
-            }
-
-            const formDataToSave = {
-                form_data: {
-                    settings: parsedData.settings,
-                    formElements: parsedData.formElements
-                },
-                owner: user.id,
-                name: parsedData.settings.heading
-            };
-
-            const existingForms = await pb.collection('leadforms').getList(1, 1, {
-                filter: `owner = "${user.id}"`
-            });
-
-            let result;
-            if (existingForms.items.length > 0) {
-                result = await pb.collection('leadforms').update(existingForms.items[0].id, formDataToSave);
-            } else {
-                result = await pb.collection('leadforms').create(formDataToSave);
-            }
-
-            return {
-                success: true,
-                message: 'Form saved successfully!',
-                form: result
-            };
-        } catch (error) {
-            console.error('Error saving form:', error);
-            return fail(500, {
-                success: false,
-                message: 'Error saving form. Please try again.'
-            });
-        }
-    }
-} satisfies Actions;
+			return {
+				success: true,
+				message: 'Form saved successfully!',
+				form: result,
+			}
+		} catch (error) {
+			console.error('Error saving form:', error)
+			return fail(500, { success: false, message: 'Error saving form. Please try again.' })
+		}
+	},
+} satisfies Actions

@@ -4,7 +4,6 @@
     import { Button } from "$lib/components/ui/button";
     import { toast } from "svelte-sonner";
     import { goto } from '$app/navigation';
-	import { pb } from '$lib/pocketbase';
     import { useForm, HintGroup, Hint, validators, email, required, pattern } from 'svelte-use-form';
     import { slide } from 'svelte/transition';
     import { quintOut } from 'svelte/easing';
@@ -12,7 +11,7 @@
     let loading = $state(false);
     const formValidation = useForm();
 
-    const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+    const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
 
     function handleEnhance() {
         return async ({ result, update }) => {
@@ -25,7 +24,6 @@
             }
             
             if (result.type === 'redirect') {
-                pb.authStore.loadFromCookie(document.cookie);
                 await goto('/create-company');
             }
         };

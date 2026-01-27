@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(303, '/login');
 	}
 
-	const contacts = await getContactsByCompany(user.company);
+	const contacts = await getContactsByCompany(user.company.id);
 
 	return {
 		contacts

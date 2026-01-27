@@ -3,6 +3,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import twilio from 'twilio';
 import { logCommunication } from '$lib/utils/communication-log';
+import { createOrUpdateContact } from '$lib/utils/contacts';
 const MessagingResponse = twilio.twiml.MessagingResponse;
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -83,21 +84,26 @@ export const POST: RequestHandler = async ({ request }) => {
 
       console.log('✅ Message saved:', savedMessage.id);
 
-      // Log the inbound SMS communication (Twilio)
+      const contact = await createOrUpdateContact({
+        company_id: thread.company_id,
+        phone: from,
+        name: thread.customer_name || undefined,
+      });
+
       await logCommunication({
         type: 'sms',
         direction: 'inbound',
         status: 'success',
         source: from,
-        destination: 'Twilio Number', // Could be dynamic if we parsed 'To'
+        destination: 'Twilio Number',
         company_id: thread.company_id,
-        customer_id: undefined, // Could determine from thread
+        customer_id: contact?.id,
         summary: body.substring(0, 50) + '...',
         content: body,
         metadata: {
           thread_id: thread.id,
-          provider: 'twilio'
-        }
+          provider: 'twilio',
+        },
       });
 
       // Return TwiML response

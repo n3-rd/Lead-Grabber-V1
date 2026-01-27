@@ -7,12 +7,10 @@
 	import { Switch } from '$lib/components/ui/switch/index';
 	import * as Tabs from '$lib/components/ui/tabs/index';
 	import { toast } from 'svelte-sonner';
-	import { PUBLIC_POCKETBASE_URL } from '$env/static/public';
 	import { Loader2, Users } from 'lucide-svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index';
 	import * as Select from '$lib/components/ui/select/index.js';
-	import { pb, getFileUrl } from '$lib/pocketbase';
 	import RoleBadge from '$lib/components/RoleBadge.svelte';
 	import { formatDate } from '$lib/utils/date';
 	import { goto } from '$app/navigation';
@@ -26,7 +24,6 @@
 
 	interface Company {
 		id: string;
-		collectionId: string;
 		name: string;
 		website?: string;
 		logo?: string;
@@ -59,6 +56,13 @@
 		data: {
 			company: Company | null;
 			members: Member[];
+			pendingInvites?: Array<{
+				id: string;
+				email: string | null;
+				role: string | null;
+				status: string;
+				created: string;
+			}>;
 			userRole?: string;
 			isAdminOrOwner?: boolean;
 		};
@@ -68,16 +72,9 @@
 	let loading = $state(false);
 	let previewUrl: string | null = $state(null);
 	let showInviteDialog = $state(false);
-	let pendingInvites = $state<
-		{
-			id: string;
-			email: string;
-			role: string;
-			status: string;
-			created: string;
-			resent?: string;
-		}[]
-	>([]);
+	let showInviteLinkDialog = $state(false);
+	let inviteLink = $state<string>('');
+	let pendingInvites = $state(data.pendingInvites || []);
 	let editMemberDialog = $state(false);
 	let selectedMember = $state<Member | null>(null);
 	let selectedRole = $state<string>('');
@@ -111,10 +108,7 @@
 		}
 	});
 
-	function getLogoUrl(filename: string) {
-		if (!filename) return '';
-		return getFileUrl(company, filename);
-	}
+	import { getFileUrl as getLogoUrl } from '$lib/utils/file-url';
 
 	function handleFileSelect(event: Event) {
 		const input = event.target as HTMLInputElement;
@@ -140,31 +134,26 @@
 		}
 	});
 
-	async function updateMemberRole(memberId: string, newRole: string) {
-		try {
-			await pb.collection('users').update(memberId, {
-				role: newRole
-			});
-			toast.success('Member role updated');
-		} catch (error) {
-			toast.error('Failed to update member role');
-			console.error('Error updating role:', error);
-		}
-	}
-
 	async function loadPendingInvites() {
 		if (!company?.id) return;
 		try {
-			const records = await pb.collection('invites').getList(1, 50, {
-				filter: `company = "${company.id}"`,
-				sort: '-created'
-			});
-			pendingInvites = records.items;
+			const response = await fetch(`/api/invites?companyId=${company.id}`);
+			if (response.ok) {
+				const data = await response.json();
+				pendingInvites = data.invites || [];
+			}
 		} catch (err) {
 			console.error('Error loading invites:', err);
 			toast.error('Failed to load invites');
 		}
 	}
+
+	// Update pendingInvites when data changes
+	$effect(() => {
+		if (data.pendingInvites) {
+			pendingInvites = data.pendingInvites;
+		}
+	});
 
 	onMount(() => {
 		loadPendingInvites();
@@ -172,77 +161,48 @@
 
 	async function cancelInvite(inviteId: string) {
 		try {
-			await pb.collection('invites').delete(inviteId);
-			toast.success('Invite cancelled');
-			await loadPendingInvites();
+			const response = await fetch(`/api/invites/${inviteId}`, { method: 'DELETE' });
+			if (response.ok) {
+				toast.success('Invite cancelled');
+				// Remove from local state
+				pendingInvites = pendingInvites.filter(inv => inv.id !== inviteId);
+				// Also reload from server
+				await loadPendingInvites();
+			} else {
+				const error = await response.json();
+				toast.error(error.error || 'Failed to cancel invite');
+			}
 		} catch (err) {
 			console.error('Error cancelling invite:', err);
 			toast.error('Failed to cancel invite');
 		}
 	}
 
-	async function removeMember(memberId: string) {
-		try {
-			await pb.collection('users').update(memberId, {
-				company: null,
-				role: null
-			});
-			toast.success('Member removed successfully');
-		} catch (error) {
-			console.error('Error removing member:', error);
-			toast.error('Failed to remove member');
-		}
-	}
-
 	async function resendInvite(inviteId: string) {
 		try {
-			await pb.collection('invites').update(inviteId, {
-				resent: new Date().toISOString()
-			});
-			toast.success('Invitation resent successfully');
+			const response = await fetch(`/api/invites/${inviteId}/resend`, { method: 'POST' });
+			if (response.ok) {
+				const data = await response.json();
+				if (data.inviteLink) {
+					inviteLink = data.inviteLink;
+					showInviteLinkDialog = true;
+					// Copy to clipboard
+					try {
+						await navigator.clipboard.writeText(data.inviteLink);
+					} catch (err) {
+						console.error('Failed to copy to clipboard:', err);
+					}
+				} else {
+					toast.success('Invitation resent successfully');
+				}
+				await loadPendingInvites();
+			} else {
+				const error = await response.json();
+				toast.error(error.error || 'Failed to resend invitation');
+			}
 		} catch (error) {
 			console.error('Error resending invite:', error);
 			toast.error('Failed to resend invitation');
-		}
-	}
-
-	async function checkUserExists(email: string) {
-		try {
-			const user = await pb.collection('users').getFirstListItem(`email="${email}"`);
-			return user !== null;
-		} catch {
-			return false;
-		}
-	}
-
-	async function handleInviteMember(email: string, role: string) {
-		const userExists = await checkUserExists(email);
-		if (!userExists) {
-			toast.error('This email is not registered. Please ask them to create an account first.');
-			return;
-		}
-
-		const currentUser = pb.authStore.record;
-		if (!currentUser) {
-			toast.error('You must be logged in to invite members');
-			return;
-		}
-
-		try {
-			await pb.collection('invites').create({
-				email,
-				company: company.id,
-				role,
-				status: 'pending',
-				invited_by: currentUser.id,
-				expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-			});
-			toast.success('Invitation sent successfully');
-			showInviteDialog = false;
-			await loadPendingInvites();
-		} catch (error) {
-			console.error('Error sending invite:', error);
-			toast.error('Failed to send invitation');
 		}
 	}
 
@@ -256,12 +216,18 @@
 		if (!selectedMember || !selectedRole) return;
 
 		try {
-			await pb.collection('company_members').update(selectedMember.id, {
-				role: selectedRole
+			const response = await fetch(`/api/company-members/${selectedMember.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ role: selectedRole }),
 			});
-			toast.success('Member role updated');
-			// Refresh the page to show updated data
-			window.location.reload();
+			if (response.ok) {
+				toast.success('Member role updated');
+				// Refresh the page to show updated data
+				window.location.reload();
+			} else {
+				toast.error('Failed to update member');
+			}
 		} catch (error) {
 			console.error('Error updating member:', error);
 			toast.error('Failed to update member');
@@ -539,9 +505,9 @@
 									{#each pendingInvites as invite}
 										<div class="flex items-center justify-between rounded-lg bg-gray-50 p-4">
 											<div>
-												<p class="font-medium">{invite.email}</p>
+												<p class="font-medium">{invite.email || 'No email'}</p>
 												<div class="flex items-center gap-2">
-													<p class="text-sm text-gray-500">Role: {invite.role}</p>
+													<p class="text-sm text-gray-500">Role: {invite.role || 'member'}</p>
 													<span
 														class="rounded-full px-2 py-0.5 text-sm {invite.status === 'pending'
 															? 'bg-yellow-100 text-yellow-800'
@@ -587,7 +553,22 @@
 				use:enhance={() => {
 					return async ({ result }) => {
 						if (result.type === 'success') {
-							toast.success('Invitation sent successfully');
+							const link = result.data?.inviteLink;
+							if (link) {
+								// Show dialog with invite link
+								inviteLink = link;
+								showInviteLinkDialog = true;
+								// Also log to console (always)
+								console.log(`Invite link: ${link}`);
+								// Copy to clipboard automatically
+								try {
+									await navigator.clipboard.writeText(link);
+								} catch (err) {
+									console.error('Failed to copy to clipboard:', err);
+								}
+							} else {
+								toast.success('Invitation sent successfully');
+							}
 							showInviteDialog = false;
 							await loadPendingInvites();
 						} else if (result.type === 'failure') {
@@ -670,6 +651,47 @@
 				>
 					Save Changes
 				</Button>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
+
+	<Dialog.Root bind:open={showInviteLinkDialog}>
+		<Dialog.Content class="sm:max-w-[500px]">
+			<Dialog.Header>
+				<Dialog.Title>Invitation Sent Successfully</Dialog.Title>
+				<Dialog.Description>
+					Share this link with the invited member. The link has been copied to your clipboard.
+				</Dialog.Description>
+			</Dialog.Header>
+
+			<div class="grid gap-4 py-4">
+				<div class="space-y-2">
+					<Label>Invite Link</Label>
+					<div class="flex gap-2">
+						<Input
+							value={inviteLink}
+							readonly
+							class="flex-1 font-mono text-sm"
+						/>
+						<Button
+							variant="outline"
+							onclick={async () => {
+								try {
+									await navigator.clipboard.writeText(inviteLink);
+									toast.success('Link copied to clipboard!');
+								} catch (err) {
+									toast.error('Failed to copy link');
+								}
+							}}
+						>
+							Copy
+						</Button>
+					</div>
+				</div>
+			</div>
+
+			<Dialog.Footer>
+				<Button onclick={() => (showInviteLinkDialog = false)}>Close</Button>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>

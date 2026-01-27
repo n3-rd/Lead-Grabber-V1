@@ -1,0 +1,47 @@
+import { writeFile, mkdir } from 'fs/promises'
+import { join } from 'path'
+import { existsSync } from 'fs'
+
+const UPLOAD_DIR = 'static/uploads/logos'
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+
+export async function saveUploadedFile(file: File, filename?: string): Promise<string> {
+  // Validate file
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error('File size exceeds 5MB limit')
+  }
+
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    throw new Error('Invalid file type. Only PNG, JPEG, and WebP images are allowed.')
+  }
+
+  // Ensure upload directory exists
+  const uploadPath = join(process.cwd(), UPLOAD_DIR)
+  if (!existsSync(uploadPath)) {
+    await mkdir(uploadPath, { recursive: true })
+  }
+
+  // Generate filename if not provided
+  let finalFilename = filename
+  if (!finalFilename) {
+    const ext = file.name.split('.').pop() || 'png'
+    finalFilename = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`
+  } else if (!finalFilename.includes('.')) {
+    // If filename provided without extension, add it
+    const ext = file.name.split('.').pop() || 'png'
+    finalFilename = `${finalFilename}.${ext}`
+  }
+  const filePath = join(uploadPath, finalFilename)
+
+  // Convert File to Buffer and save
+  const arrayBuffer = await file.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  await writeFile(filePath, buffer)
+
+  // Return the public URL path
+  return `/uploads/logos/${finalFilename}`
+}
+
+// Note: getFileUrl has been moved to file-url.ts for client-side compatibility
+// Import it from there if needed in client code

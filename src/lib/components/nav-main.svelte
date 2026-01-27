@@ -4,7 +4,6 @@
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
 	import {
 		Home,
-		Users,
 		ChartColumnBig,
 		Smartphone,
 		BookOpen,
@@ -43,7 +42,6 @@
 		{ title: 'Important Notifications', url: '/notifications', icon: Bell, href: '/notifications' },
 		{ title: 'Inbox', url: '/inbox', icon: Home, href: '/inbox' },
 		{ title: 'Profiles', url: '/profiles', icon: UserCircle, href: '/profiles' },
-		{ title: 'Contacts', url: '/contacts', icon: Users, href: '/contacts' },
 		{ title: 'Dialer', url: '/dialer', icon: Phone, href: '/dialer' },
 		{
 			title: 'Buy Number',

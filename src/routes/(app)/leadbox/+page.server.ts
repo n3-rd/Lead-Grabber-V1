@@ -1,102 +1,137 @@
-import { pb } from '$lib/pocketbase';
-import { fail, redirect } from '@sveltejs/kit';
-import type { Actions } from './$types';
+import { prisma } from '$lib/db'
+import { fail, redirect } from '@sveltejs/kit'
+import type { Actions, PageServerLoad } from './$types'
 
-export const load = async ({ locals }) => {
-    const user = locals.user;
-    
+export const load: PageServerLoad = async ({ locals }) => {
+  const user = locals.user
+
+  if (!user) {
+    throw redirect(303, '/login')
+  }
+
+  if (!user.company) {
+    throw redirect(303, '/create-company')
+  }
+
+  try {
+    // Fetch the user's existing leadbox
+    const existingLeadbox = await prisma.leadbox.findFirst({
+      where: {
+        ownerId: user.id,
+      },
+      orderBy: {
+        created: 'desc',
+      },
+    })
+
+    // Get company logo for default
+    const company = await prisma.company.findUnique({
+      where: { id: user.company.id },
+    })
+
+    // Parse leadbox_data if it exists
+    let leadboxData = null
+    if (existingLeadbox?.leadboxData) {
+      try {
+        leadboxData =
+          typeof existingLeadbox.leadboxData === 'string'
+            ? JSON.parse(existingLeadbox.leadboxData)
+            : existingLeadbox.leadboxData
+      } catch {
+        leadboxData = existingLeadbox.leadboxData
+      }
+    }
+
+    // Use company logo as default if no logo in leadbox data
+    // Don't override if leadbox already has a logo
+    if (!leadboxData) {
+      leadboxData = {}
+    }
+    if (!leadboxData.logoImage && company?.logo) {
+      leadboxData.logoImage = company.logo
+    }
+
+    const leadbox = existingLeadbox
+      ? {
+          ...existingLeadbox,
+          leadbox_data: leadboxData,
+        }
+      : null
+
+    return {
+      user,
+      leadbox,
+      companyLogo: company?.logo || null,
+    }
+  } catch (error) {
+    console.error('Error loading leadbox:', error)
+    return {
+      user,
+      leadbox: null,
+      companyLogo: null,
+    }
+  }
+}
+
+export const actions: Actions = {
+  saveLeadbox: async ({ request, locals }) => {
+    const user = locals.user
     if (!user) {
-        throw redirect(303, '/login');
+      return fail(401, { error: 'Unauthorized' })
     }
 
     try {
-        // Check if user has a company
-        const companies = await pb.collection('companies').getList(1, 1, {
-            filter: `owner = "${user.id}"`,
-        });
+      const data = await request.formData()
+      const leadboxDataJson = data.get('leadboxData')
 
-        if (companies.items.length === 0) {
-            throw redirect(303, '/create-company');
-        }
+      if (!leadboxDataJson || typeof leadboxDataJson !== 'string') {
+        return fail(400, {
+          success: false,
+          message: 'Invalid leadbox data',
+        })
+      }
 
-        // Fetch the user's existing leadbox
-        const existingLeadboxes = await pb.collection('leadboxes').getList(1, 1, {
-            filter: `owner = "${user.id}"`,
-            sort: '-created'
-        });
+      const parsedData = JSON.parse(leadboxDataJson)
 
-        // Check if leadbox_data is already an object
-        const leadbox = existingLeadboxes.items[0] ? {
-            ...existingLeadboxes.items[0],
-            leadbox_data: typeof existingLeadboxes.items[0].leadbox_data === 'string' 
-                ? JSON.parse(existingLeadboxes.items[0].leadbox_data)
-                : existingLeadboxes.items[0].leadbox_data
-        } : null;
+      const leadboxDataToSave = {
+        leadboxData: parsedData,
+        ownerId: user.id,
+        name: 'Default Leadbox',
+        status: 'active' as const,
+      }
 
-        return {
-            user,
-            leadbox
-        };
+      const existingLeadbox = await prisma.leadbox.findFirst({
+        where: {
+          ownerId: user.id,
+        },
+      })
+
+      let result
+      if (existingLeadbox) {
+        result = await prisma.leadbox.update({
+          where: { id: existingLeadbox.id },
+          data: leadboxDataToSave,
+        })
+      } else {
+        result = await prisma.leadbox.create({
+          data: leadboxDataToSave,
+        })
+      }
+
+      console.log('res', result)
+      return {
+        type: 'success',
+        data: {
+          message: 'Leadbox saved successfully!',
+          leadbox: result,
+        },
+      }
     } catch (error) {
-        console.error('Error loading leadbox:', error);
-        return {
-            user,
-            leadbox: null
-        };
+      console.error('Error saving leadbox:', error)
+      return fail(500, {
+        type: 'error',
+        message: 'Error saving leadbox. Please try again.',
+      })
     }
-};
-
-export const actions = {
-    saveLeadbox: async ({ request, locals }) => {
-        const user = locals.user;
-        if (!user) {
-            return fail(401, { error: 'Unauthorized' });
-        }
-
-        try {
-            const data = await request.formData();
-            const leadboxDataJson = data.get('leadboxData');
-            
-            if (!leadboxDataJson || typeof leadboxDataJson !== 'string') {
-                return fail(400, {
-                    success: false,
-                    message: 'Invalid leadbox data'
-                });
-            }
-
-            const parsedData = JSON.parse(leadboxDataJson);
-
-            const leadboxDataToSave = {
-                leadbox_data: parsedData,
-                owner: user.id,
-                name: "Default Leadbox",
-                status: "active"
-            };
-
-            const existingLeadboxes = await pb.collection('leadboxes').getList(1, 1, {
-                filter: `owner = "${user.id}"`
-            });
-
-            let result;
-            if (existingLeadboxes.items.length > 0) {
-                result = await pb.collection('leadboxes').update(existingLeadboxes.items[0].id, leadboxDataToSave);
-            } else {
-                result = await pb.collection('leadboxes').create(leadboxDataToSave);
-            }
-            console.log("res",result);
-            return {
-                type: 'success',
-                data: {
-                    message: 'Leadbox saved successfully!',
-                    leadbox: result
-                }
-            };
-        } catch (error) {
-            console.error('Error saving leadbox:', error);
-            return fail(500, {
-                type: 'error',
-                message: 'Error saving leadbox. Please try again.'
-            });
-        }
-    }
-};
+  },
+}

@@ -1,0 +1,381 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Auth collections (converted from PocketBase auth type)
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  password        String   // Hashed password
+  tokenKey        String   @unique @default(cuid())
+  emailVisibility Boolean  @default(false)
+  verified        Boolean  @default(false)
+  name            String?
+  avatar          String?  // File path/URL
+  role            UserRole?
+  companyId       String?
+  company         Company? @relation(fields: [companyId], references: [id])
+  created         DateTime  @default(now())
+  updated         DateTime  @updatedAt
+
+  // Relations
+  ownedCompanies                    Company[]                            @relation("CompanyOwner")
+  teamMemberships                   CompanyMember[]
+  communicationLogs                 CommunicationLog[]
+  assignedCommunicationLogs         CommunicationLogAssignedMember[]
+  assignedMessages                  Message[]
+  ownedLeadboxes                    Leadbox[]
+  ownedLeadforms                    Leadform[]
+  sentInvites                       Invite[]                             @relation("InvitedBy")
+  receivedInvites                   Invite[]                             @relation("InvitedUser")
+
+  @@index([email])
+  @@index([tokenKey])
+  @@map("users")
+}
+
+enum UserRole {
+  owner
+  admin
+  agent
+}
+
+// Superuser model (system admin users)
+model SuperUser {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  password        String   // Hashed password
+  tokenKey        String   @unique @default(cuid())
+  emailVisibility Boolean  @default(false)
+  verified        Boolean  @default(false)
+  created         DateTime  @default(now())
+  updated         DateTime  @updatedAt
+
+  @@index([email])
+  @@index([tokenKey])
+  @@map("_superusers")
+}
+
+// System auth tables
+model AuthOrigin {
+  id           String   @id @default(cuid())
+  collectionRef String
+  recordRef    String
+  fingerprint  String
+  created      DateTime  @default(now())
+  updated      DateTime  @updatedAt
+
+  @@unique([collectionRef, recordRef, fingerprint])
+  @@map("_authOrigins")
+}
+
+model ExternalAuth {
+  id          String   @id @default(cuid())
+  collectionRef String
+  recordRef   String
+  provider    String
+  providerId  String
+  created     DateTime  @default(now())
+  updated     DateTime  @updatedAt
+
+  @@unique([collectionRef, recordRef, provider])
+  @@unique([collectionRef, provider, providerId])
+  @@map("_externalAuths")
+}
+
+model Mfa {
+  id           String   @id @default(cuid())
+  collectionRef String
+  recordRef    String
+  method       String
+  created      DateTime  @default(now())
+  updated      DateTime  @updatedAt
+
+  @@index([collectionRef, recordRef])
+  @@map("_mfas")
+}
+
+model Otp {
+  id           String   @id @default(cuid())
+  collectionRef String
+  recordRef    String
+  password     String   // Hashed OTP
+  sentTo       String?
+  created      DateTime  @default(now())
+  updated      DateTime  @updatedAt
+
+  @@index([collectionRef, recordRef])
+  @@map("_otps")
+}
+
+// Main application models
+model Company {
+  id          String   @id @default(cuid())
+  name        String?
+  website     String?
+  ownerId     String
+  owner       User     @relation("CompanyOwner", fields: [ownerId], references: [id])
+  settings    Json?
+  logo        String?  // File path/URL
+  created     DateTime  @default(now())
+  updated     DateTime  @updatedAt
+
+  // Relations
+  users              User[]
+  teamMembers        CompanyMember[]
+  contacts           Contact[]
+  communicationLogs  CommunicationLog[]
+  messages           Message[]
+  invites            Invite[]
+  locations          Location[]
+
+  @@map("companies")
+}
+
+model Location {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  address   String?
+  city      String?
+  phone     String?
+  hours     Json?    // { Mon: string, Tue: string, ... }
+  created   DateTime @default(now())
+  updated   DateTime @updatedAt
+
+  @@index([companyId])
+  @@map("locations")
+}
+
+model CompanyMember {
+  id          String            @id @default(cuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id])
+  companyId   String
+  company     Company           @relation(fields: [companyId], references: [id])
+  role        CompanyMemberRole
+  permissions Json?
+  status      CompanyMemberStatus
+  joinedAt    DateTime?
+  created     DateTime          @default(now())
+  updated     DateTime          @updatedAt
+
+  @@unique([userId, companyId])
+  @@map("company_members")
+}
+
+enum CompanyMemberRole {
+  owner
+  admin
+  member
+}
+
+enum CompanyMemberStatus {
+  active
+  inactive
+  suspended
+}
+
+model Contact {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id])
+  email         String?
+  phone         String?
+  name          String?
+  address       String?
+  landline      String?
+  cell          String?
+  smsPermission Boolean  @default(false)
+  pastNames     Json?
+  created       DateTime  @default(now())
+  updated       DateTime  @updatedAt
+
+  // Relations
+  communicationLogs CommunicationLog[]
+
+  @@index([companyId])
+  @@map("contacts")
+}
+
+model CommunicationLog {
+  id              String                    @id @default(cuid())
+  type            CommunicationType
+  direction       CommunicationDirection
+  status          CommunicationStatus
+  source          String?
+  destination     String?
+  customerId      String?
+  customer        Contact?                 @relation(fields: [customerId], references: [id])
+  companyId       String
+  company         Company                  @relation(fields: [companyId], references: [id])
+  userId          String?
+  user            User?                    @relation(fields: [userId], references: [id])
+  assignedMembers CommunicationLogAssignedMember[]
+  summary         String?
+  content         String?
+  duration        Float?
+  metadata        Json?
+  created         DateTime                  @default(now())
+  updated         DateTime                  @updatedAt
+
+  @@index([companyId])
+  @@index([customerId])
+  @@index([userId])
+  @@map("communication_logs")
+}
+
+// Join table for many-to-many relationship between CommunicationLog and User (assigned members)
+model CommunicationLogAssignedMember {
+  communicationLogId String
+  communicationLog   CommunicationLog @relation(fields: [communicationLogId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([communicationLogId, userId])
+  @@map("_communication_log_assigned_members")
+}
+
+enum CommunicationType {
+  email
+  sms
+  voice
+  web
+  facebook
+  chatbot
+  leadform
+  leadbox
+}
+
+enum CommunicationDirection {
+  inbound
+  outbound
+}
+
+enum CommunicationStatus {
+  success
+  failed
+  pending
+  missed
+  completed
+}
+
+model Invite {
+  id         String        @id @default(cuid())
+  email      String?
+  companyId  String?
+  company    Company?      @relation(fields: [companyId], references: [id])
+  invitedById String?
+  invitedBy  User?        @relation("InvitedBy", fields: [invitedById], references: [id])
+  userId     String?
+  user       User?        @relation("InvitedUser", fields: [userId], references: [id])
+  role       InviteRole?
+  status     InviteStatus
+  expiresAt  DateTime?
+  acceptedAt DateTime?
+  declinedAt DateTime?
+  created    DateTime      @default(now())
+  updated    DateTime      @updatedAt
+
+  @@index([companyId])
+  @@index([email])
+  @@map("invites")
+}
+
+enum InviteRole {
+  admin
+  member
+}
+
+enum InviteStatus {
+  accepted
+  pending
+  declined
+}
+
+model Leadbox {
+  id          String        @id @default(cuid())
+  ownerId     String
+  owner       User          @relation(fields: [ownerId], references: [id])
+  name        String?
+  status      LeadboxStatus
+  leadboxData Json?
+  created     DateTime      @default(now())
+  updated     DateTime      @updatedAt
+
+  @@index([ownerId])
+  @@map("leadboxes")
+}
+
+enum LeadboxStatus {
+  active
+  inactive
+}
+
+model Leadform {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id])
+  name      String
+  formData  Json?
+  created   DateTime @default(now())
+  updated   DateTime @updatedAt
+
+  @@index([ownerId])
+  @@map("leadforms")
+}
+
+model Logo {
+  id    String   @id @default(cuid())
+  logo  String?  // File path/URL
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+
+  @@map("logos")
+}
+
+model Message {
+  id            String        @id @default(cuid())
+  threadId      String        @unique
+  companyId     String
+  company       Company       @relation(fields: [companyId], references: [id])
+  customerName  String?
+  customerEmail String?
+  customerPhone String?
+  assignedToId  String?
+  assignedTo    User?        @relation(fields: [assignedToId], references: [id])
+  status        MessageStatus
+  urgency       MessageUrgency?
+  aiSummary     String?
+  messages      Json?         // Array of message objects
+  created       DateTime      @default(now())
+  updated       DateTime      @updatedAt
+
+  @@index([companyId])
+  @@index([assignedToId])
+  @@index([status])
+  @@map("messages")
+}
+
+enum MessageStatus {
+  new
+  read
+  replied
+  assigned
+  closed
+}
+
+enum MessageUrgency {
+  green
+  yellow
+  red
+}

@@ -9,8 +9,8 @@
 	import { toast } from 'svelte-sonner';
 	import { enhance } from '$app/forms';
 	import { getLeadboxEmbedCode } from '$lib/utils/getEmbedCode.js';
-	import { pb, getFileUrl } from '$lib/pocketbase';
 	import * as Dialog from '$lib/components/ui/dialog/index';
+	import { getFileUrl } from '$lib/utils/file-url';
 	import { Copy, Check } from 'lucide-svelte';
 	import { getSvgIcon } from '$lib/utils/getSvgIcon';
 	import { onMount } from 'svelte';
@@ -25,8 +25,22 @@
 	let leadBoxOpen = $state(data.leadbox?.leadbox_data?.leadBoxOpen ?? true);
 	let primaryIconOnly = $state(data.leadbox?.leadbox_data?.primaryIconOnly ?? false);
 
-	// Add logo image state
-	let logoImage = $state(data.leadbox?.leadbox_data?.logoImage ?? '/img/gen-can-expo.png');
+	// Add logo image state - use company logo as default if available
+	function getDefaultLogo() {
+		// If leadbox has a logo, use it
+		if (data.leadbox?.leadbox_data?.logoImage) {
+			const url = getFileUrl(data.leadbox.leadbox_data.logoImage);
+			if (url) return url;
+		}
+		// Otherwise use company logo if available
+		if (data.companyLogo) {
+			const url = getFileUrl(data.companyLogo);
+			if (url) return url;
+		}
+		// Fallback to default
+		return '/img/gen-can-expo.png';
+	}
+	let logoImage = $state(getDefaultLogo());
 	let logoImageFile: File | null = $state(null);
 
 	let channels = $state(
@@ -103,14 +117,23 @@
 		logoImageFile = file;
 
 		try {
+			// Upload file to server
 			const formData = new FormData();
 			formData.append('logo', file);
-			formData.append('user', user.id);
+			formData.append('type', 'leadbox');
 
-			const record = await pb.collection('logos').create(formData);
-			const fileUrl = getFileUrl(record, record.logo);
-			if (fileUrl) {
-				logoImage = fileUrl;
+			const response = await fetch('/api/upload/logo', {
+				method: 'POST',
+				body: formData,
+			});
+
+			if (!response.ok) {
+				throw new Error('Upload failed');
+			}
+
+			const data = await response.json();
+			if (data.url) {
+				logoImage = data.url;
 				toast.success('Logo uploaded successfully!');
 			} else {
 				toast.error('Error: Logo URL could not be generated');

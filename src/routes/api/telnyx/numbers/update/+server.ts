@@ -6,7 +6,6 @@ export const POST: RequestHandler = async ({ request }) => {
   try {
     const body = await request.json();
     const { phone_number_id, ...updateData } = body;
-    const body = await request.json();
 
     if (!phone_number_id) {
       return json({

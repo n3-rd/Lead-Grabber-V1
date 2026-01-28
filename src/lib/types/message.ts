@@ -23,5 +23,10 @@ export interface Message {
       content_type: string;
     }[];
   }[];
-  urgency?: 'green' | 'yellow' | 'red';
+  urgency?: 'green' | 'blue' | 'red';
+  urgencyScore?: number;
+  sentiment?: string;
+  intent?: string;
+  aiSummary?: string;
+  draftResponse?: string;
 } 

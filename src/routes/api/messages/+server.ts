@@ -6,6 +6,7 @@ import { getLogsForMessage } from '$lib/utils/inbox-log-link'
 import { logCommunication } from '$lib/utils/communication-log'
 import { createNotification } from '$lib/utils/notifications'
 import { createOrUpdateContact } from '$lib/utils/contacts'
+import { analyzeIncomingMessage } from '$lib/ai/groq'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -57,6 +58,21 @@ export const POST: RequestHandler = async ({ request }) => {
       is_agent_reply: false,
     }
     const existing = await prisma.message.findUnique({ where: { threadId } })
+    const threadMessages = existing && existing.companyId === companyId
+      ? (Array.isArray(existing.messages) ? existing.messages : [])
+      : []
+
+    // AI first so we can store Groq summary + purpose in CommunicationLog
+    const analysis = await analyzeIncomingMessage(messageContent, threadMessages)
+
+    const aiData = analysis ? {
+      urgency: analysis.urgency,
+      urgencyScore: analysis.urgencyScore,
+      sentiment: analysis.sentiment,
+      intent: analysis.intent,
+      aiSummary: analysis.aiSummary,
+    } : {}
+
     let message
     if (existing && existing.companyId === companyId) {
       const prev = Array.isArray(existing.messages) ? existing.messages : []
@@ -69,6 +85,7 @@ export const POST: RequestHandler = async ({ request }) => {
           customerPhone: customerPhone ?? existing.customerPhone,
           customerEmail: customerEmail ?? existing.customerEmail,
           updated: new Date(),
+          ...aiData,
         },
       })
     } else {
@@ -81,6 +98,7 @@ export const POST: RequestHandler = async ({ request }) => {
           customerEmail,
           status: 'new',
           messages: [newItem],
+          ...aiData,
         },
       })
     }
@@ -95,6 +113,12 @@ export const POST: RequestHandler = async ({ request }) => {
           })
         : null
 
+    const logSummary = analysis?.aiSummary ?? (messageContent.slice(0, 80) + (messageContent.length > 80 ? '...' : ''))
+    const logMetadata: Record<string, string> = { thread_id: threadId }
+    if (analysis?.urgency != null) logMetadata.urgency = analysis.urgency
+    if (analysis?.sentiment != null) logMetadata.sentiment = analysis.sentiment
+    if (analysis?.intent != null) logMetadata.intent = analysis.intent
+
     await logCommunication({
       type: source === 'leadform' ? 'leadform' : 'leadbox',
       direction: 'inbound',
@@ -103,9 +127,9 @@ export const POST: RequestHandler = async ({ request }) => {
       destination: null,
       company_id: companyId,
       customer_id: contact?.id ?? undefined,
-      summary: messageContent.slice(0, 80) + (messageContent.length > 80 ? '...' : ''),
+      summary: logSummary,
       content: messageContent,
-      metadata: { thread_id: threadId },
+      metadata: logMetadata,
     })
 
     await notifyMessageUpdate(companyId, 'update', message.id, message.threadId)
@@ -259,6 +283,7 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
           status: updateData.status,
           assignedToId: updateData.assigned_to,
           urgency: updateData.urgency,
+          ...(updateData.draft_response !== undefined && { draftResponse: updateData.draft_response }),
         },
       })
       await syncLogAssignment(updated, updated.assignedToId ?? undefined)

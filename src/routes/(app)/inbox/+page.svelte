@@ -578,6 +578,11 @@
 												class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800"
 												>Urgent</span
 											>
+										{:else if msg.urgency === 'blue'}
+											<span
+												class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800"
+												>Medium</span
+											>
 										{:else if msg.urgency === 'yellow'}
 											<span
 												class="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800"

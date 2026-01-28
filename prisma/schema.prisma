@@ -356,6 +356,10 @@ model Message {
   assignedTo    User?        @relation(fields: [assignedToId], references: [id])
   status        MessageStatus
   urgency       MessageUrgency?
+  urgencyScore  Int?
+  sentiment     String?
+  intent        String?
+  draftResponse String?
   aiSummary     String?
   messages      Json?         // Array of message objects
   created       DateTime      @default(now())
@@ -375,9 +379,10 @@ enum MessageStatus {
   closed
 }
 
+// Level 1-2 → green, 3 → blue, 4-5 → red (urgent)
 enum MessageUrgency {
   green
-  yellow
+  blue
   red
 }
 

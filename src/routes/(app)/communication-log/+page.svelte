@@ -62,22 +62,34 @@
 				.map((user: any) => user?.name || user?.email || '')
 				.filter(Boolean);
 
+			// Groq: urgency (dot color), sentiment, intent → 1–2 word purpose
+			const meta = log.metadata || {};
+			const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+			let purpose: string;
+			if (meta.intent || meta.sentiment) {
+				const urgent = meta.urgency === 'red' ? 'Urgent ' : '';
+				const word = meta.intent ? cap(meta.intent) : meta.sentiment ? cap(meta.sentiment) : 'General';
+				purpose = urgent + word;
+			} else {
+				purpose = log.summary ? 'See Summary' : 'General';
+			}
+			// Status dot: use urgency (green/blue/red) when from Groq, else direction (in/out)
+			const status = (meta.urgency === 'green' || meta.urgency === 'blue' || meta.urgency === 'red')
+				? meta.urgency
+				: (log.direction === 'inbound' ? 'in' : 'out');
+
 			return {
 				date,
 				time,
 				type: log.direction === 'inbound' ? 'In' : 'Out',
-				typeIcon: log.type, // email, sms, etc.
+				typeIcon: log.type,
 				source: log.source,
 				endpoint: log.destination,
-				purpose: log.metadata?.urgency
-					? `Urgency: ${log.metadata.urgency}`
-					: log.summary
-						? 'See Summary'
-						: 'General',
-				purposeIsButton: false, // For now, just show text
+				purpose,
+				purposeIsButton: false,
 				summary: log.summary || log.content || 'No content',
 				commId: log.id,
-				status: log.direction === 'inbound' ? 'in' : 'out',
+				status,
 				assignedMemberNames,
 				raw: log
 			};
@@ -143,8 +155,8 @@
 		commId={selectedComm.commId || selectedComm.raw?.id || ''}
 		date={selectedComm.date}
 		time={selectedComm.time}
-		category={selectedComm.purpose?.split(' | ')[0] || 'Sales'}
-		subCategory={selectedComm.purpose?.split(' | ')[1] || 'Inquiry'}
+		category={(selectedComm.raw?.metadata?.sentiment ?? 'sales').charAt(0).toUpperCase() + (selectedComm.raw?.metadata?.sentiment ?? 'sales').slice(1)}
+		subCategory={(selectedComm.raw?.metadata?.intent ?? 'Inquiry').charAt(0).toUpperCase() + (selectedComm.raw?.metadata?.intent ?? 'inquiry').slice(1)}
 		email={selectedComm.source}
 		subject={selectedComm.raw?.metadata?.subject || selectedComm.raw?.subject || 'No subject'}
 		body={selectedComm.raw?.content || selectedComm.summary || ''}

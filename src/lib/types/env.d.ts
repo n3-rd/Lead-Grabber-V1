@@ -18,6 +18,7 @@ declare global {
     TWILIO_AUTH_TOKEN: string;
     TWILIO_PHONE_NUMBER: string;
     TWILIO_ENABLED: string;
+    GROQ_API_KEY: string;
     POCKETBASE_URL: string;
     NODE_ENV: string;
     PUBLIC_BASE_URL: string;

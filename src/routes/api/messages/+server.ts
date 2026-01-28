@@ -4,6 +4,7 @@ import type { RequestHandler } from './$types'
 import { notifyMessageUpdate } from '$lib/utils/realtime'
 import { getLogsForMessage } from '$lib/utils/inbox-log-link'
 import { logCommunication } from '$lib/utils/communication-log'
+import { createNotification } from '$lib/utils/notifications'
 import { createOrUpdateContact } from '$lib/utils/contacts'
 
 const CORS_HEADERS = {
@@ -231,6 +232,25 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
       })
       await syncLogAssignment(updated, newAssignedToId ?? undefined)
       await notifyMessageUpdate(existing.companyId, 'update', id, updated.threadId)
+      // Notify when a new message (e.g. agent reply) was added to the thread
+      const prevLen = Array.isArray(existing.messages) ? existing.messages.length : 0
+      const newLen = Array.isArray(updateData.messages) ? updateData.messages.length : 0
+      if (newLen > prevLen) {
+        const lastMsg = Array.isArray(updateData.messages) ? updateData.messages[newLen - 1] : null
+        const content = typeof lastMsg === 'object' && lastMsg && 'content' in lastMsg ? String(lastMsg.content) : ''
+        const isAgent = typeof lastMsg === 'object' && lastMsg && (lastMsg as { is_agent_reply?: boolean }).is_agent_reply
+        await createNotification({
+          company_id: existing.companyId,
+          type: 'sms',
+          direction: isAgent ? 'outbound' : 'inbound',
+          source_name: existing.customerName ?? undefined,
+          source_identifier: existing.customerPhone ?? existing.customerEmail ?? existing.threadId,
+          message_preview: content.slice(0, 120) + (content.length > 120 ? '...' : ''),
+          content: content || undefined,
+          message_id: id,
+          thread_id: updated.threadId,
+        })
+      }
       return json(updated)
     } else {
       const updated = await prisma.message.update({

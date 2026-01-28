@@ -136,6 +136,7 @@ model Company {
   messages           Message[]
   invites            Invite[]
   locations          Location[]
+  notifications      Notification[]
 
   @@map("companies")
 }
@@ -378,4 +379,26 @@ enum MessageUrgency {
   green
   yellow
   red
+}
+
+model Notification {
+  id                  String   @id @default(cuid())
+  companyId           String
+  company             Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type                CommunicationType
+  direction           CommunicationDirection
+  sourceName          String?  // e.g. customer name or "Inbox"
+  sourceIdentifier    String?  // phone, email, threadId
+  messagePreview      String   // short preview for list
+  content             String?  // full body
+  read                Boolean  @default(false)
+  communicationLogId  String?
+  messageId           String?  // Message.id (inbox thread)
+  threadId            String?  // Message.threadId for linking to inbox
+  createdAt           DateTime @default(now())
+
+  @@index([companyId])
+  @@index([companyId, createdAt])
+  @@index([read])
+  @@map("notifications")
 }

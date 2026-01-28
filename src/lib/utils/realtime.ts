@@ -1,9 +1,9 @@
 import { Pool } from 'pg'
 import { env } from '$env/dynamic/private'
 
-// Create a pool for sending NOTIFY events
 const notifyPool = new Pool({
   connectionString: env.DATABASE_URL,
+  ssl: env.DATABASE_SSL_NO_VERIFY === 'true' ? { rejectUnauthorized: false } : undefined,
 })
 
 /**

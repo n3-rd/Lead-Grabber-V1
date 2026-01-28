@@ -3,63 +3,57 @@ import type { RequestHandler } from './$types'
 import { Pool } from 'pg'
 import { env } from '$env/dynamic/private'
 
-// Create a separate connection pool for LISTEN/NOTIFY
 const pool = new Pool({
   connectionString: env.DATABASE_URL,
   max: 1,
   ssl: env.DATABASE_SSL_NO_VERIFY === 'true' ? { rejectUnauthorized: false } : undefined,
 })
 
-export const GET: RequestHandler = async ({ locals, url }) => {
-  if (!locals.user || !locals.user.company) {
+export const GET: RequestHandler = async ({ locals }) => {
+  if (!locals.user?.company) {
     return json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const companyId = locals.user.company.id
+  const channel = `notifications_${companyId.replace(/-/g, '_')}`
 
-  // Set up SSE headers
   const headers = new Headers({
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
   })
 
+  let cleanup: (() => Promise<void>) | null = null
   const stream = new ReadableStream({
     async start(controller) {
       const client = await pool.connect()
+      await client.query(`LISTEN ${channel}`)
 
-      // Listen for notifications on a channel specific to this company
-      await client.query(`LISTEN messages_${companyId.replace(/-/g, '_')}`)
-
-      // Send initial connection message
       const encoder = new TextEncoder()
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'connected' })}\n\n`))
 
-      // Handle notifications
       client.on('notification', (msg) => {
         try {
           const payload = JSON.parse(msg.payload || '{}')
-          const data = `data: ${JSON.stringify(payload)}\n\n`
-          controller.enqueue(encoder.encode(data))
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`))
         } catch (err) {
-          console.error('Error parsing notification:', err)
+          console.error('Error parsing notification payload:', err)
         }
       })
 
-      // Handle client disconnect
-      const cleanup = async () => {
+      cleanup = async () => {
         try {
           client.removeAllListeners('notification')
-          await client.query(`UNLISTEN messages_${companyId.replace(/-/g, '_')}`)
+          await client.query(`UNLISTEN ${channel}`)
           client.release()
         } catch (err) {
-          console.error('Error cleaning up realtime connection:', err)
+          console.error('Error cleaning up notifications realtime:', err)
           client.release()
         }
       }
-
-      // Clean up on stream close
-      controller.close = cleanup
+    },
+    cancel() {
+      return cleanup?.() ?? Promise.resolve()
     },
   })
 

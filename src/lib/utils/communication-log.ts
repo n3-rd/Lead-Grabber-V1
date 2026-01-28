@@ -1,4 +1,5 @@
 import { prisma } from '$lib/db'
+import { createNotification } from '$lib/utils/notifications'
 
 export type CommunicationType = 'email' | 'sms' | 'voice' | 'web' | 'facebook' | 'chatbot' | 'leadform' | 'leadbox'
 export type CommunicationDirection = 'inbound' | 'outbound'
@@ -55,6 +56,21 @@ export async function logCommunication(entry: CommunicationLogEntry) {
           userId,
         })),
         skipDuplicates: true,
+      })
+    }
+
+    // Show notification for every communication log
+    if (entry.company_id) {
+      await createNotification({
+        company_id: entry.company_id,
+        type: entry.type,
+        direction: entry.direction,
+        source_name: entry.source ?? undefined,
+        source_identifier: entry.destination ?? undefined,
+        message_preview: (entry.summary ?? entry.content ?? '').slice(0, 120) + ((entry.summary ?? entry.content ?? '').length > 120 ? '...' : ''),
+        content: entry.content ?? undefined,
+        communication_log_id: record.id,
+        thread_id: (entry.metadata as { thread_id?: string })?.thread_id,
       })
     }
 

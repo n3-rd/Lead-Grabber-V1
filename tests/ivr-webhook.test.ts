@@ -1,0 +1,323 @@
+/**
+ * IVR webhook simulation tests: simulate Telnyx Event API payloads and assert
+ * the correct Telnyx API calls (answer, playback, gather, transfer, hangup).
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const mockFetch = vi.fn();
+const mockPrismaCallFlowFindMany = vi.fn();
+const mockPrismaCallFlowFindUnique = vi.fn();
+const mockPbCreate = vi.fn();
+const mockAddPendingCall = vi.fn();
+
+vi.mock('$env/static/private', () => ({
+	TELNYX_API_KEY: 'test-telnyx-key',
+	TELNYX_RECEIVING_NUMBER: '+17059986143'
+}));
+
+vi.mock('$env/static/public', () => ({
+	PUBLIC_BASE_URL: 'https://app.test'
+}));
+
+vi.mock('$lib/db', () => ({
+	prisma: {
+		callFlow: {
+			findMany: (...args: unknown[]) => mockPrismaCallFlowFindMany(...args),
+			findUnique: (...args: unknown[]) => mockPrismaCallFlowFindUnique(...args)
+		}
+	}
+}));
+
+vi.mock('$lib/pocketbase', () => ({
+	pb: {
+		collection: () => ({
+			create: (data: unknown) => mockPbCreate(data)
+		})
+	}
+}));
+
+vi.mock('$lib/utils/callStore', () => ({
+	addPendingCall: (data: unknown) => mockAddPendingCall(data)
+}));
+
+// Must mock global fetch before importing the handler (handler uses fetch at top-level for Telnyx)
+beforeEach(() => {
+	vi.stubGlobal('fetch', mockFetch);
+	mockFetch.mockResolvedValue({ ok: true, json: async () => ({}) });
+	mockPbCreate.mockResolvedValue({});
+	mockAddPendingCall.mockImplementation(() => {});
+});
+
+describe('IVR webhook simulation', () => {
+	describe('call.initiated', () => {
+		const eventPayload = {
+			data: {
+				event_type: 'call.initiated',
+				payload: {
+					call_control_id: 'call-ctrl-123',
+					from: '+15551234567',
+					to: '+17059986143',
+					direction: 'incoming',
+					caller_id_name: 'Test Caller'
+				}
+			}
+		};
+
+		it('answers with IVR client_state when TELNYX_IVR_COMPANY_ID is set and active flow exists', async () => {
+			process.env.TELNYX_IVR_COMPANY_ID = 'company-1';
+			mockPrismaCallFlowFindMany.mockResolvedValue([
+				{
+					id: 'flow-1',
+					title: 'Main',
+					greetingAudioUrl: '/g.mp3',
+					companyId: 'company-1',
+					queueHoldAudioUrl: null,
+					allUnavailableAudioUrl: null,
+					backupCellAudioUrl: null,
+					failoverConfig: null,
+					created: new Date(),
+					updated: new Date(),
+					rules: [
+						{
+							id: 'rule-1',
+							callFlowId: 'flow-1',
+							ruleTitle: 'Always',
+							schedule: {
+								Mon: { start: '00:00', end: '23:59' },
+								Tue: { start: '00:00', end: '23:59' },
+								Wed: { start: '00:00', end: '23:59' },
+								Thu: { start: '00:00', end: '23:59' },
+								Fri: { start: '00:00', end: '23:59' },
+								Sat: { start: '00:00', end: '23:59' },
+								Sun: { start: '00:00', end: '23:59' }
+							},
+							promptsAudioUrl: '/p.mp3',
+							keyPrompts: [],
+							failoverCount: 2,
+							failoverDelayMinutes: 2,
+							failoverAudioUrl: null,
+							hangupAudioUrl: null,
+							leaveMessageOnHash: true,
+							created: new Date(),
+							updated: new Date()
+						}
+					]
+				}
+			]);
+
+			const { POST } = await import('../src/routes/api/telnyx/call-webhook/+server');
+			const res = await POST({
+				request: new Request('http://localhost/api/telnyx/call-webhook', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(eventPayload)
+				})
+			});
+
+			expect(res.status).toBe(200);
+			const answerCalls = mockFetch.mock.calls.filter(
+				(c: { 0: string }) => c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-123/actions/answer'
+			);
+			expect(answerCalls.length).toBeGreaterThanOrEqual(1);
+			const answerBody = JSON.parse(answerCalls[0][1]?.body ?? '{}');
+			expect(answerBody.client_state).toBeDefined();
+			const state = JSON.parse(Buffer.from(answerBody.client_state, 'base64').toString('utf8'));
+			expect(state.ivrFlowId).toBe('flow-1');
+			expect(state.ivrRuleId).toBe('rule-1');
+		});
+
+		it('adds to pending calls when no TELNYX_IVR_COMPANY_ID', async () => {
+			vi.resetModules();
+			delete process.env.TELNYX_IVR_COMPANY_ID;
+			const eventPayloadNoIvr = {
+				data: {
+					event_type: 'call.initiated',
+					payload: {
+						call_control_id: 'call-ctrl-no-ivr',
+						from: '+15551234567',
+						to: '+17059986143',
+						direction: 'incoming',
+						caller_id_name: 'Test Caller'
+					}
+				}
+			};
+			const { POST } = await import('../src/routes/api/telnyx/call-webhook/+server');
+			const res = await POST({
+				request: new Request('http://localhost/api/telnyx/call-webhook', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(eventPayloadNoIvr)
+				})
+			});
+			expect(res.status).toBe(200);
+			expect(mockAddPendingCall).toHaveBeenCalledWith(
+				expect.objectContaining({ phone: '+15551234567', callId: 'call-ctrl-no-ivr' })
+			);
+		});
+	});
+
+	describe('call.gather.ended', () => {
+		const flowId = 'flow-1';
+		const ruleId = 'rule-1';
+		const clientState = Buffer.from(
+			JSON.stringify({ ivrFlowId: flowId, ivrRuleId: ruleId })
+		).toString('base64');
+
+		beforeEach(() => {
+			mockPrismaCallFlowFindUnique.mockResolvedValue({
+				id: flowId,
+				title: 'Main',
+				greetingAudioUrl: '/g.mp3',
+				companyId: 'company-1',
+				queueHoldAudioUrl: null,
+				allUnavailableAudioUrl: null,
+				backupCellAudioUrl: null,
+				failoverConfig: null,
+				created: new Date(),
+				updated: new Date(),
+				rules: [
+					{
+						id: ruleId,
+						callFlowId: flowId,
+						ruleTitle: 'Test',
+						schedule: {},
+						promptsAudioUrl: '/p.mp3',
+						keyPrompts: [
+							{ key: '1', name: 'Sales', extension: '+15559876000' },
+							{ key: '#', name: 'Hangup', extension: '' }
+						],
+						failoverCount: 2,
+						failoverDelayMinutes: 2,
+						failoverAudioUrl: '/f.mp3',
+						hangupAudioUrl: '/h.mp3',
+						leaveMessageOnHash: true,
+						created: new Date(),
+						updated: new Date()
+					}
+				]
+			});
+		});
+
+		it('transfers to extension when digit matches a key', async () => {
+			const { POST } = await import('../src/routes/api/telnyx/call-webhook/+server');
+			await POST({
+				request: new Request('http://localhost/api/telnyx/call-webhook', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						data: {
+							event_type: 'call.gather.ended',
+							payload: {
+								call_control_id: 'call-ctrl-456',
+								digits: '1',
+								status: 'valid',
+								client_state: clientState
+							}
+						}
+					})
+				})
+			});
+
+			const transferCalls = mockFetch.mock.calls.filter(
+				(c: { 0: string }) => c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-456/actions/transfer'
+			);
+			expect(transferCalls.length).toBe(1);
+			const body = JSON.parse(transferCalls[0][1]?.body ?? '{}');
+			expect(body.to).toBe('+15559876000');
+		});
+
+		it('starts hangup playback when digit is #', async () => {
+			const { POST } = await import('../src/routes/api/telnyx/call-webhook/+server');
+			await POST({
+				request: new Request('http://localhost/api/telnyx/call-webhook', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						data: {
+							event_type: 'call.gather.ended',
+							payload: {
+								call_control_id: 'call-ctrl-789',
+								digits: '#',
+								status: 'valid',
+								client_state: clientState
+							}
+						}
+					})
+				})
+			});
+
+			const playbackCalls = mockFetch.mock.calls.filter(
+				(c: { 0: string }) =>
+					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-789/actions/playback_start'
+			);
+			expect(playbackCalls.length).toBe(1);
+			const body = JSON.parse(playbackCalls[0][1]?.body ?? '{}');
+			expect(body.audio_url).toContain('/h.mp3');
+			expect(body.client_state).toBeDefined();
+		});
+
+		it('re-gathers on timeout when under failover count', async () => {
+			const retryState = Buffer.from(
+				JSON.stringify({ ivrFlowId: flowId, ivrRuleId: ruleId, ivrRetry: 0 })
+			).toString('base64');
+
+			const { POST } = await import('../src/routes/api/telnyx/call-webhook/+server');
+			await POST({
+				request: new Request('http://localhost/api/telnyx/call-webhook', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						data: {
+							event_type: 'call.gather.ended',
+							payload: {
+								call_control_id: 'call-ctrl-timeout',
+								digits: '',
+								status: 'timeout',
+								client_state: retryState
+							}
+						}
+					})
+				})
+			});
+
+			// Should play failover then (on playback.ended) re-gather; or if no failover URL, gather immediately
+			const gatherCalls = mockFetch.mock.calls.filter(
+				(c: { 0: string }) =>
+					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-timeout/actions/gather_using_audio'
+			);
+			const playbackCalls = mockFetch.mock.calls.filter(
+				(c: { 0: string }) =>
+					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-timeout/actions/playback_start'
+			);
+			expect(gatherCalls.length + playbackCalls.length).toBeGreaterThanOrEqual(1);
+		});
+	});
+
+	describe('event type detection', () => {
+		it('accepts Call Control format with explicit event_type', async () => {
+			process.env.TELNYX_IVR_COMPANY_ID = 'company-1';
+			mockPrismaCallFlowFindMany.mockResolvedValue([]);
+
+			const { POST } = await import('../src/routes/api/telnyx/call-webhook/+server');
+			const res = await POST({
+				request: new Request('http://localhost/api/telnyx/call-webhook', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						call_control_id: 'call-ctrl-cc',
+						event_type: 'call.gather.ended',
+						digits: '1',
+						status: 'valid',
+						client_state: Buffer.from(
+							JSON.stringify({ ivrFlowId: 'f1', ivrRuleId: 'r1' })
+						).toString('base64')
+					})
+				})
+			});
+
+			expect(res.status).toBe(200);
+			// Would try to load flow f1 / rule r1 and then transfer or fail
+			expect(mockPrismaCallFlowFindUnique).toHaveBeenCalled();
+		});
+	});
+});

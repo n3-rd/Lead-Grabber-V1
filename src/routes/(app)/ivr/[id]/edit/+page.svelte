@@ -1,39 +1,67 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, ChevronDown, Clock, Plus, Pencil, Trash2 } from 'lucide-svelte';
-	import { page } from '$app/stores';
+	import { ArrowLeft, ChevronDown, Clock, Pencil } from 'lucide-svelte';
 
-	// Get title from query parameter if it exists
-	const titleParam = $page.url.searchParams.get('title');
-	let callFlowRuleTitle = $state(titleParam || 'Business Hours IVR');
+	let { data }: { data: { flow?: { id: string; title?: string }; flowId?: string } } = $props();
+	const flowId = $derived(data?.flowId ?? data?.flow?.id ?? '');
+	const flow = $derived(data?.flow ?? null);
+	const flowTitle = $derived(flow?.title ?? 'Call Flow');
+
+	const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+	let callFlowRuleTitle = $state('Call Flow Rule when Open');
 	let promptsFile = $state<File | null>(null);
 	let failoverFile = $state<File | null>(null);
 	let hangupFile = $state<File | null>(null);
+	let saving = $state(false);
+	let error = $state('');
 
-	// Schedule for each day
-	const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 	let schedule = $state<Record<string, { start1: string; end1: string; start2: string; end2: string }>>({
-		Mon: { start1: '09:00 am', end1: '05:00 pm', start2: '-- : --', end2: '-- : --' },
-		Tue: { start1: '09:00 am', end1: '05:00 pm', start2: '-- : --', end2: '-- : --' },
-		Wed: { start1: '09:00 am', end1: '05:00 pm', start2: '-- : --', end2: '-- : --' },
-		Thu: { start1: '09:00 am', end1: '05:00 pm', start2: '-- : --', end2: '-- : --' },
-		Fri: { start1: '09:00 am', end1: '05:00 pm', start2: '-- : --', end2: '-- : --' },
-		Sat: { start1: '-- : --', end1: '-- : --', start2: '-- : --', end2: '-- : --' },
-		Sun: { start1: '-- : --', end1: '-- : --', start2: '-- : --', end2: '-- : --' }
+		Mon: { start1: '09:00', end1: '17:00', start2: '', end2: '' },
+		Tue: { start1: '09:00', end1: '17:00', start2: '', end2: '' },
+		Wed: { start1: '09:00', end1: '17:00', start2: '', end2: '' },
+		Thu: { start1: '09:00', end1: '17:00', start2: '', end2: '' },
+		Fri: { start1: '09:00', end1: '17:00', start2: '', end2: '' },
+		Sat: { start1: '', end1: '', start2: '', end2: '' },
+		Sun: { start1: '', end1: '', start2: '', end2: '' }
 	});
 
-	// Key prompts
-	let keyPrompts = $state([
-		{ key: '1', name: 'Sales', extension: '0001', editing: false },
-		{ key: '2', name: 'Support', extension: '0002', editing: false },
-		{ key: '3', name: 'Billing', extension: '0003', editing: false }
+	let keyPrompts = $state<{ key: string; name: string; extension: string; transferAudioUrl?: string; editing?: boolean }[]>([
+		{ key: '1', name: 'Sales', extension: '0001' },
+		{ key: '2', name: 'Support', extension: '0002' },
+		{ key: '3', name: 'Repeat Option', extension: '0003' }
 	]);
+	// Per-key transfer message audio (file picked, not yet uploaded)
+	let promptTransferFiles = $state<(File | null)[]>([null, null, null]);
 
-	let failoverCount = $state('1-3 Failover');
-	let failoverTime = $state('1sec - 30sec');
+	let failoverCount = $state(2);
+	let failoverDelayMinutes = $state(2);
+
+	async function uploadFile(file: File, type: string): Promise<string | null> {
+		const form = new FormData();
+		form.set('file', file);
+		form.set('type', type);
+		const res = await fetch('/api/upload/ivr', { method: 'POST', body: form });
+		if (!res.ok) throw new Error('Upload failed');
+		const data = await res.json();
+		return data.url ?? null;
+	}
+
+	function scheduleToPayload(): Record<string, { start: string; end: string } | null> {
+		const out: Record<string, { start: string; end: string } | null> = {};
+		for (const d of days) {
+			const s = schedule[d];
+			if (!s?.start1?.trim() || s.start1 === '-- : --') {
+				out[d] = null;
+				continue;
+			}
+			out[d] = { start: s.start1.trim(), end: (s.end1 || s.start1).trim() };
+		}
+		return out;
+	}
 
 	function handleBack() {
-		goto('/ivr');
+		goto(`/ivr/${flowId}`);
 	}
 
 	function handleFileUpload(event: Event, type: string) {
@@ -47,17 +75,82 @@
 	}
 
 	function toggleEdit(index: number) {
-		keyPrompts[index].editing = !keyPrompts[index].editing;
-		keyPrompts = [...keyPrompts];
+		const next = [...keyPrompts];
+		next[index] = { ...next[index], editing: !next[index].editing };
+		keyPrompts = next;
 	}
 
 	function addKeyPrompt() {
-		keyPrompts = [...keyPrompts, { key: '', name: '', extension: '', editing: false }];
+		keyPrompts = [...keyPrompts, { key: '', name: '', extension: '' }];
+		promptTransferFiles = [...promptTransferFiles, null];
 	}
 
-	function handleSave() {
-		// TODO: Save changes
-		console.log('Save all changes');
+	function handlePromptTransferFile(event: Event, index: number) {
+		const target = event.target as HTMLInputElement;
+		const file = target.files?.[0];
+		promptTransferFiles = promptTransferFiles.slice();
+		promptTransferFiles[index] = file ?? null;
+		if (promptTransferFiles.length < keyPrompts.length) {
+			while (promptTransferFiles.length < keyPrompts.length) promptTransferFiles.push(null);
+		}
+	}
+
+	async function handleSave() {
+		error = '';
+		if (!callFlowRuleTitle.trim()) {
+			error = 'Rule title is required';
+			return;
+		}
+		if (!flowId) {
+			error = 'Missing flow. Go back and try again.';
+			return;
+		}
+		saving = true;
+		try {
+			let promptsAudioUrl: string | null = null;
+			let failoverAudioUrl: string | null = null;
+			let hangupAudioUrl: string | null = null;
+			if (promptsFile) promptsAudioUrl = await uploadFile(promptsFile, 'prompts');
+			if (failoverFile) failoverAudioUrl = await uploadFile(failoverFile, 'failover');
+			if (hangupFile) hangupAudioUrl = await uploadFile(hangupFile, 'hangup');
+			const keyPromptsPayload = await Promise.all(
+				keyPrompts.map(async (p, i) => {
+					if (!p.key.trim()) return null;
+					const transferFile = promptTransferFiles[i] ?? null;
+					const transferAudioUrl = transferFile
+						? await uploadFile(transferFile, `transfer-${p.key}`)
+						: p.transferAudioUrl ?? undefined;
+					return {
+						key: p.key.trim(),
+						name: p.name.trim(),
+						extension: p.extension.trim(),
+						...(transferAudioUrl && { transferAudioUrl })
+					};
+				})
+			).then((arr) => arr.filter(Boolean) as { key: string; name: string; extension: string; transferAudioUrl?: string }[]);
+			const res = await fetch(`/api/ivr/flows/${flowId}/rules`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					ruleTitle: callFlowRuleTitle.trim(),
+					schedule: scheduleToPayload(),
+					promptsAudioUrl,
+					keyPrompts: keyPromptsPayload,
+					failoverCount,
+					failoverDelayMinutes,
+					failoverAudioUrl,
+					hangupAudioUrl,
+					leaveMessageOnHash: true
+				})
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error || 'Failed to save rule');
+			goto(`/ivr/${flowId}`, { invalidateAll: true });
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Failed to save';
+		} finally {
+			saving = false;
+		}
 	}
 </script>
 
@@ -66,7 +159,7 @@
 	<div class="mb-4 rounded-[3px] bg-white px-4 py-3">
 		<div class="flex items-center justify-between">
 			<h1 class="font-['Poppins'] text-[23px] font-semibold leading-[30px] text-[#747474]">
-				Business Hours Call Flow
+				{flowTitle}
 			</h1>
 			<button
 				onclick={handleBack}
@@ -84,7 +177,7 @@
 			<!-- Call Flow Rule Title -->
 			<div class="space-y-2">
 				<p class="font-['Poppins'] text-xl font-normal leading-[24px] text-[#808080]">
-					Building the rules for business hours IVR
+					Building the rules for this call flow IVR
 				</p>
 				<label class="block font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">
 					Call Flow Rule Title:
@@ -111,7 +204,7 @@
 							<div class="space-y-2">
 								<div class="relative">
 									<input
-										type="text"
+										type="time"
 										bind:value={schedule[day].start1}
 										class="h-[40px] w-full rounded-[3px] border border-black bg-white px-3 pr-10 font-['Poppins'] text-lg font-light leading-[21px] text-[#808080] outline-none"
 									/>
@@ -119,7 +212,7 @@
 								</div>
 								<div class="relative">
 									<input
-										type="text"
+										type="time"
 										bind:value={schedule[day].end1}
 										class="h-[40px] w-full rounded-[3px] border border-black bg-white px-3 pr-10 font-['Poppins'] text-lg font-light leading-[21px] text-[#808080] outline-none"
 									/>
@@ -127,7 +220,7 @@
 								</div>
 								<div class="relative">
 									<input
-										type="text"
+										type="time"
 										bind:value={schedule[day].start2}
 										class="h-[40px] w-full rounded-[3px] border border-black bg-white px-3 pr-10 font-['Poppins'] text-lg font-light leading-[21px] text-[#808080] outline-none"
 									/>
@@ -135,7 +228,7 @@
 								</div>
 								<div class="relative">
 									<input
-										type="text"
+										type="time"
 										bind:value={schedule[day].end2}
 										class="h-[40px] w-full rounded-[3px] border border-black bg-white px-3 pr-10 font-['Poppins'] text-lg font-light leading-[21px] text-[#808080] outline-none"
 									/>
@@ -219,36 +312,33 @@
 									/>
 								</div>
 							</div>
-							{#if prompt.editing}
-								<div class="mt-4 space-y-4">
-									<p class="font-['Poppins'] text-lg font-medium leading-[29px] text-[#808080]">
-										Add Extension Connect to {prompt.name}
-									</p>
-									<!-- Extension configuration would go here -->
-									<div class="flex gap-2">
-										<button
-											onclick={() => toggleEdit(index)}
-											class="h-[44px] rounded-[2px] border border-[#577AB7] bg-[#577AB7] px-4 font-['Poppins'] text-xl font-medium leading-[24px] text-white"
-										>
-											Save Changes
-										</button>
-										<button
-											onclick={() => toggleEdit(index)}
-											class="h-[44px] rounded-[2px] bg-[#EB3223] px-4 font-['Poppins'] text-xl font-medium leading-[24px] text-white"
-										>
-											Delete
-										</button>
-									</div>
-								</div>
-							{:else}
-								<button
-									onclick={() => toggleEdit(index)}
-									class="mt-4 flex items-center gap-2 font-['Poppins'] text-lg font-normal leading-[21px] text-[#808080]"
-								>
-									<Pencil class="h-4 w-4" />
-									Edit Key {prompt.key}
-								</button>
-							{/if}
+							<div class="mb-2 font-['Poppins'] text-sm text-[#808080]">
+								Pre-recorded message for this key (optional, e.g. “Your call is being transferred to [name]…”)
+							</div>
+							<div class="mb-4">
+								<label class="inline-block cursor-pointer">
+									<input
+										type="file"
+										accept="audio/*"
+										onchange={(e) => handlePromptTransferFile(e, index)} class="hidden"
+									/>
+									<span
+										class="inline-block h-[32px] rounded border border-[#577AB7] bg-white px-3 font-['Poppins'] text-sm text-[#577AB7]"
+										role="button"
+										tabindex="0"
+										onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}
+									>
+										{promptTransferFiles[index] ? promptTransferFiles[index]?.name ?? 'Change' : 'Upload audio'}
+									</span>
+								</label>
+							</div>
+							<button
+								onclick={() => toggleEdit(index)}
+								class="mt-4 flex items-center gap-2 font-['Poppins'] text-lg font-normal leading-[21px] text-[#808080]"
+							>
+								<Pencil class="h-4 w-4" />
+								Edit Key {prompt.key}
+							</button>
 						</div>
 					{/each}
 					<button
@@ -275,19 +365,9 @@
 								Drag a file to upload or
 							</p>
 							<div class="mt-4">
-								<label class="inline-block">
-									<input
-										type="file"
-										accept="audio/*"
-										onchange={(e) => handleFileUpload(e, 'failover')}
-										class="hidden"
-									/>
-									<button
-										type="button"
-										class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[19px] text-white"
-									>
-										Browse...
-									</button>
+								<label class="inline-block cursor-pointer">
+									<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'failover')} class="hidden" />
+									<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[19px] text-white" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}>Browse...</span>
 								</label>
 							</div>
 						</div>
@@ -298,18 +378,21 @@
 								How many times Failover
 							</label>
 							<input
-								type="text"
+								type="number"
+								min="1"
+								max="5"
 								bind:value={failoverCount}
 								class="h-[29px] w-full rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-xl font-normal leading-[29px] text-[rgba(63,63,63,0.22)] outline-none"
 							/>
 						</div>
 						<div class="space-y-2">
 							<label class="block font-['Poppins'] text-xl font-normal leading-[24px] text-[#808080]">
-								Time between each failovers
+								Time before failovers (min)
 							</label>
 							<input
-								type="text"
-								bind:value={failoverTime}
+								type="number"
+								min="1"
+								bind:value={failoverDelayMinutes}
 								class="h-[29px] w-full rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-xl font-normal leading-[29px] text-[rgba(63,63,63,0.22)] outline-none"
 							/>
 						</div>
@@ -332,19 +415,9 @@
 								Drag a file to upload or
 							</p>
 							<div class="mt-4">
-								<label class="inline-block">
-									<input
-										type="file"
-										accept="audio/*"
-										onchange={(e) => handleFileUpload(e, 'hangup')}
-										class="hidden"
-									/>
-									<button
-										type="button"
-										class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[19px] text-white"
-									>
-										Browse...
-									</button>
+								<label class="inline-block cursor-pointer">
+									<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'hangup')} class="hidden" />
+									<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[19px] text-white" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}>Browse...</span>
 								</label>
 							</div>
 						</div>
@@ -352,19 +425,24 @@
 				</div>
 			</div>
 
+			{#if error}
+				<p class="font-['Poppins'] text-base text-red-600">{error}</p>
+			{/if}
 			<!-- Action Buttons -->
 			<div class="flex justify-end gap-3">
 				<button
 					onclick={handleBack}
-					class="h-[52px] rounded-[2px] border border-[#577AB7] bg-[#577AB7] px-4 font-['Poppins'] text-xl font-medium leading-[24px] text-white transition-colors hover:bg-[#4a6ba5]"
+					disabled={saving}
+					class="h-[52px] rounded-[2px] border border-[#577AB7] bg-[#577AB7] px-4 font-['Poppins'] text-xl font-medium leading-[24px] text-white transition-colors hover:bg-[#4a6ba5] disabled:opacity-50"
 				>
 					Cancel
 				</button>
 				<button
 					onclick={handleSave}
-					class="h-[52px] rounded-[2px] border border-[#577AB7] bg-[#577AB7] px-4 font-['Poppins'] text-xl font-medium leading-[24px] text-white transition-colors hover:bg-[#4a6ba5]"
+					disabled={saving}
+					class="h-[52px] rounded-[2px] border border-[#577AB7] bg-[#577AB7] px-4 font-['Poppins'] text-xl font-medium leading-[24px] text-white transition-colors hover:bg-[#4a6ba5] disabled:opacity-50"
 				>
-					Save All Changes
+					{saving ? 'Saving…' : 'Save All Changes'}
 				</button>
 			</div>
 		</div>

@@ -1,15 +1,49 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { createPublicKey, verify } from 'crypto';
 import { pb } from '$lib/pocketbase';
 import { TELNYX_API_KEY, TELNYX_RECEIVING_NUMBER } from '$env/static/private';
 import { addPendingCall } from '$lib/utils/callStore';
+import { prisma } from '$lib/db';
+import { getActiveCallFlow, toAbsoluteAudioUrl } from '$lib/ivr';
+import { PUBLIC_BASE_URL } from '$env/static/public';
 
-// The phone number that receives calls
 const INCOMING_CALL_NUMBER = TELNYX_RECEIVING_NUMBER;
+const TELNYX_IVR_COMPANY_ID = process.env.TELNYX_IVR_COMPANY_ID;
+const TELNYX_PUBLIC_KEY = process.env.TELNYX_PUBLIC_KEY;
+
+/** Verify Telnyx webhook signature (Ed25519). Signed payload = timestamp|rawBody. Skip if TELNYX_PUBLIC_KEY not set. */
+function verifyTelnyxSignature(rawBody: string, timestamp: string, signatureB64: string): boolean {
+	if (!TELNYX_PUBLIC_KEY) return true;
+	try {
+		const payload = `${timestamp}|${rawBody}`;
+		const sig = Buffer.from(signatureB64, 'base64');
+		const key =
+			TELNYX_PUBLIC_KEY.includes('-----BEGIN')
+				? createPublicKey({ key: TELNYX_PUBLIC_KEY, format: 'pem' })
+				: createPublicKey({
+						key: Buffer.from(TELNYX_PUBLIC_KEY, 'base64'),
+						format: 'raw',
+						type: 'ed25519'
+					});
+		return verify(null, Buffer.from(payload, 'utf8'), key, sig);
+	} catch {
+		return false;
+	}
+}
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    const body = await request.json();
+    const rawBody = await request.text();
+    const timestamp = request.headers.get('telnyx-timestamp') ?? '';
+    const signature = request.headers.get('telnyx-signature-ed25519') ?? '';
+    if (TELNYX_PUBLIC_KEY && (!timestamp || !signature)) {
+      return json({ error: 'Missing webhook signature headers' }, { status: 401 });
+    }
+    if (TELNYX_PUBLIC_KEY && !verifyTelnyxSignature(rawBody, timestamp, signature)) {
+      return json({ error: 'Invalid webhook signature' }, { status: 401 });
+    }
+    const body = JSON.parse(rawBody);
     
     // Detect webhook format: Event API (wrapped) vs Call Control (direct)
     const isEventAPI = body.data?.event_type;
@@ -26,21 +60,23 @@ export const POST: RequestHandler = async ({ request }) => {
       payload = body.data.payload;
       console.log('📞 Event API webhook:', eventType, callControlId);
     } else if (isCallControl) {
-      // Call Control format (production webhooks)
+      // Call Control format (production webhooks) – use explicit event_type when present
       callControlId = body.call_control_id;
       payload = body;
-      
-      // Infer event type from payload state/properties
-      if (body.state === 'parked' && !body.hangup_cause) {
-        eventType = 'call.initiated';
-      } else if (body.hangup_cause) {
-        eventType = 'call.hangup';
-      } else if (body.start_time && !body.hangup_cause) {
-        eventType = 'call.answered';
+      const explicitEventType = body.event_type as string | undefined;
+      if (explicitEventType) {
+        eventType = explicitEventType;
       } else {
-        eventType = 'call.unknown';
+        if (body.state === 'parked' && !body.hangup_cause) {
+          eventType = 'call.initiated';
+        } else if (body.hangup_cause) {
+          eventType = 'call.hangup';
+        } else if (body.start_time && !body.hangup_cause) {
+          eventType = 'call.answered';
+        } else {
+          eventType = 'call.unknown';
+        }
       }
-      
       console.log('📞 Call Control webhook:', eventType, callControlId, 'state:', body.state);
     } else {
       console.log('❓ Unknown webhook format:', body);
@@ -65,16 +101,38 @@ export const POST: RequestHandler = async ({ request }) => {
         
         if (isIncomingCall) {
           console.log('🔔 Incoming call detected to:', INCOMING_CALL_NUMBER, 'from:', fromNumber);
-          
-          // Store the incoming call for polling
-          addPendingCall({
-            name: callerName,
-            phone: fromNumber,
-            callId: callControlId
-          });
-          
-          console.log('📞 Call stored in pending calls - waiting for user to answer via dialog');
-          
+
+          if (TELNYX_IVR_COMPANY_ID) {
+            const active = await getActiveCallFlow(prisma, TELNYX_IVR_COMPANY_ID, new Date());
+            if (active) {
+              const clientState = Buffer.from(
+                JSON.stringify({ ivrFlowId: active.flow.id, ivrRuleId: active.rule.id })
+              ).toString('base64');
+              try {
+                await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${TELNYX_API_KEY}`
+                  },
+                  body: JSON.stringify({
+                    record: 'record-from-answer',
+                    client_state: clientState
+                  })
+                });
+                console.log('✅ IVR flow answered:', active.flow.title, active.rule.ruleTitle);
+              } catch (err) {
+                console.error('❌ IVR answer failed:', err);
+                addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });
+              }
+            } else {
+              addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });
+              console.log('📞 No active IVR rule for this time - stored in pending calls');
+            }
+          } else {
+            addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });
+            console.log('📞 Call stored in pending calls - waiting for user to answer via dialog');
+          }
         } else {
           // For outbound calls, we can still auto-answer
           if (callControlId) {
@@ -99,6 +157,238 @@ export const POST: RequestHandler = async ({ request }) => {
       case 'call.answered': {
         console.log('✅ Call answered:', callControlId);
         await logCallEvent(callControlId, 'answered', payload);
+        let ivrFlowId: string | null = null;
+        let ivrRuleId: string | null = null;
+        if (payload?.client_state) {
+          try {
+            const decoded = JSON.parse(
+              Buffer.from(payload.client_state as string, 'base64').toString('utf8')
+            );
+            ivrFlowId = decoded.ivrFlowId ?? null;
+            ivrRuleId = decoded.ivrRuleId ?? null;
+          } catch (_) {}
+        }
+        if (ivrFlowId && ivrRuleId && callControlId) {
+          const baseUrl = PUBLIC_BASE_URL || 'https://example.com';
+          const flow = await prisma.callFlow.findUnique({
+            where: { id: ivrFlowId },
+            include: { rules: { where: { id: ivrRuleId } } }
+          });
+          const rule = flow?.rules?.[0];
+          if (flow && rule) {
+            const greetingUrl = toAbsoluteAudioUrl(flow.greetingAudioUrl, baseUrl);
+            const promptsUrl = toAbsoluteAudioUrl(rule.promptsAudioUrl, baseUrl);
+            try {
+              if (greetingUrl) {
+                await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/playback_start`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${TELNYX_API_KEY}`
+                  },
+                  body: JSON.stringify({ audio_url: greetingUrl })
+                });
+              }
+              if (promptsUrl) {
+                await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/gather_using_audio`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${TELNYX_API_KEY}`
+                  },
+                  body: JSON.stringify({
+                    audio_url: promptsUrl,
+                    minimum_digits: 1,
+                    maximum_digits: 1,
+                    timeout_millis: 10000,
+                    terminating_digit: '#',
+                    ...(payload.client_state && { client_state: payload.client_state })
+                  })
+                });
+              }
+            } catch (err) {
+              console.error('❌ IVR playback/gather failed:', err);
+            }
+          }
+        }
+        break;
+      }
+
+      case 'call.gather.ended': {
+        const digits = (payload?.digits as string) ?? '';
+        const status = (payload?.status as string) ?? '';
+        let ivrFlowId: string | null = null;
+        let ivrRuleId: string | null = null;
+        let ivrRetry = 0;
+        if (payload?.client_state) {
+          try {
+            const decoded = JSON.parse(
+              Buffer.from(payload.client_state as string, 'base64').toString('utf8')
+            );
+            ivrFlowId = decoded.ivrFlowId ?? null;
+            ivrRuleId = decoded.ivrRuleId ?? null;
+            ivrRetry = Number(decoded.ivrRetry) || 0;
+          } catch (_) {}
+        }
+        if (!callControlId || !ivrFlowId || !ivrRuleId) {
+          console.log('📞 gather.ended missing callControlId or IVR state, ignoring');
+          break;
+        }
+        const baseUrl = PUBLIC_BASE_URL || 'https://example.com';
+        const flow = await prisma.callFlow.findUnique({
+          where: { id: ivrFlowId },
+          include: { rules: { where: { id: ivrRuleId } } }
+        });
+        const rule = flow?.rules?.[0];
+        if (!flow || !rule) {
+          console.log('📞 gather.ended flow/rule not found');
+          break;
+        }
+        const keyPrompts = (rule.keyPrompts as { key: string; name?: string; extension?: string; transferAudioUrl?: string }[]) ?? [];
+        const failoverCount = rule.failoverCount ?? 2;
+        const failoverUrl = toAbsoluteAudioUrl(rule.failoverAudioUrl, baseUrl);
+        const hangupUrl = toAbsoluteAudioUrl(rule.hangupAudioUrl, baseUrl);
+        const promptsUrl = toAbsoluteAudioUrl(rule.promptsAudioUrl, baseUrl);
+
+        const encodeClientState = (extra: Record<string, unknown>) =>
+          Buffer.from(JSON.stringify({ ivrFlowId, ivrRuleId, ...extra })).toString('base64');
+
+        // Timeout or no digits: failover or hangup
+        if (status !== 'valid' || !digits.trim()) {
+          if (ivrRetry >= failoverCount) {
+            if (hangupUrl) {
+              const hangupState = Buffer.from(JSON.stringify({ afterPlaybackHangup: true })).toString('base64');
+              await telnyxPlayback(callControlId, hangupUrl, hangupState);
+            } else {
+              await telnyxHangup(callControlId);
+            }
+            console.log('📞 IVR failover exhausted, playing hangup then hangup');
+          } else {
+            if (failoverUrl) {
+              const nextState = encodeClientState({
+                ivrRetry: ivrRetry + 1,
+                afterPlaybackGather: true
+              });
+              await telnyxPlayback(callControlId, failoverUrl, nextState);
+            } else {
+              const nextState = encodeClientState({ ivrRetry: ivrRetry + 1 });
+              await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/gather_using_audio`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TELNYX_API_KEY}` },
+                body: JSON.stringify({
+                  audio_url: promptsUrl,
+                  minimum_digits: 1,
+                  maximum_digits: 1,
+                  timeout_millis: 10000,
+                  terminating_digit: '#',
+                  client_state: nextState
+                })
+              });
+            }
+            console.log('📞 IVR failover retry', ivrRetry + 1);
+          }
+          break;
+        }
+
+        const digit = digits.trim().charAt(0);
+
+        // # = leave message / hangup
+        if (digit === '#') {
+          if (hangupUrl) {
+            const hangupState = Buffer.from(JSON.stringify({ afterPlaybackHangup: true })).toString('base64');
+            await telnyxPlayback(callControlId, hangupUrl, hangupState);
+          } else {
+            await telnyxHangup(callControlId);
+          }
+          console.log('📞 IVR user chose hangup (#)');
+          break;
+        }
+
+        const match = keyPrompts.find((p) => String(p.key).trim() === digit);
+        if (match?.extension) {
+          const to = String(match.extension).trim();
+          const transferAudioUrl = match.transferAudioUrl ? toAbsoluteAudioUrl(match.transferAudioUrl, baseUrl) : null;
+          await telnyxTransfer(callControlId, to, transferAudioUrl);
+          console.log('📞 IVR transfer to', to, match.name ?? digit);
+        } else {
+          // Unknown key: treat like timeout, failover or hangup
+          if (ivrRetry >= failoverCount) {
+            if (hangupUrl) {
+              const hangupState = Buffer.from(JSON.stringify({ afterPlaybackHangup: true })).toString('base64');
+              await telnyxPlayback(callControlId, hangupUrl, hangupState);
+            } else {
+              await telnyxHangup(callControlId);
+            }
+          } else {
+            if (failoverUrl) {
+              const nextState = encodeClientState({
+                ivrRetry: ivrRetry + 1,
+                afterPlaybackGather: true
+              });
+              await telnyxPlayback(callControlId, failoverUrl, nextState);
+            } else {
+              const nextState = encodeClientState({ ivrRetry: ivrRetry + 1 });
+              await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/gather_using_audio`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TELNYX_API_KEY}` },
+                body: JSON.stringify({
+                  audio_url: promptsUrl,
+                  minimum_digits: 1,
+                  maximum_digits: 1,
+                  timeout_millis: 10000,
+                  terminating_digit: '#',
+                  client_state: nextState
+                })
+              });
+            }
+          }
+        }
+        break;
+      }
+
+      case 'call.playback.ended': {
+        if (!callControlId || !payload?.client_state) break;
+        try {
+          const decoded = JSON.parse(
+            Buffer.from(payload.client_state as string, 'base64').toString('utf8')
+          );
+          if (decoded.afterPlaybackHangup) {
+            await telnyxHangup(callControlId);
+            console.log('📞 IVR playback (hangup) ended, hanging up');
+            break;
+          }
+          if (decoded.afterPlaybackGather && decoded.ivrFlowId && decoded.ivrRuleId) {
+            const flow = await prisma.callFlow.findUnique({
+              where: { id: decoded.ivrFlowId },
+              include: { rules: { where: { id: decoded.ivrRuleId } } }
+            });
+            const rule = flow?.rules?.[0];
+            if (rule?.promptsAudioUrl) {
+              const baseUrl = PUBLIC_BASE_URL || 'https://example.com';
+              const promptsUrl = toAbsoluteAudioUrl(rule.promptsAudioUrl, baseUrl);
+              const nextState = Buffer.from(
+                JSON.stringify({
+                  ivrFlowId: decoded.ivrFlowId,
+                  ivrRuleId: decoded.ivrRuleId,
+                  ivrRetry: Number(decoded.ivrRetry) || 0
+                })
+              ).toString('base64');
+              await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/gather_using_audio`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TELNYX_API_KEY}` },
+                body: JSON.stringify({
+                  audio_url: promptsUrl,
+                  minimum_digits: 1,
+                  maximum_digits: 1,
+                  timeout_millis: 10000,
+                  terminating_digit: '#',
+                  client_state: nextState
+                })
+              });
+              console.log('📞 IVR failover playback ended, re-gathering');
+            }
+          }
+        } catch (_) {}
         break;
       }
 
@@ -211,6 +501,49 @@ async function playAudio(callControlId: string, message: string = ''): Promise<v
   } catch (error) {
     console.error('Error playing audio:', error);
   }
+}
+
+const TELNYX_HEADERS = {
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${TELNYX_API_KEY}`
+};
+
+async function telnyxPlayback(
+  callControlId: string,
+  audioUrl: string,
+  clientState?: string
+): Promise<void> {
+  await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/playback_start`, {
+    method: 'POST',
+    headers: TELNYX_HEADERS,
+    body: JSON.stringify({
+      audio_url: audioUrl,
+      ...(clientState && { client_state: clientState })
+    })
+  });
+}
+
+async function telnyxHangup(callControlId: string): Promise<void> {
+  await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/hangup`, {
+    method: 'POST',
+    headers: TELNYX_HEADERS,
+    body: JSON.stringify({})
+  });
+}
+
+async function telnyxTransfer(
+  callControlId: string,
+  to: string,
+  audioUrl?: string | null
+): Promise<void> {
+  await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/transfer`, {
+    method: 'POST',
+    headers: TELNYX_HEADERS,
+    body: JSON.stringify({
+      to,
+      ...(audioUrl && { audio_url: audioUrl })
+    })
+  });
 }
 
 // Log call events to your database

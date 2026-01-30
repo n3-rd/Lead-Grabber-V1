@@ -5,7 +5,7 @@ import { TELNYX_API_KEY } from '$env/static/private';
 // Telnyx Call Control API - Gather Using Audio command
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    const { call_control_id, audio_url, invalid_audio_url, timeout, max_digits, finish_on_key } = await request.json();
+    const { call_control_id, audio_url, invalid_audio_url, timeout_millis, minimum_digits, maximum_digits, terminating_digit, finish_on_key, client_state } = await request.json();
 
     if (!call_control_id || !audio_url) {
       return json({
@@ -14,25 +14,15 @@ export const POST: RequestHandler = async ({ request }) => {
       }, { status: 400 });
     }
 
-    const gatherPayload: any = {
-      audio_url
+    const gatherPayload: Record<string, unknown> = {
+      audio_url,
+      ...(invalid_audio_url && { invalid_audio_url }),
+      ...(timeout_millis != null && { timeout_millis: Number(timeout_millis) }),
+      ...(minimum_digits != null && { minimum_digits: Number(minimum_digits) }),
+      ...(maximum_digits != null && { maximum_digits: Number(maximum_digits) }),
+      ...((terminating_digit ?? finish_on_key) != null && { terminating_digit: terminating_digit ?? finish_on_key }),
+      ...(client_state && { client_state })
     };
-
-    if (invalid_audio_url) {
-      gatherPayload.invalid_audio_url = invalid_audio_url;
-    }
-
-    if (timeout) {
-      gatherPayload.timeout = timeout;
-    }
-
-    if (max_digits) {
-      gatherPayload.max_digits = max_digits;
-    }
-
-    if (finish_on_key) {
-      gatherPayload.finish_on_key = finish_on_key;
-    }
 
     const response = await fetch(`https://api.telnyx.com/v2/calls/${call_control_id}/actions/gather_using_audio`, {
       method: 'POST',

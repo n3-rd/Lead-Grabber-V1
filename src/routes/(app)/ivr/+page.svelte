@@ -1,28 +1,25 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Eye, Pencil, Trash2 } from 'lucide-svelte';
+	import { page } from '$app/stores';
 
-	// Mock data for call flows
-	const callFlows = [
-		{
-			id: '1',
-			title: 'Business Hours Call Flow',
-			ruleName: 'Weekdays — use this flow',
-			schedule: 'Monday 9:00pm → Friday 5:00am'
-		},
-		{
-			id: '2',
-			title: 'Business Hours Call Flow',
-			ruleName: 'Weekend— use this flow',
-			schedule: 'Afterhours and Weekends'
-		},
-		{
-			id: '3',
-			title: 'Custom Call Flow',
-			ruleName: 'Christmas day - Holiday',
-			schedule: 'December 25, 2026'
-		}
-	];
+	interface Rule {
+		id: string;
+		ruleTitle: string;
+		schedule: Record<string, { start?: string; end?: string } | string | null>;
+	}
+	interface Flow {
+		id: string;
+		title: string;
+		rules: Rule[];
+	}
+
+	// Single source of truth: page.data from load (avoids prop/effect timing issues)
+	type PageData = { flows?: Flow[] };
+	let callFlows = $derived.by(() => {
+		const p = $page as unknown as { data?: PageData };
+		return (p?.data?.flows ?? []) as Flow[];
+	});
+	let deletingId = $state<string | null>(null);
 
 	function handleCreate() {
 		goto('/ivr/create');
@@ -33,12 +30,39 @@
 	}
 
 	function handleEdit(id: string) {
-		goto(`/ivr/${id}/edit`);
+		goto(`/ivr/${id}/edit-flow`);
 	}
 
-	function handleDelete(id: string) {
-		// TODO: Implement delete
-		console.log('Delete:', id);
+	function handleCreateRule(flowId: string) {
+		goto(`/ivr/${flowId}/edit`);
+	}
+
+	async function handleDelete(id: string) {
+		if (deletingId) return;
+		deletingId = id;
+		try {
+			const res = await fetch(`/api/ivr/flows/${id}`, { method: 'DELETE' });
+			if (res.ok) {
+				goto('/ivr', { invalidateAll: true });
+			}
+		} finally {
+			deletingId = null;
+		}
+	}
+
+	function scheduleSummary(schedule: Rule['schedule']): string {
+		if (!schedule || typeof schedule !== 'object') return 'No schedule';
+		const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+		const parts = days
+			.map((d) => {
+				const v = schedule[d];
+				if (v == null || v === 'closed') return null;
+				if (typeof v === 'object' && v && 'start' in v && 'end' in v)
+					return `${d} ${(v as { start: string }).start}-${(v as { end: string }).end}`;
+				return `${d}`;
+			})
+			.filter(Boolean);
+		return parts.length ? parts.join(', ') : 'Closed';
 	}
 </script>
 
@@ -82,22 +106,26 @@
 		{:else}
 			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{#each callFlows as flow}
-					<div class="rounded-xl bg-[#f1f4f8] p-6 shadow-[0_2px_4px_rgba(0,0,0,0.05)] flex flex-col">
+					<div class="flex flex-col rounded-xl bg-[#f1f4f8] p-6 shadow-[0_2px_4px_rgba(0,0,0,0.05)]">
 						<h2 class="mb-5 font-['Poppins'] text-[1.75rem] font-semibold leading-normal text-[#666]">
 							{flow.title}
 						</h2>
 
-						<div class="mb-6 flex flex-wrap gap-2 leading-[1.4]">
-							<span class="font-['Poppins'] text-[1.2rem] font-bold text-[#5c7cb8]">
-								Active rule:
-							</span>
-							<span class="font-['Poppins'] text-[1.2rem] italic text-[#777]">
-								{flow.ruleName}
-								<span class="not-italic">({flow.schedule})</span>
-							</span>
-						</div>
+						{#if flow.rules?.length}
+							<div class="mb-4 flex flex-wrap gap-2 leading-[1.4]">
+								<span class="font-['Poppins'] text-[1.2rem] font-bold text-[#5c7cb8]">
+									Active rule:
+								</span>
+								<span class="font-['Poppins'] text-[1.2rem] italic text-[#777]">
+									{flow.rules[0].ruleTitle}
+									<span class="not-italic">({scheduleSummary(flow.rules[0].schedule as Rule['schedule'])})</span>
+								</span>
+							</div>
+						{:else}
+							<p class="mb-4 font-['Poppins'] text-[1rem] text-[#808080]">No rules yet. Add a schedule rule.</p>
+						{/if}
 
-						<div class="mt-auto flex gap-3">
+						<div class="mt-auto flex flex-wrap gap-3">
 							<button
 								onclick={() => handleView(flow.id)}
 								class="rounded px-5 py-1.5 font-['Poppins'] text-base font-semibold text-white transition-opacity hover:opacity-90"
@@ -113,11 +141,19 @@
 								Edit
 							</button>
 							<button
-								onclick={() => handleDelete(flow.id)}
+								onclick={() => handleCreateRule(flow.id)}
 								class="rounded px-5 py-1.5 font-['Poppins'] text-base font-semibold text-white transition-opacity hover:opacity-90"
+								style="background-color: #577AB7;"
+							>
+								Create New Set Rule
+							</button>
+							<button
+								onclick={() => handleDelete(flow.id)}
+								disabled={deletingId === flow.id}
+								class="rounded px-5 py-1.5 font-['Poppins'] text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
 								style="background-color: #d65b5b;"
 							>
-								Delete
+								{deletingId === flow.id ? 'Deleting…' : 'Delete'}
 							</button>
 						</div>
 					</div>

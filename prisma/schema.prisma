@@ -125,6 +125,7 @@ model Company {
   owner       User     @relation("CompanyOwner", fields: [ownerId], references: [id])
   settings    Json?
   logo        String?  // File path/URL
+  emailSlug   String?  @unique
   created     DateTime  @default(now())
   updated     DateTime  @updatedAt
 
@@ -137,8 +138,47 @@ model Company {
   invites            Invite[]
   locations          Location[]
   notifications      Notification[]
+  callFlows          CallFlow[]
 
   @@map("companies")
+}
+
+model CallFlow {
+  id                     String         @id @default(cuid())
+  companyId              String
+  company                Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title                  String
+  greetingAudioUrl       String?
+  queueHoldAudioUrl      String?   // hold music when all reps on call
+  allUnavailableAudioUrl String?   // when offline/no forwarding
+  backupCellAudioUrl     String?   // after attempt 5 rings, no answer
+  failoverConfig         Json?     // [{ key, name, durationSec, audioUrl }] for Add Failover keys 4-9
+  created                DateTime       @default(now())
+  updated                DateTime       @updatedAt
+  rules                  CallFlowRule[]
+
+  @@index([companyId])
+  @@map("call_flows")
+}
+
+model CallFlowRule {
+  id                   String    @id @default(cuid())
+  callFlowId           String
+  callFlow             CallFlow  @relation(fields: [callFlowId], references: [id], onDelete: Cascade)
+  ruleTitle            String
+  schedule             Json      // { Mon: { start, end }, Tue: ..., Sun: null } or "closed"
+  promptsAudioUrl      String?
+  keyPrompts           Json      // [{ key, name, extension }]
+  failoverCount        Int       @default(2)
+  failoverDelayMinutes Int       @default(2)
+  failoverAudioUrl     String?
+  hangupAudioUrl       String?
+  leaveMessageOnHash   Boolean   @default(true)
+  created              DateTime  @default(now())
+  updated              DateTime  @updatedAt
+
+  @@index([callFlowId])
+  @@map("call_flow_rules")
 }
 
 model Location {

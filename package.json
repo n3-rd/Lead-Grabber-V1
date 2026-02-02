@@ -62,7 +62,6 @@
 		"svelte-dnd-action": "^0.9.52",
 		"svelte-use-form": "^2.10.0",
 		"groq-sdk": "^0.37.0",
-		"twilio": "^5.4.0",
 		"ws": "^8.18.3"
 	}
 }

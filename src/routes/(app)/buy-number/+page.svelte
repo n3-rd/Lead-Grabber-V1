@@ -1,61 +1,41 @@
 <script lang="ts">
 	import { ChevronDown, Phone, MessageSquare, Mail, Image as ImageIcon, Copy, Filter, Download, SlidersHorizontal } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+	import AreaCodeSelector from '$lib/components/AreaCodeSelector.svelte';
+
+	// Options for dynamic dropdowns (Telnyx-supported)
+	const COUNTRY_OPTIONS = [
+		{ label: 'United States +1', code: 'US' },
+		{ label: 'Canada +1', code: 'CA' },
+		{ label: 'United Kingdom +44', code: 'GB' },
+		{ label: 'Australia +61', code: 'AU' },
+		{ label: 'Ireland +353', code: 'IE' },
+		{ label: 'France +33', code: 'FR' },
+		{ label: 'Germany +49', code: 'DE' },
+		{ label: 'Spain +34', code: 'ES' },
+		{ label: 'Netherlands +31', code: 'NL' },
+		{ label: 'Belgium +32', code: 'BE' }
+	] as const;
+	const FEATURE_OPTIONS = [
+		{ value: '', label: 'Any features' },
+		{ value: 'voice', label: 'Voice' },
+		{ value: 'sms', label: 'SMS' },
+		{ value: 'mms', label: 'MMS' },
+		{ value: 'emergency', label: 'Emergency' }
+	];
+	const SEARCH_BY_OPTIONS = ['Area Code', 'Phone number (contains)'] as const;
 
 	let activeTab = $state<'buy' | 'orders'>('buy');
-	let country = $state('United States of America +1');
+	let country = $state('US');
 	let features = $state('');
-	let searchBy = $state('Area Code');
+	let searchBy = $state<'Area Code' | 'Phone number (contains)'>('Area Code');
 	let areaCode = $state('');
 	let selectedNumbers = $state<Set<string>>(new Set());
 	let phoneNumbers = $state<any[]>([]);
 	let isLoading = $state(false);
 	let cart = $state<Set<string>>(new Set());
 
-	// Mock data for phone numbers (fallback)
-	const mockPhoneNumbers = [
-		{ number: '+1 705 243 8416', location: 'PETERBOROUGH, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
-		{ number: '+1 705 243 8417', location: 'BARRIE, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
-		{ number: '+1 705 243 8418', location: 'BARRIE, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
-		{ number: '+1 705 243 8419', location: 'PETERBOROUGH, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
-		{ number: '+1 705 243 8420', location: 'BARRIE, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
-		{ number: '+1 705 243 8421', location: 'PETERBOROUGH, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
-		{ number: '+1 705 243 8422', location: 'BARRIE, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
-		{ number: '+1 705 243 8423', location: 'TORONTO, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
-		{ number: '+1 705 243 8424', location: 'OTTAWA, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
-		{ number: '+1 705 243 8425', location: 'HAMILTON, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
-		{ number: '+1 705 243 8426', location: 'LONDON, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
-		{ number: '+1 705 243 8427', location: 'WINDSOR, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
-		{ number: '+1 705 243 8428', location: 'KINGSTON, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
-		{ number: '+1 705 243 8429', location: 'THUNDER BAY, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' },
-		{ number: '+1 705 243 8430', location: 'SUDBURY, ON CA', type: 'Local', upfront: '$1.00', monthly: '$1.00' }
-	];
-
 	let numberOrders = $state<any[]>([]);
-
-	// Mock data for number orders (fallback)
-	const mockNumberOrders = [
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789abc', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789abc', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789def', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789def', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789ghi', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789ghi', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789jkl', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789jkl', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789mno', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789mno', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789pqr', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789pqr', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789stu', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789stu', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789vwx', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789vwx', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789yza', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789yza', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789bcd', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789bcd', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789efg', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789efg', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789hij', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789hij', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789klm', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789klm', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789nop', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789nop', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789qrs', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789qrs', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789tuv', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789tuv', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789wxy', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789wxy', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789zab', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789zab', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'United States', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789cde', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789cde', actor: 'r.dredhart@canada.com', numberType: 'Local' },
-		{ date: '8/5/25 4:53PM', status: 'Active', country: 'Canada', orderId: '8fdea89-5a1b-4c3d-9e8f-123456789fgh', subOrderId: '8fdea89-5a1b-4c3d-9e8f-123456789fgh', actor: 'r.dredhart@canada.com', numberType: 'Local' }
-	];
 
 	function toggleNumber(number: string) {
 		if (selectedNumbers.has(number)) {
@@ -96,20 +76,22 @@
 	}
 
 	async function handleSearch() {
-		if (!areaCode && searchBy === 'Area Code') {
-			toast.error('Please enter an area code');
+		const isAreaCode = searchBy === 'Area Code';
+		if (!areaCode.trim()) {
+			toast.error(isAreaCode ? 'Please enter an area code' : 'Enter digits to search by number');
 			return;
 		}
 
 		isLoading = true;
 		try {
-			const countryCode = country.includes('+1') ? 'US' : country.split('+')[1]?.substring(0, 2) || 'US';
 			const params = new URLSearchParams({
-				country_code: countryCode
+				country_code: country
 			});
 
-			if (areaCode) {
-				params.append('area_code', areaCode);
+			if (isAreaCode) {
+				params.append('area_code', areaCode.trim());
+			} else {
+				params.append('phone_number', areaCode.trim());
 			}
 
 			if (features) {
@@ -247,7 +229,9 @@
 								bind:value={country}
 								class="h-[47px] w-full appearance-none rounded-[2px] border border-[#969696] bg-white px-3 pr-10 font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080] outline-none"
 							>
-								<option>United States of America +1</option>
+								{#each COUNTRY_OPTIONS as opt}
+									<option value={opt.code}>{opt.label}</option>
+								{/each}
 							</select>
 							<ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#808080]" />
 						</div>
@@ -264,7 +248,9 @@
 								bind:value={features}
 								class="h-[47px] w-full appearance-none rounded-[2px] border border-[#969696] bg-white px-3 pr-10 font-['Poppins'] text-sm font-normal leading-[17px] text-[rgba(128,128,128,0.47)] outline-none"
 							>
-								<option value="">Any features</option>
+								{#each FEATURE_OPTIONS as opt}
+									<option value={opt.value}>{opt.label}</option>
+								{/each}
 							</select>
 							<ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#808080]" />
 						</div>
@@ -281,27 +267,32 @@
 								bind:value={searchBy}
 								class="h-[47px] w-full appearance-none rounded-[2px] border border-[#969696] bg-white px-3 pr-10 font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080] outline-none"
 							>
-								<option>Area Code</option>
+								{#each SEARCH_BY_OPTIONS as opt}
+									<option value={opt}>{opt}</option>
+								{/each}
 							</select>
 							<ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#808080]" />
 						</div>
 					</div>
 
-					<!-- Area Code -->
+					<!-- Area Code or Number -->
 					<div class="flex flex-col gap-2">
 						<label for="areaCode" class="font-['Poppins'] text-base font-medium leading-[19px] text-[#757575]">
-							Area Code
+							{searchBy === 'Area Code' ? 'Area Code' : 'Digits (contains)'}
 						</label>
-						<div class="relative">
-							<select
+						{#if searchBy === 'Area Code'}
+							<AreaCodeSelector bind:value={areaCode} {country} placeholder="Select or search area code..." />
+						{:else}
+							<input
 								id="areaCode"
+								type="text"
 								bind:value={areaCode}
-								class="h-[47px] w-full appearance-none rounded-[2px] border border-[#969696] bg-white px-3 pr-10 font-['Poppins'] text-sm font-normal leading-[17px] text-[rgba(128,128,128,0.47)] outline-none"
-							>
-								<option value="">Select...</option>
-							</select>
-							<ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#808080]" />
-						</div>
+								placeholder="e.g. 562"
+								inputmode="numeric"
+								pattern="[0-9]*"
+								class="h-[47px] w-full rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080] outline-none placeholder:text-[rgba(128,128,128,0.47)]"
+							/>
+						{/if}
 					</div>
 				</div>
 

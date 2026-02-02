@@ -3,10 +3,11 @@ import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const fromNumber = body.from || '+15551234567';
-    
-    // Create a realistic Telnyx webhook payload for an incoming call
+    // Use the number that "received" the call — must be assigned to your company in Manage Numbers for IVR
+    const toNumber = body.to || body.receiving_number || '+17059986143';
+
     const webhookPayload = {
       data: {
         event_type: 'call.initiated',
@@ -18,7 +19,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
           call_session_id: `test-session-${Date.now()}`,
           direction: 'incoming',
           from: fromNumber,
-          to: '+17059986143', // Your receiving number
+          to: toNumber,
           state: 'ringing',
           created_at: new Date().toISOString(),
           answered_at: null,
@@ -58,12 +59,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
         body: webhookResult
       },
       instructions: {
-        description: 'This simulates an incoming call to +17059986143',
+        description: `Simulates an incoming call to ${toNumber}. For IVR: assign this number to your company in Manage Numbers and create an IVR flow with a rule whose schedule includes now.`,
         expectedBehavior: [
-          '1. Call dialog should appear in the UI',
-          '2. Call should be auto-answered and recording started',
-          '3. Premium answering machine detection should be enabled',
-          '4. SSE event should be broadcasted to connected clients'
+          '1. If number is assigned + active IVR rule: call is answered with IVR (greeting → prompts → digit gather)',
+          '2. Otherwise: call is added to pending calls'
         ]
       }
     });
@@ -78,16 +77,12 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 };
 
 export const GET: RequestHandler = async ({ url, fetch }) => {
-  // Allow GET requests for easy testing
   const fromNumber = url.searchParams.get('from') || '+15551234567';
-  
-  // Create a mock request object for the POST handler
+  const toNumber = url.searchParams.get('to') || undefined;
   const mockRequest = {
-    json: async () => ({ from: fromNumber }),
+    json: async () => ({ from: fromNumber, ...(toNumber && { to: toNumber }) }),
     url: url.toString()
   };
-  
-  // Call the POST handler with our mock request
   return await POST({
     request: mockRequest as Request,
     fetch

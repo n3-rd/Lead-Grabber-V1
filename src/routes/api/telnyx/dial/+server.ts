@@ -2,18 +2,39 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { TELNYX_API_KEY, TELNYX_CONNECTION_ID } from '$env/static/private';
 import { formatPhoneForDialing } from '$lib/utils/phone';
+import { getFirstCompanyNumber } from '$lib/company-numbers';
+import { prisma } from '$lib/db';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
   try {
-    const { to, from, clientId } = await request.json();
-    
+    const { to, from: fromParam, clientId } = await request.json();
+
     if (!to) {
       return json({ success: false, error: 'Missing destination phone number' }, { status: 400 });
     }
-    
+
+    const companyId = locals.user?.company?.id;
+    if (!companyId) {
+      return json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    let from: string;
+    if (fromParam) {
+      from = fromParam;
+    } else {
+      const companyNumber = await getFirstCompanyNumber(prisma, companyId);
+      if (!companyNumber) {
+        return json({
+          success: false,
+          error: 'No phone number assigned. Assign a number in Manage Numbers.'
+        }, { status: 400 });
+      }
+      from = companyNumber.phoneNumber;
+    }
+
     // Format phone number for dialing (E.164 format)
     const formattedPhone = formatPhoneForDialing(to);
-    
+
     // Create the call using Telnyx API
     const response = await fetch('https://api.telnyx.com/v2/calls', {
       method: 'POST',
@@ -24,7 +45,7 @@ export const POST: RequestHandler = async ({ request }) => {
       body: JSON.stringify({
         connection_id: TELNYX_CONNECTION_ID,
         to: formattedPhone,
-        from: from,
+        from,
         send_silence_when_idle: false, // Ensures continuous audio
         client_state: clientId ? btoa(JSON.stringify({ clientId })) : undefined,
         webhook_url: `${request.headers.get('origin')}/api/telnyx/call-webhook`, // Ensure webhooks are properly routed

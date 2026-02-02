@@ -5,9 +5,8 @@ import { pb } from '$lib/pocketbase';
 import { normalizePhoneNumber } from '$lib/utils/phone';
 import { logCommunication } from '$lib/utils/communication-log';
 import { createOrUpdateContact } from '$lib/utils/contacts';
-
-// Define the hardcoded company ID
-const HARDCODED_COMPANY_ID = '6h4zpjhqip1d50b';
+import { getCompanyIdByPhoneNumber } from '$lib/company-numbers';
+import { prisma } from '$lib/db';
 
 // Define the handleWebhook function used by PUT
 async function handleWebhook(request: Request) {
@@ -50,36 +49,31 @@ export const POST: RequestHandler = async ({ request }) => {
       return json({ success: false, error: 'Missing phone number' });
     }
 
-    // Normalize phone number
     const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
-    console.log('Normalized phone number:', normalizedPhoneNumber);
+    const toNumber = messageData.to?.phone_number || messageData.to;
+    const companyId = toNumber ? await getCompanyIdByPhoneNumber(prisma, toNumber) : null;
+    console.log('Normalized phone:', normalizedPhoneNumber, 'to (our number):', toNumber, 'companyId:', companyId ?? 'none');
 
-    // Generate a thread ID - use only the customer's phone number
     const threadId = normalizedPhoneNumber;
-    console.log('Generated threadId:', threadId);
 
     try {
-      // Try to find existing thread by thread_id or customer_phone
       let existingUser;
       try {
-        // First try by thread_id (most specific match)
         try {
           existingUser = await pb.collection('messages').getFirstListItem(`thread_id="${normalizedPhoneNumber}"`);
-          console.log('Found existing thread by thread_id:', existingUser.id);
         } catch {
-          // If not found by thread_id, try by phone number
           existingUser = await pb.collection('messages').getFirstListItem(`customer_phone="${normalizedPhoneNumber}"`);
-          console.log('Found existing thread by phone number:', existingUser.id);
         }
       } catch {
-        // No existing thread found, which is fine - we'll create one
-        console.log('No existing thread found for:', normalizedPhoneNumber);
+        existingUser = undefined;
       }
 
       let customerName: string;
       if (existingUser) {
         customerName = existingUser.customer_name ?? 'Unknown Customer';
-        const updatedUser = await pb.collection('messages').update(existingUser.id, {
+        const companyIdForThread = companyId ?? existingUser.company_id;
+        await pb.collection('messages').update(existingUser.id, {
+          ...(companyIdForThread && { company_id: companyIdForThread }),
           messages: [...(Array.isArray(existingUser.messages) ? existingUser.messages : []), {
             content,
             timestamp: new Date().toISOString(),
@@ -88,51 +82,49 @@ export const POST: RequestHandler = async ({ request }) => {
           }],
           status: 'new'
         });
-        console.log('Updated existing thread:', updatedUser.id);
       } else {
+        if (!companyId) {
+          console.log('Inbound SMS to unassigned number, skipping thread creation');
+          return json({ success: true });
+        }
         const nameMatch = content.match(/(?:I'm|I am)\s+(?:new\s+customer,\s+)?([A-Za-z]+)/i);
         customerName = nameMatch?.[1] ?? 'Unknown Customer';
-        try {
-          await pb.collection('messages').create({
-            thread_id: threadId,
-            customer_phone: phoneNumber,
-            customer_name: customerName,
-            messages: [{
-              content,
-              timestamp: new Date().toISOString(),
-              is_agent_reply: false,
-              media: media.length > 0 ? media : undefined
-            }],
-            status: 'new',
-            company_id: HARDCODED_COMPANY_ID,
-            source: 'sms',
-            color: 'bg-primary',
-            initials: customerName.substring(0, 2).toUpperCase(),
-            form_data: {},
-            source_url: ''
-          });
-        } catch (error) {
-          console.error('Failed to create thread, error:', error);
-          return json({
-            success: false,
-            error: 'Failed to create message thread. Check server logs for details.'
-          }, { status: 500 });
-        }
+        await pb.collection('messages').create({
+          thread_id: threadId,
+          customer_phone: phoneNumber,
+          customer_name: customerName,
+          messages: [{
+            content,
+            timestamp: new Date().toISOString(),
+            is_agent_reply: false,
+            media: media.length > 0 ? media : undefined
+          }],
+          status: 'new',
+          company_id: companyId,
+          source: 'sms',
+          color: 'bg-primary',
+          initials: customerName.substring(0, 2).toUpperCase(),
+          form_data: {},
+          source_url: ''
+        });
       }
 
-      const contact = await createOrUpdateContact({
-        company_id: HARDCODED_COMPANY_ID,
-        phone: normalizedPhoneNumber,
-        name: customerName !== 'Unknown Customer' ? customerName : undefined,
-      });
+      const effectiveCompanyId = companyId ?? (existingUser?.company_id as string | undefined);
+      const contact = effectiveCompanyId
+        ? await createOrUpdateContact({
+            company_id: effectiveCompanyId,
+            phone: normalizedPhoneNumber,
+            name: customerName !== 'Unknown Customer' ? customerName : undefined,
+          })
+        : undefined;
 
       await logCommunication({
         type: 'sms',
         direction: 'inbound',
         status: 'success',
         source: phoneNumber,
-        destination: messageData.to || 'Inbox',
-        company_id: HARDCODED_COMPANY_ID,
+        destination: toNumber || 'Inbox',
+        company_id: companyId ?? undefined,
         customer_id: contact?.id ?? undefined,
         summary: content.substring(0, 50) + '...',
         content: content,

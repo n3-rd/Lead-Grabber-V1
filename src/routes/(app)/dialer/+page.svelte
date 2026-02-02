@@ -43,7 +43,6 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					to: phoneNumber,
-					from: '+17059800835', // Your Telnyx number
 					clientId: clientId
 				})
 			});

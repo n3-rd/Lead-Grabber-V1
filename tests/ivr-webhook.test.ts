@@ -7,12 +7,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockFetch = vi.fn();
 const mockPrismaCallFlowFindMany = vi.fn();
 const mockPrismaCallFlowFindUnique = vi.fn();
+const mockPrismaCompanyPhoneNumberFindUnique = vi.fn();
 const mockPbCreate = vi.fn();
 const mockAddPendingCall = vi.fn();
 
 vi.mock('$env/static/private', () => ({
-	TELNYX_API_KEY: 'test-telnyx-key',
-	TELNYX_RECEIVING_NUMBER: '+17059986143'
+	TELNYX_API_KEY: 'test-telnyx-key'
 }));
 
 vi.mock('$env/static/public', () => ({
@@ -24,6 +24,9 @@ vi.mock('$lib/db', () => ({
 		callFlow: {
 			findMany: (...args: unknown[]) => mockPrismaCallFlowFindMany(...args),
 			findUnique: (...args: unknown[]) => mockPrismaCallFlowFindUnique(...args)
+		},
+		companyPhoneNumber: {
+			findUnique: (...args: unknown[]) => mockPrismaCompanyPhoneNumberFindUnique(...args)
 		}
 	}
 }));
@@ -63,8 +66,8 @@ describe('IVR webhook simulation', () => {
 			}
 		};
 
-		it('answers with IVR client_state when TELNYX_IVR_COMPANY_ID is set and active flow exists', async () => {
-			process.env.TELNYX_IVR_COMPANY_ID = 'company-1';
+		it('answers with IVR client_state when "to" number is assigned to company and active flow exists', async () => {
+			mockPrismaCompanyPhoneNumberFindUnique.mockResolvedValue({ companyId: 'company-1' });
 			mockPrismaCallFlowFindMany.mockResolvedValue([
 				{
 					id: 'flow-1',
@@ -126,9 +129,8 @@ describe('IVR webhook simulation', () => {
 			expect(state.ivrRuleId).toBe('rule-1');
 		});
 
-		it('adds to pending calls when no TELNYX_IVR_COMPANY_ID', async () => {
-			vi.resetModules();
-			delete process.env.TELNYX_IVR_COMPANY_ID;
+		it('adds to pending calls when "to" number is not assigned to any company', async () => {
+			mockPrismaCompanyPhoneNumberFindUnique.mockResolvedValue(null);
 			const eventPayloadNoIvr = {
 				data: {
 					event_type: 'call.initiated',
@@ -295,7 +297,7 @@ describe('IVR webhook simulation', () => {
 
 	describe('event type detection', () => {
 		it('accepts Call Control format with explicit event_type', async () => {
-			process.env.TELNYX_IVR_COMPANY_ID = 'company-1';
+			mockPrismaCompanyPhoneNumberFindUnique.mockResolvedValue(null);
 			mockPrismaCallFlowFindMany.mockResolvedValue([]);
 
 			const { POST } = await import('../src/routes/api/telnyx/call-webhook/+server');

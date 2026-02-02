@@ -1,8 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { TELNYX_API_KEY } from '$env/static/private';
+import { prisma } from '$lib/db';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     const { phone_numbers } = await request.json();
 
@@ -13,21 +14,37 @@ export const POST: RequestHandler = async ({ request }) => {
       }, { status: 400 });
     }
 
+    // Get company from session
+    if (!locals.user?.company?.id) {
+      return json({
+        success: false,
+        error: 'Company not found. Please log in.'
+      }, { status: 401 });
+    }
+
+    const companyId = locals.user.company.id;
+
     // Create order for phone numbers
-    const response = await fetch('https://api.telnyx.com/v2/phone_number_orders', {
+    const payload = {
+      phone_numbers: phone_numbers.map((num: string) => ({
+        phone_number: num
+      }))
+    };
+
+    console.log('Telnyx buy request:', JSON.stringify(payload, null, 2));
+
+    const response = await fetch('https://api.telnyx.com/v2/number_orders', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${TELNYX_API_KEY}`
       },
-      body: JSON.stringify({
-        phone_numbers: phone_numbers.map((num: string) => ({
-          phone_number: num
-        }))
-      })
+      body: JSON.stringify(payload)
     });
 
     const data = await response.json();
+
+    console.log('Telnyx buy response:', response.status, JSON.stringify(data, null, 2));
 
     if (!response.ok) {
       console.error('Telnyx buy error:', data);
@@ -37,10 +54,44 @@ export const POST: RequestHandler = async ({ request }) => {
       }, { status: response.status });
     }
 
+    // Store purchased numbers in database
+    const orderData = data.data;
+    const purchasedNumbers = orderData?.phone_numbers || [];
+
+    // Create records for each purchased number
+    const createdNumbers = await Promise.all(
+      purchasedNumbers.map(async (numData: any) => {
+        const phoneNumber = numData.phone_number;
+        const telnyxPhoneNumberId = numData.id;
+
+        // Check if number already exists
+        const existing = await prisma.companyPhoneNumber.findUnique({
+          where: { phoneNumber }
+        });
+
+        if (existing) {
+          console.log(`Number ${phoneNumber} already exists for company ${existing.companyId}`);
+          return existing;
+        }
+
+        // Create new phone number record
+        return await prisma.companyPhoneNumber.create({
+          data: {
+            companyId,
+            phoneNumber,
+            telnyxPhoneNumberId
+          }
+        });
+      })
+    );
+
+    console.log(`Stored ${createdNumbers.length} numbers for company ${companyId}`);
+
     return json({
       success: true,
-      order: data.data,
-      orderId: data.data?.id
+      order: orderData,
+      orderId: orderData?.id,
+      numbers: createdNumbers
     });
 
   } catch (error) {

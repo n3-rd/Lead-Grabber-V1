@@ -10,6 +10,7 @@
 	let selectedNumbers = $state<Set<string>>(new Set());
 	let numbers = $state<any[]>([]);
 	let verifiedNumbers = $state<any[]>([]);
+	let companyNumbers = $state<{ id: string; phoneNumber: string }[]>([]);
 	let isLoading = $state(false);
 
 	// Mock data for numbers (fallback)
@@ -66,22 +67,60 @@
 	async function loadNumbers() {
 		isLoading = true;
 		try {
-			const params = new URLSearchParams();
-			if (searchQuery) {
-				params.append('search', searchQuery);
-			}
-			const response = await fetch(`/api/telnyx/numbers/list?${params.toString()}`);
-			const result = await response.json();
-			if (result.success) {
-				numbers = result.numbers;
-			} else {
-				toast.error(result.error || 'Failed to load numbers');
-			}
+			const [listRes, companyRes] = await Promise.all([
+				fetch(`/api/telnyx/numbers/list?${new URLSearchParams(searchQuery ? { search: searchQuery } : {}).toString()}`),
+				fetch('/api/company-numbers')
+			]);
+			const listResult = await listRes.json();
+			const companyResult = await companyRes.json();
+			if (listResult.success) numbers = listResult.numbers;
+			else toast.error(listResult.error || 'Failed to load numbers');
+			if (companyResult.success) companyNumbers = companyResult.numbers;
 		} catch (error) {
 			console.error('Error loading numbers:', error);
 			toast.error('Error loading numbers');
 		} finally {
 			isLoading = false;
+		}
+	}
+
+	function isAssigned(phoneNumber: string): { id: string } | null {
+		const n = phoneNumber.replace(/\D/g, '');
+		const match = companyNumbers.find((c) => (c.phoneNumber || '').replace(/\D/g, '') === n);
+		return match ? { id: match.id } : null;
+	}
+
+	async function handleAssign(num: { number: string; id: string }) {
+		try {
+			const res = await fetch('/api/company-numbers', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ phoneNumber: num.number, telnyxPhoneNumberId: num.id })
+			});
+			const result = await res.json();
+			if (result.success) {
+				toast.success('Number assigned to your company');
+				companyNumbers = [...companyNumbers, { id: result.number.id, phoneNumber: result.number.phoneNumber }];
+			} else {
+				toast.error(result.error || 'Failed to assign');
+			}
+		} catch (e) {
+			toast.error('Failed to assign number');
+		}
+	}
+
+	async function handleUnassign(cpId: string) {
+		try {
+			const res = await fetch(`/api/company-numbers/${cpId}`, { method: 'DELETE' });
+			const result = await res.json();
+			if (result.success) {
+				toast.success('Number unassigned');
+				companyNumbers = companyNumbers.filter((c) => c.id !== cpId);
+			} else {
+				toast.error(result.error || 'Failed to unassign');
+			}
+		} catch (e) {
+			toast.error('Failed to unassign number');
 		}
 	}
 
@@ -472,6 +511,9 @@
 								Tags
 							</th>
 							<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								Company
+							</th>
+							<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
 								Action
 							</th>
 						</tr>
@@ -479,18 +521,19 @@
 					<tbody>
 						{#if isLoading}
 							<tr>
-								<td colspan="8" class="py-8 text-center text-gray-500">
+								<td colspan="9" class="py-8 text-center text-gray-500">
 									Loading...
 								</td>
 							</tr>
 						{:else if numbers.length === 0}
 							<tr>
-								<td colspan="8" class="py-8 text-center text-gray-500">
+								<td colspan="9" class="py-8 text-center text-gray-500">
 									No numbers found.
 								</td>
 							</tr>
 						{:else}
 						{#each numbers as num}
+							{@const assigned = isAssigned(num.number)}
 							<tr class="border-b border-[rgba(193,193,193,0.4)]">
 								<td class="py-3 pl-4 pr-3">
 									<input
@@ -531,6 +574,26 @@
 									<button class="text-[#808080] hover:text-[#577AB7] transition-colors">
 										<Plus class="h-4 w-4" />
 									</button>
+								</td>
+								<td class="py-3 font-['Poppins'] text-[14px] text-[#808080]">
+									{#if assigned}
+										<span class="text-green-600">Assigned</span>
+										<button
+											type="button"
+											onclick={() => handleUnassign(assigned.id)}
+											class="ml-2 text-xs text-[#577AB7] hover:underline"
+										>
+											Unassign
+										</button>
+									{:else}
+										<button
+											type="button"
+											onclick={() => handleAssign(num)}
+											class="rounded bg-[#577AB7] px-2 py-1 text-xs text-white hover:bg-[#4a6ba5]"
+										>
+											Assign to company
+										</button>
+									{/if}
 								</td>
 								<td class="py-3">
 									<div class="flex items-center gap-2">

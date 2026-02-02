@@ -10,8 +10,7 @@ export default defineConfig({
 		globals: true
 	},
 	ssr: {
-		noExternal: ['lucide-svelte'],
-		external: ['bcryptjs']
+		noExternal: ['lucide-svelte']
 	},
 	build: {
 		minify: true,

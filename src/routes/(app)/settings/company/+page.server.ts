@@ -3,7 +3,6 @@ import { fail, redirect } from '@sveltejs/kit'
 import type { Actions, PageServerLoad } from './$types'
 import { sendInviteEmail } from '$lib/server/brevo'
 import { PUBLIC_BASE_URL, PUBLIC_ENV } from '$env/static/public'
-import { TWILIO_PHONE_NUMBER } from '$env/static/private'
 import { saveUploadedFile } from '$lib/utils/file-upload'
 
 function normalizeUrl(baseUrl: string, path: string): string {
@@ -183,8 +182,7 @@ export const actions: Actions = {
             email: emailNotifications,
             web: webNotifications,
           },
-          twilio_phone_number: TWILIO_PHONE_NUMBER,
-          webhook_url: `${PUBLIC_BASE_URL}/api/twilio/webhook`,
+          webhook_url: `${PUBLIC_BASE_URL}/api/telnyx/webhook`,
         },
       }
 

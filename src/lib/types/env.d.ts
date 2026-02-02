@@ -11,13 +11,8 @@ declare global {
   interface ImportMetaEnv {
     TELNYX_API_KEY: string;
     TELNYX_PHONE_NUMBER: string;
-    TELNYX_RECEIVING_NUMBER: string;
     TELNYX_CONNECTION_ID: string;
     TELNYX_MESSAGING_PROFILE_ID: string;
-    TWILIO_ACCOUNT_SID: string;
-    TWILIO_AUTH_TOKEN: string;
-    TWILIO_PHONE_NUMBER: string;
-    TWILIO_ENABLED: string;
     GROQ_API_KEY: string;
     POCKETBASE_URL: string;
     NODE_ENV: string;

@@ -2,14 +2,13 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { createPublicKey, verify } from 'crypto';
 import { pb } from '$lib/pocketbase';
-import { TELNYX_API_KEY, TELNYX_RECEIVING_NUMBER } from '$env/static/private';
+import { TELNYX_API_KEY } from '$env/static/private';
 import { addPendingCall } from '$lib/utils/callStore';
 import { prisma } from '$lib/db';
 import { getActiveCallFlow, toAbsoluteAudioUrl } from '$lib/ivr';
+import { getCompanyIdByPhoneNumber } from '$lib/company-numbers';
 import { PUBLIC_BASE_URL } from '$env/static/public';
 
-const INCOMING_CALL_NUMBER = TELNYX_RECEIVING_NUMBER;
-const TELNYX_IVR_COMPANY_ID = process.env.TELNYX_IVR_COMPANY_ID;
 const TELNYX_PUBLIC_KEY = process.env.TELNYX_PUBLIC_KEY;
 
 /** Verify Telnyx webhook signature (Ed25519). Signed payload = timestamp|rawBody. Skip if TELNYX_PUBLIC_KEY not set. */
@@ -92,18 +91,18 @@ export const POST: RequestHandler = async ({ request }) => {
         console.log('Call initiated:', callControlId);
         await logCallEvent(callControlId, 'initiated', payload);
         
-        // Check if this is an incoming call to our specific number
-        const toNumber = (payload?.to as string)?.replace(/\D/g, '') || '';
+        // Incoming: "to" is the number that received the call. Resolve company by that number.
+        const toRaw = (payload?.to as string) || '';
         const fromNumber = (payload?.from as string) || '';
         const callerName = (payload?.caller_id_name as string) || 'Unknown Caller';
-        const isIncomingCall = payload?.direction === 'incoming' || 
-                              (toNumber && toNumber.includes('7059986143'));
-        
-        if (isIncomingCall) {
-          console.log('🔔 Incoming call detected to:', INCOMING_CALL_NUMBER, 'from:', fromNumber);
+        const isIncomingCall = payload?.direction === 'incoming';
 
-          if (TELNYX_IVR_COMPANY_ID) {
-            const active = await getActiveCallFlow(prisma, TELNYX_IVR_COMPANY_ID, new Date());
+        if (isIncomingCall) {
+          const companyId = await getCompanyIdByPhoneNumber(prisma, toRaw);
+          console.log('🔔 Incoming call to:', toRaw, 'from:', fromNumber, 'companyId:', companyId ?? 'none');
+
+          if (companyId) {
+            const active = await getActiveCallFlow(prisma, companyId, new Date());
             if (active) {
               const clientState = Buffer.from(
                 JSON.stringify({ ivrFlowId: active.flow.id, ivrRuleId: active.rule.id })
@@ -131,7 +130,7 @@ export const POST: RequestHandler = async ({ request }) => {
             }
           } else {
             addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });
-            console.log('📞 Call stored in pending calls - waiting for user to answer via dialog');
+            console.log('📞 Number not assigned to a company - stored in pending calls');
           }
         } else {
           // For outbound calls, we can still auto-answer

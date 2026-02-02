@@ -4,13 +4,21 @@ import { TELNYX_API_KEY, TELNYX_PHONE_NUMBER, TELNYX_MESSAGING_PROFILE_ID } from
 import { PUBLIC_BASE_URL } from '$env/static/public';
 import { normalizePhoneNumber } from '$lib/utils/phone';
 import { logCommunication } from '$lib/utils/communication-log';
+import { getFirstCompanyNumber } from '$lib/company-numbers';
+import { prisma } from '$lib/db';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
   const { message, phoneNumber } = await request.json();
 
   try {
-    // Your Telnyx phone number (from your Messaging Profile)
-    const fromNumber = TELNYX_PHONE_NUMBER;
+    const companyId = locals.user?.company?.id;
+    let fromNumber: string;
+    if (companyId) {
+      const companyNumber = await getFirstCompanyNumber(prisma, companyId);
+      fromNumber = companyNumber?.phoneNumber ?? TELNYX_PHONE_NUMBER;
+    } else {
+      fromNumber = TELNYX_PHONE_NUMBER;
+    }
 
     // Normalize phone number
     const formattedPhoneNumber = normalizePhoneNumber(phoneNumber);
@@ -62,14 +70,13 @@ export const POST: RequestHandler = async ({ request }) => {
       throw new Error(errorDetail);
     }
 
-    // Log the outbound SMS communication
     await logCommunication({
       type: 'sms',
       direction: 'outbound',
       status: 'success',
       source: fromNumber,
       destination: formattedPhoneNumber,
-      company_id: undefined, // Could fetch if needed, but not readily available in this scope?
+      company_id: companyId ?? undefined,
       summary: message.substring(0, 50) + '...',
       content: message,
       metadata: {

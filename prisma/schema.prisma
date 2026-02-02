@@ -139,8 +139,24 @@ model Company {
   locations          Location[]
   notifications      Notification[]
   callFlows          CallFlow[]
+  phoneNumbers      CompanyPhoneNumber[]
 
   @@map("companies")
+}
+
+// Numbers bought via Telnyx and assigned to a company for dialing, IVR, SMS
+model CompanyPhoneNumber {
+  id                   String   @id @default(cuid())
+  companyId            String
+  company              Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  phoneNumber          String   // E.164 e.g. +17051234567
+  telnyxPhoneNumberId  String?  // Telnyx phone_number id if needed
+  created              DateTime @default(now())
+  updated              DateTime @updatedAt
+
+  @@unique([phoneNumber])
+  @@index([companyId])
+  @@map("company_phone_numbers")
 }
 
 model CallFlow {

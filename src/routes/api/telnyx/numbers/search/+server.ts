@@ -16,18 +16,24 @@ export const GET: RequestHandler = async ({ url }) => {
       'page[size]': limit
     });
 
+    // Best effort: return similar results if exact match not found (US/CA only)
+    if (countryCode === 'US' || countryCode === 'CA') {
+      params.append('filter[best_effort]', 'true');
+    }
+
     if (areaCode) {
-      params.append('filter[nxx]', areaCode);
+      params.append('filter[national_destination_code]', areaCode);
     }
 
     if (phoneNumber) {
-      params.append('filter[phone_number]', phoneNumber);
+      params.append('filter[contains]', phoneNumber);
     }
 
     if (features) {
+      // Telnyx expects filter[features]=voice (not filter[features][voice]=true)
       const featureList = features.split(',');
       featureList.forEach(feature => {
-        params.append(`filter[features][${feature}]`, 'true');
+        params.append('filter[features]', feature.trim());
       });
     }
 

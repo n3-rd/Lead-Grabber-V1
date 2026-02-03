@@ -11,15 +11,10 @@ export function normalizePhoneNumber(phone: string): string {
 	// Trim whitespace
 	let normalized = phone.trim();
 	
-	// If it starts with +, keep it and remove all non-digit chars after
+	// If it starts with +, keep it and remove all non-digit chars after (preserve E.164)
 	if (normalized.startsWith('+')) {
 		const digits = normalized.slice(1).replace(/\D/g, '');
-		// Remove US country code (1) if present and number has 11 digits
-		if (digits.startsWith('1') && digits.length === 11) {
-			normalized = '+' + digits.slice(1);
-		} else {
-			normalized = '+' + digits;
-		}
+		normalized = '+' + digits;
 	} else {
 		// Otherwise, remove all non-digit chars
 		normalized = normalized.replace(/\D/g, '');

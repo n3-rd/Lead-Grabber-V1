@@ -1,9 +1,24 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { TELNYX_API_KEY } from '$env/static/private';
+import { prisma } from '$lib/db';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, locals }) => {
   try {
+    if (!locals.user) {
+      return json({ success: false, error: 'Not logged in' }, { status: 401 });
+    }
+    if (!locals.user.company?.id) {
+      return json({ success: false, error: 'No company' }, { status: 403 });
+    }
+
+    const companyId = locals.user.company.id;
+    const companyNumbers = await prisma.companyPhoneNumber.findMany({
+      where: { companyId },
+      select: { phoneNumber: true }
+    });
+    const companyNumberSet = new Set(companyNumbers.map((n) => n.phoneNumber));
+
     const page = url.searchParams.get('page') || '1';
     const limit = url.searchParams.get('limit') || '20';
 
@@ -12,7 +27,7 @@ export const GET: RequestHandler = async ({ url }) => {
       'page[size]': limit
     });
 
-    const response = await fetch(`https://api.telnyx.com/v2/phone_number_orders?${params.toString()}`, {
+    const response = await fetch(`https://api.telnyx.com/v2/number_orders?${params.toString()}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${TELNYX_API_KEY}`
@@ -29,8 +44,15 @@ export const GET: RequestHandler = async ({ url }) => {
       }, { status: response.status });
     }
 
+    // Only include orders that contain at least one number belonging to this company
+    const allOrders = data.data || [];
+    const ordersForCompany = allOrders.filter((order: any) => {
+      const nums = order.phone_numbers ?? [];
+      return nums.some((p: { phone_number?: string }) => companyNumberSet.has(p.phone_number));
+    });
+
     // Transform Telnyx response
-    const orders = data.data?.map((order: any) => ({
+    const orders = ordersForCompany.map((order: any) => ({
       orderId: order.id,
       subOrderId: order.sub_order_id || order.id,
       date: new Date(order.created_at).toLocaleString(),

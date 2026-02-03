@@ -27,11 +27,32 @@ function parseTime(s: string): number | null {
 	return h * 60 + m;
 }
 
-function isWithinSchedule(
-	schedule: Record<string, { start?: string; end?: string } | null>,
+type ScheduleRecord = Record<string, { start?: string; end?: string } | null>;
+
+function normalizeSchedule(
+	raw: unknown
+): ScheduleRecord | null {
+	if (raw == null) return null;
+	if (typeof raw === 'string') {
+		try {
+			raw = JSON.parse(raw) as ScheduleRecord;
+		} catch {
+			return null;
+		}
+	}
+	if (typeof raw !== 'object' || Array.isArray(raw)) return null;
+	return raw as ScheduleRecord;
+}
+
+/** True if schedule is empty/null (always active) or current time is within the rule's window. */
+function isActiveBySchedule(
+	rawSchedule: unknown,
 	day: string,
 	minutesSinceMidnight: number
 ): boolean {
+	const schedule = normalizeSchedule(rawSchedule);
+	// No schedule or empty = default 24/7
+	if (!schedule || Object.keys(schedule).length === 0) return true;
 	const daySchedule = schedule[day];
 	if (daySchedule == null || typeof daySchedule !== 'object') return false;
 	const start = daySchedule.start;
@@ -44,41 +65,65 @@ function isWithinSchedule(
 	return minutesSinceMidnight >= startMin || minutesSinceMidnight <= endMin;
 }
 
+function isValidTimezone(tz: string): boolean {
+	try {
+		new Intl.DateTimeFormat('en-US', { timeZone: tz });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/** Get day (e.g. "Tue") and minutes-since-midnight in the given IANA timezone. */
+function getDayAndMinutesInZone(now: Date, timezone: string): { day: string; minutesSinceMidnight: number } {
+	const dayFormatter = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' });
+	const day = dayFormatter.format(now);
+	const parts = new Intl.DateTimeFormat('en-US', {
+		timeZone: timezone,
+		hour: 'numeric',
+		minute: '2-digit',
+		hour12: false
+	}).formatToParts(now);
+	const hour = parseInt(parts.find((p) => p.type === 'hour')?.value ?? '0', 10);
+	const minute = parseInt(parts.find((p) => p.type === 'minute')?.value ?? '0', 10);
+	return { day, minutesSinceMidnight: hour * 60 + minute };
+}
+
 export async function getActiveCallFlow(
 	prisma: PrismaClient,
 	companyId: string,
-	now: Date = new Date()
+	now: Date = new Date(),
+	opts?: { timezone?: string }
 ): Promise<{ flow: { id: string; title: string; greetingAudioUrl: string | null }; rule: { id: string; ruleTitle: string; promptsAudioUrl: string | null; keyPrompts: unknown; failoverCount: number; failoverDelayMinutes: number; failoverAudioUrl: string | null; hangupAudioUrl: string | null } } | null> {
 	const flows = await prisma.callFlow.findMany({
 		where: { companyId },
 		include: { rules: true },
 		orderBy: { updated: 'desc' }
 	});
-	const day = DAY_MAP[now.getDay()];
-	const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
+	const { day, minutesSinceMidnight } =
+		opts?.timezone && isValidTimezone(opts.timezone)
+			? getDayAndMinutesInZone(now, opts.timezone)
+			: { day: DAY_MAP[now.getDay()], minutesSinceMidnight: now.getHours() * 60 + now.getMinutes() };
 	for (const flow of flows) {
 		for (const rule of flow.rules) {
-			const schedule = rule.schedule as Record<string, { start?: string; end?: string } | null> | null;
-			if (!schedule) continue;
-			if (isWithinSchedule(schedule, day, minutesSinceMidnight)) {
-				return {
-					flow: {
-						id: flow.id,
-						title: flow.title,
-						greetingAudioUrl: flow.greetingAudioUrl
-					},
-					rule: {
-						id: rule.id,
-						ruleTitle: rule.ruleTitle,
-						promptsAudioUrl: rule.promptsAudioUrl,
-						keyPrompts: rule.keyPrompts,
-						failoverCount: rule.failoverCount,
-						failoverDelayMinutes: rule.failoverDelayMinutes,
-						failoverAudioUrl: rule.failoverAudioUrl,
-						hangupAudioUrl: rule.hangupAudioUrl
-					}
-				};
-			}
+			if (!isActiveBySchedule(rule.schedule, day, minutesSinceMidnight)) continue;
+			return {
+				flow: {
+					id: flow.id,
+					title: flow.title,
+					greetingAudioUrl: flow.greetingAudioUrl
+				},
+				rule: {
+					id: rule.id,
+					ruleTitle: rule.ruleTitle,
+					promptsAudioUrl: rule.promptsAudioUrl,
+					keyPrompts: rule.keyPrompts,
+					failoverCount: rule.failoverCount,
+					failoverDelayMinutes: rule.failoverDelayMinutes,
+					failoverAudioUrl: rule.failoverAudioUrl,
+					hangupAudioUrl: rule.hangupAudioUrl
+				}
+			};
 		}
 	}
 	return null;

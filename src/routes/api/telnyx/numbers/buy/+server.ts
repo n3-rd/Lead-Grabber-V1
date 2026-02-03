@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { TELNYX_API_KEY } from '$env/static/private';
 import { prisma } from '$lib/db';
+import { TELNYX_APP_ID, assignNumberToApp } from '$lib/server/telnyx';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
@@ -14,12 +15,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       }, { status: 400 });
     }
 
-    // Get company from session
-    if (!locals.user?.company?.id) {
+    // Require authenticated user with a company (session cookie pb_auth must be sent for API calls)
+    if (!locals.user) {
       return json({
         success: false,
-        error: 'Company not found. Please log in.'
+        error: 'Not logged in. Send the session cookie (e.g. pb_auth) for API requests.'
       }, { status: 401 });
+    }
+    if (!locals.user.company?.id) {
+      return json({
+        success: false,
+        error: 'No company. Create or join a company first (e.g. Create Company or accept an invite).'
+      }, { status: 403 });
     }
 
     const companyId = locals.user.company.id;
@@ -54,11 +61,19 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       }, { status: response.status });
     }
 
-    // Store purchased numbers in database
     const orderData = data.data;
     const purchasedNumbers = orderData?.phone_numbers || [];
 
-    // Create records for each purchased number
+    // Assign each number to messaging app and voice connection
+    for (const numData of purchasedNumbers) {
+      try {
+        await assignNumberToApp(numData.id);
+      } catch (e) {
+        console.error(`Failed to assign ${numData.phone_number} to app/voice:`, e);
+      }
+    }
+
+    // Store purchased numbers in database
     const createdNumbers = await Promise.all(
       purchasedNumbers.map(async (numData: any) => {
         const phoneNumber = numData.phone_number;

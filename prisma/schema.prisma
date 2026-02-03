@@ -442,6 +442,33 @@ enum MessageUrgency {
   red
 }
 
+model CallLog {
+  id        String   @id @default(cuid())
+  callId    String   // Telnyx call_control_id
+  status    String   // initiated, answered, ended, etc.
+  to        String?
+  from      String?
+  duration  Float?
+  metadata  Json?    // full payload if needed
+  createdAt DateTime @default(now())
+
+  @@index([callId])
+  @@index([from])
+  @@index([to])
+  @@map("call_logs")
+}
+
+model CallRecording {
+  id          String   @id @default(cuid())
+  callId      String
+  recordingId String?
+  urls        Json?    // recording_urls from Telnyx
+  createdAt   DateTime @default(now())
+
+  @@index([callId])
+  @@map("call_recordings")
+}
+
 model Notification {
   id                  String   @id @default(cuid())
   companyId           String

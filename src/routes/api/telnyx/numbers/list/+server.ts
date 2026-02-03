@@ -1,9 +1,21 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { TELNYX_API_KEY } from '$env/static/private';
+import { prisma } from '$lib/db';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, locals }) => {
   try {
+    if (!locals.user?.company?.id) {
+      return json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const companyId = locals.user.company.id;
+    const companyNumbers = await prisma.companyPhoneNumber.findMany({
+      where: { companyId },
+      select: { phoneNumber: true }
+    });
+    const companyNumberSet = new Set(companyNumbers.map((n) => n.phoneNumber));
+
     const page = url.searchParams.get('page') || '1';
     const limit = url.searchParams.get('limit') || '50';
     const search = url.searchParams.get('search');
@@ -49,8 +61,13 @@ export const GET: RequestHandler = async ({ url }) => {
       }, { status: response.status });
     }
 
-    // Transform Telnyx response
-    const numbers = data.data?.map((num: any) => ({
+    // Only include numbers that belong to this company
+    const allNumbers = data.data || [];
+    const numbersForCompany = companyNumberSet.size > 0
+      ? allNumbers.filter((num: any) => companyNumberSet.has(num.phone_number))
+      : [];
+
+    const numbers = numbersForCompany.map((num: any) => ({
       number: num.phone_number,
       status: num.status || 'Unknown',
       connection: num.connection_name || '-',
@@ -62,7 +79,7 @@ export const GET: RequestHandler = async ({ url }) => {
         mms: num.features?.mms || false
       },
       id: num.id
-    })) || [];
+    }));
 
     return json({
       success: true,

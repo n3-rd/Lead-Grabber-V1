@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Clock } from 'lucide-svelte';
+	import { ArrowLeft, Clock, Play } from 'lucide-svelte';
 	import { page } from '$app/stores';
 
 	type KeyPrompt = { key: string; name: string; extension: string; transferAudioUrl?: string };
@@ -65,8 +65,15 @@
 	let error = $state('');
 	let schedule = $state<Record<string, { start1: string; end1: string; start2: string; end2: string }>>(emptySchedule);
 	let keyPrompts = $state<KeyPrompt[]>(defaultKeyPrompts());
+	let promptTransferFiles = $state<(File | null)[]>([]);
 	let failoverCount = $state(2);
 	let failoverDelayMinutes = $state(2);
+
+	$effect(() => {
+		if (promptTransferFiles.length < keyPrompts.length) {
+			while (promptTransferFiles.length < keyPrompts.length) promptTransferFiles = [...promptTransferFiles, null];
+		}
+	});
 
 	$effect(() => {
 		const r = rule;
@@ -127,12 +134,27 @@
 		}
 	}
 
+	function handlePromptTransferFile(event: Event, index: number) {
+		const target = event.target as HTMLInputElement;
+		const file = target.files?.[0] ?? null;
+		const next = [...promptTransferFiles];
+		while (next.length <= index) next.push(null);
+		next[index] = file;
+		promptTransferFiles = next;
+	}
+
+	function playPromptAudio(url: string) {
+		const audio = new Audio(url);
+		audio.play().catch(() => {});
+	}
+
 	function toggleEdit(_index: number) {
 		// Optional: expand key edit UI
 	}
 
 	function addKeyPrompt() {
 		keyPrompts = [...keyPrompts, { key: '', name: '', extension: '' }];
+		promptTransferFiles = [...promptTransferFiles, null];
 	}
 
 	async function handleSave() {
@@ -143,17 +165,27 @@
 		}
 		saving = true;
 		try {
+			const keyPromptsPayload = (
+				await Promise.all(
+					keyPrompts.map(async (p, i) => {
+						if (!p.key.trim()) return null;
+						const transferFile = promptTransferFiles[i] ?? null;
+						const transferAudioUrl = transferFile
+							? await uploadFile(transferFile, `transfer-${p.key}`)
+							: p.transferAudioUrl;
+						return {
+							key: p.key.trim(),
+							name: p.name.trim(),
+							extension: p.extension.trim(),
+							...(transferAudioUrl && { transferAudioUrl })
+						};
+					})
+				)
+			).filter((x): x is NonNullable<typeof x> => x != null);
 			const body: Record<string, unknown> = {
 				ruleTitle: callFlowRuleTitle.trim(),
 				schedule: scheduleToPayload(),
-				keyPrompts: keyPrompts
-					.filter((p) => p.key.trim())
-					.map(({ key, name, extension, transferAudioUrl }) => ({
-						key: key.trim(),
-						name: name.trim(),
-						extension: extension.trim(),
-						...(transferAudioUrl && { transferAudioUrl })
-					})),
+				keyPrompts: keyPromptsPayload,
 				failoverCount,
 				failoverDelayMinutes,
 				leaveMessageOnHash: true
@@ -257,12 +289,24 @@
 									<input type="text" bind:value={prompt.extension} class="h-[45px] w-full rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-base text-[#808080] outline-none" />
 								</div>
 							</div>
-							{#if prompt.transferAudioUrl}
-								<div class="mt-3 border-t border-[#e5e5e5] pt-3">
-									<p class="font-['Poppins'] text-sm text-[#808080]">Transfer message: {prompt.transferAudioUrl}</p>
-									<audio src={prompt.transferAudioUrl} controls class="mt-2 max-w-full"></audio>
-								</div>
-							{/if}
+							<div class="mt-3 flex flex-wrap items-center gap-3 border-t border-[#e5e5e5] pt-3">
+								<span class="font-['Poppins'] text-sm text-[#808080]">Audio for key {prompt.key}:</span>
+								<label class="inline-flex cursor-pointer items-center gap-2 rounded border border-[#577AB7] bg-white px-3 py-1.5 font-['Poppins'] text-sm text-[#577AB7] hover:bg-[#f0f4ff]">
+									<input type="file" accept="audio/*" onchange={(e) => handlePromptTransferFile(e, index)} class="hidden" />
+									{promptTransferFiles[index] ? promptTransferFiles[index]?.name ?? 'Change' : 'Upload audio'}
+								</label>
+								{#if prompt.transferAudioUrl}
+									<button
+										type="button"
+										onclick={() => playPromptAudio(prompt.transferAudioUrl!)}
+										class="flex items-center gap-2 rounded border border-[#577AB7] bg-[#577AB7] px-3 py-1.5 font-['Poppins'] text-sm text-white hover:bg-[#4a6ba5]"
+										title="Play audio for {prompt.name}"
+									>
+										<Play class="h-4 w-4" />
+										Play
+									</button>
+								{/if}
+							</div>
 						</div>
 					{/each}
 					<button onclick={addKeyPrompt} class="h-[45px] rounded-[4px] border border-[#577AB7] bg-[#577AB7] px-4 font-['Poppins'] text-base font-semibold text-white hover:bg-[#4a6ba5]">Add Another Key Prompts</button>

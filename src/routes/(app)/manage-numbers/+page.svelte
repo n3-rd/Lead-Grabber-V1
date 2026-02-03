@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronDown, Search, Pencil, Trash2, Phone, MessageSquare, Mail, Image as ImageIcon, Play, FileText, Settings, User, Plus, Download } from 'lucide-svelte';
+	import { ChevronDown, Search, Pencil, Trash2, Phone, MessageSquare, Mail, Image as ImageIcon, Play, FileText, Settings, User, Plus, Download, Copy } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
@@ -11,6 +11,7 @@
 	let numbers = $state<any[]>([]);
 	let verifiedNumbers = $state<any[]>([]);
 	let companyNumbers = $state<{ id: string; phoneNumber: string }[]>([]);
+	let numberOrders = $state<any[]>([]);
 	let isLoading = $state(false);
 
 	// Mock data for numbers (fallback)
@@ -140,9 +141,33 @@
 		}
 	}
 
+	async function loadOrders() {
+		try {
+			const response = await fetch('/api/telnyx/numbers/orders');
+			const result = await response.json();
+			if (result.success) numberOrders = result.orders;
+			else toast.error(result.error || 'Failed to load orders');
+		} catch (error) {
+			console.error('Error loading orders:', error);
+			toast.error('Error loading orders');
+		}
+	}
+
+	function truncateId(id: string) {
+		if (!id) return '-';
+		return id.length > 12 ? id.slice(0, 8) + '…' : id;
+	}
+	function copyOrderId(id: string) {
+		navigator.clipboard.writeText(id);
+		toast.success('Order ID copied');
+	}
+
 	$effect(() => {
 		if (activeTab === 'myNumber') {
 			loadNumbers();
+		} else if (activeTab === 'messaging') {
+			if (messagingSubTab === 'numbers') loadNumbers();
+			else if (messagingSubTab === 'orders') loadOrders();
 		} else if (activeTab === 'voice') {
 			loadVerifiedNumbers();
 		}
@@ -294,22 +319,92 @@
 
 				<!-- Table Container -->
 				<div class="rounded-b border border-[#BEBEBE] bg-white">
-					<!-- Table Headers -->
-					<div class="border-b border-[#949494] px-4 py-3">
-						<div class="grid grid-cols-4 gap-4 font-['Poppins'] text-[15px] font-medium leading-[18px] text-[#757575]">
-							<div>Number</div>
-							<div>Messaging Profile</div>
-							<div>Features</div>
-							<div>Created At</div>
+					{#if messagingSubTab === 'numbers'}
+						<div class="border-b border-[#949494] px-4 py-3">
+							<div class="grid grid-cols-4 gap-4 font-['Poppins'] text-[15px] font-medium leading-[18px] text-[#757575]">
+								<div>Number</div>
+								<div>Messaging Profile</div>
+								<div>Features</div>
+								<div>Created At</div>
+							</div>
 						</div>
-					</div>
-
-					<!-- Empty State -->
-					<div class="flex h-[400px] items-center justify-center">
-						<p class="font-['Poppins'] text-xl font-medium leading-[24px] text-[#808080]">
-							No Results Found
-						</p>
-					</div>
+						{#if isLoading}
+							<div class="flex h-[200px] items-center justify-center text-[#808080]">Loading...</div>
+						{:else if numbers.length === 0}
+							<div class="flex h-[200px] items-center justify-center">
+								<p class="font-['Poppins'] text-xl font-medium leading-[24px] text-[#808080]">No numbers found.</p>
+							</div>
+						{:else}
+							<div class="divide-y divide-[rgba(193,193,193,0.4)]">
+								{#each numbers as num}
+									<div class="grid grid-cols-4 gap-4 px-4 py-3">
+										<div class="font-['Poppins'] text-sm text-[#808080]">{num.number}</div>
+										<div class="font-['Poppins'] text-sm text-[#808080]">{num.messagingProfile}</div>
+										<div class="flex gap-1.5">
+											{#if num.features?.sms}<MessageSquare class="h-3.5 w-3.5 text-[#577AB7]" />{/if}
+											{#if num.features?.voice}<Phone class="h-3.5 w-3.5 text-[#577AB7]" />{/if}
+										</div>
+										<div class="font-['Poppins'] text-sm text-[#808080]">-</div>
+									</div>
+								{/each}
+							</div>
+						{/if}
+					{:else}
+						<!-- Orders sub-tab -->
+						<div class="max-h-[400px] overflow-y-auto overflow-x-auto">
+							<table class="w-full min-w-[800px]">
+								<thead class="sticky top-0 bg-white z-10">
+									<tr class="border-b border-[rgba(193,193,193,0.96)]">
+										<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold text-[#757575]">Date</th>
+										<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold text-[#757575]">Status</th>
+										<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold text-[#757575]">Country</th>
+										<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold text-[#757575]">Order ID</th>
+										<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold text-[#757575]">SubOrder ID</th>
+										<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold text-[#757575]">Actor</th>
+										<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold text-[#757575]">Number Typ</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#if numberOrders.length === 0}
+										<tr>
+											<td colspan="7" class="py-8 text-center font-['Poppins'] text-[#808080]">No orders found.</td>
+										</tr>
+									{:else}
+										{#each numberOrders as order}
+											<tr class="border-b border-[rgba(193,193,193,0.4)]">
+												<td class="py-3 font-['Poppins'] text-[15px] text-[#808080]">{order.date}</td>
+												<td class="py-3">
+													<div class="flex items-center gap-2">
+														<div class="h-[6px] w-[5px] rounded-full bg-[#04CB15]"></div>
+														<span class="font-['Poppins'] text-[15px] text-[#808080]">{order.status}</span>
+													</div>
+												</td>
+												<td class="py-3 font-['Poppins'] text-[15px] text-[#808080]">{order.country}</td>
+												<td class="py-3">
+													<div class="flex items-center gap-2">
+														<span class="font-['Poppins'] text-[15px] text-[#808080]">{truncateId(order.orderId)}</span>
+														<button type="button" onclick={() => copyOrderId(order.orderId)} class="cursor-pointer text-[#6C6C6C] hover:text-[#808080]">
+															<Copy class="h-4 w-4" />
+														</button>
+													</div>
+												</td>
+												<td class="py-3">
+													<div class="flex items-center gap-2">
+														<span class="font-['Poppins'] text-[15px] text-[#808080]">{truncateId(order.subOrderId)}</span>
+														<button type="button" onclick={() => copyOrderId(order.subOrderId)} class="cursor-pointer text-[#6C6C6C] hover:text-[#808080]">
+															<Copy class="h-4 w-4" />
+														</button>
+													</div>
+												</td>
+												<td class="py-3 font-['Poppins'] text-[15px] text-[#808080]">{order.actor}</td>
+												<td class="py-3 font-['Poppins'] text-[15px] text-[#808080]">{order.numberType}</td>
+											</tr>
+										{/each}
+									{/if}
+								</tbody>
+							</table>
+						</div>
+					{/if}
 				</div>
 			</div>
 		{:else if activeTab === 'voice'}

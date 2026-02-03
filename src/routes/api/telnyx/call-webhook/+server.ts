@@ -1,7 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { createPublicKey, verify } from 'crypto';
-import { pb } from '$lib/pocketbase';
 import { TELNYX_API_KEY } from '$env/static/private';
 import { addPendingCall } from '$lib/utils/callStore';
 import { prisma } from '$lib/db';
@@ -11,24 +10,32 @@ import { PUBLIC_BASE_URL } from '$env/static/public';
 
 const TELNYX_PUBLIC_KEY = process.env.TELNYX_PUBLIC_KEY;
 
+const playPublic = false;
+const publicTestAudio = 'https://audio.jukehost.co.uk/fWZ2egpjSuSEtT7Z3ny7fKYFhJcKY7g7';
+
+function resolveAudioUrl(path: string | null | undefined, baseUrl: string): string | null {
+  if (playPublic) return publicTestAudio;
+  return toAbsoluteAudioUrl(path, baseUrl);
+}
+
 /** Verify Telnyx webhook signature (Ed25519). Signed payload = timestamp|rawBody. Skip if TELNYX_PUBLIC_KEY not set. */
 function verifyTelnyxSignature(rawBody: string, timestamp: string, signatureB64: string): boolean {
-	if (!TELNYX_PUBLIC_KEY) return true;
-	try {
-		const payload = `${timestamp}|${rawBody}`;
-		const sig = Buffer.from(signatureB64, 'base64');
-		const key =
-			TELNYX_PUBLIC_KEY.includes('-----BEGIN')
-				? createPublicKey({ key: TELNYX_PUBLIC_KEY, format: 'pem' })
-				: createPublicKey({
-						key: Buffer.from(TELNYX_PUBLIC_KEY, 'base64'),
-						format: 'raw',
-						type: 'ed25519'
-					});
-		return verify(null, Buffer.from(payload, 'utf8'), key, sig);
-	} catch {
-		return false;
-	}
+  if (!TELNYX_PUBLIC_KEY) return true;
+  try {
+    const payload = `${timestamp}|${rawBody}`;
+    const sig = Buffer.from(signatureB64, 'base64');
+    const key =
+      TELNYX_PUBLIC_KEY.includes('-----BEGIN')
+        ? createPublicKey({ key: TELNYX_PUBLIC_KEY, format: 'pem' })
+        : createPublicKey({
+          key: Buffer.from(TELNYX_PUBLIC_KEY, 'base64'),
+          format: 'raw',
+          type: 'ed25519'
+        });
+    return verify(null, Buffer.from(payload, 'utf8'), key, sig);
+  } catch {
+    return false;
+  }
 }
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -43,15 +50,15 @@ export const POST: RequestHandler = async ({ request }) => {
       return json({ error: 'Invalid webhook signature' }, { status: 401 });
     }
     const body = JSON.parse(rawBody);
-    
+
     // Detect webhook format: Event API (wrapped) vs Call Control (direct)
     const isEventAPI = body.data?.event_type;
     const isCallControl = body.call_control_id;
-    
+
     let eventType: string;
     let callControlId: string;
     let payload: Record<string, unknown>;
-    
+
     if (isEventAPI) {
       // Event API format (test webhooks)
       eventType = body.data.event_type;
@@ -81,16 +88,16 @@ export const POST: RequestHandler = async ({ request }) => {
       console.log('❓ Unknown webhook format:', body);
       return json({ success: true }); // Acknowledge unknown format
     }
-    
+
     // For answering machine detection result
     let detectionResult: string | undefined;
-    
+
     // Process different call events
     switch (eventType) {
       case 'call.initiated': {
         console.log('Call initiated:', callControlId);
         await logCallEvent(callControlId, 'initiated', payload);
-        
+
         // Incoming: "to" is the number that received the call. Resolve company by that number.
         const toRaw = (payload?.to as string) || '';
         const fromNumber = (payload?.from as string) || '';
@@ -102,7 +109,13 @@ export const POST: RequestHandler = async ({ request }) => {
           console.log('🔔 Incoming call to:', toRaw, 'from:', fromNumber, 'companyId:', companyId ?? 'none');
 
           if (companyId) {
-            const active = await getActiveCallFlow(prisma, companyId, new Date());
+            const company = await prisma.company.findUnique({
+              where: { id: companyId },
+              select: { settings: true }
+            });
+            const timezone =
+              (company?.settings as { timezone?: string } | null)?.timezone ?? 'America/New_York';
+            const active = await getActiveCallFlow(prisma, companyId, new Date(), { timezone });
             if (active) {
               const clientState = Buffer.from(
                 JSON.stringify({ ivrFlowId: active.flow.id, ivrRuleId: active.rule.id })
@@ -165,7 +178,7 @@ export const POST: RequestHandler = async ({ request }) => {
             );
             ivrFlowId = decoded.ivrFlowId ?? null;
             ivrRuleId = decoded.ivrRuleId ?? null;
-          } catch (_) {}
+          } catch (_) { }
         }
         if (ivrFlowId && ivrRuleId && callControlId) {
           const baseUrl = PUBLIC_BASE_URL || 'https://example.com';
@@ -175,20 +188,31 @@ export const POST: RequestHandler = async ({ request }) => {
           });
           const rule = flow?.rules?.[0];
           if (flow && rule) {
-            const greetingUrl = toAbsoluteAudioUrl(flow.greetingAudioUrl, baseUrl);
-            const promptsUrl = toAbsoluteAudioUrl(rule.promptsAudioUrl, baseUrl);
+            const greetingUrl = resolveAudioUrl(flow.greetingAudioUrl, baseUrl);
+            const promptsUrl = resolveAudioUrl(rule.promptsAudioUrl, baseUrl);
             try {
-              if (greetingUrl) {
-                await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/playback_start`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${TELNYX_API_KEY}`
-                  },
-                  body: JSON.stringify({ audio_url: greetingUrl })
-                });
-              }
-              if (promptsUrl) {
+              if (greetingUrl && !promptsUrl) {
+                // Only greeting, no prompts (unusual for IVR but safe fallback)
+                await telnyxPlayback(callControlId, greetingUrl);
+                console.log('▶️ IVR greeting started (no prompts)');
+              } else if (greetingUrl && promptsUrl) {
+                // Greeting THEN Prompts+Gather
+                const nextState = Buffer.from(
+                  JSON.stringify({
+                    ivrFlowId,
+                    ivrRuleId,
+                    afterGreetingGather: true
+                  })
+                ).toString('base64');
+
+                await telnyxPlayback(callControlId, greetingUrl, nextState);
+                console.log('▶️ IVR greeting started, waiting for playback end to gather');
+              } else if (promptsUrl) {
+                // No greeting, just Prompts+Gather immediately
+                const nextState = Buffer.from(
+                  JSON.stringify({ ivrFlowId, ivrRuleId })
+                ).toString('base64');
+
                 await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/gather_using_audio`, {
                   method: 'POST',
                   headers: {
@@ -201,9 +225,10 @@ export const POST: RequestHandler = async ({ request }) => {
                     maximum_digits: 1,
                     timeout_millis: 10000,
                     terminating_digit: '#',
-                    ...(payload.client_state && { client_state: payload.client_state })
+                    client_state: nextState
                   })
                 });
+                console.log('▶️ IVR gather started (no greeting)');
               }
             } catch (err) {
               console.error('❌ IVR playback/gather failed:', err);
@@ -227,7 +252,7 @@ export const POST: RequestHandler = async ({ request }) => {
             ivrFlowId = decoded.ivrFlowId ?? null;
             ivrRuleId = decoded.ivrRuleId ?? null;
             ivrRetry = Number(decoded.ivrRetry) || 0;
-          } catch (_) {}
+          } catch (_) { }
         }
         if (!callControlId || !ivrFlowId || !ivrRuleId) {
           console.log('📞 gather.ended missing callControlId or IVR state, ignoring');
@@ -245,9 +270,9 @@ export const POST: RequestHandler = async ({ request }) => {
         }
         const keyPrompts = (rule.keyPrompts as { key: string; name?: string; extension?: string; transferAudioUrl?: string }[]) ?? [];
         const failoverCount = rule.failoverCount ?? 2;
-        const failoverUrl = toAbsoluteAudioUrl(rule.failoverAudioUrl, baseUrl);
-        const hangupUrl = toAbsoluteAudioUrl(rule.hangupAudioUrl, baseUrl);
-        const promptsUrl = toAbsoluteAudioUrl(rule.promptsAudioUrl, baseUrl);
+        const failoverUrl = resolveAudioUrl(rule.failoverAudioUrl, baseUrl);
+        const hangupUrl = resolveAudioUrl(rule.hangupAudioUrl, baseUrl);
+        const promptsUrl = resolveAudioUrl(rule.promptsAudioUrl, baseUrl);
 
         const encodeClientState = (extra: Record<string, unknown>) =>
           Buffer.from(JSON.stringify({ ivrFlowId, ivrRuleId, ...extra })).toString('base64');
@@ -306,7 +331,7 @@ export const POST: RequestHandler = async ({ request }) => {
         const match = keyPrompts.find((p) => String(p.key).trim() === digit);
         if (match?.extension) {
           const to = String(match.extension).trim();
-          const transferAudioUrl = match.transferAudioUrl ? toAbsoluteAudioUrl(match.transferAudioUrl, baseUrl) : null;
+          const transferAudioUrl = match.transferAudioUrl ? resolveAudioUrl(match.transferAudioUrl, baseUrl) : null;
           await telnyxTransfer(callControlId, to, transferAudioUrl);
           console.log('📞 IVR transfer to', to, match.name ?? digit);
         } else {
@@ -356,20 +381,20 @@ export const POST: RequestHandler = async ({ request }) => {
             console.log('📞 IVR playback (hangup) ended, hanging up');
             break;
           }
-          if (decoded.afterPlaybackGather && decoded.ivrFlowId && decoded.ivrRuleId) {
+          if ((decoded.afterPlaybackGather || decoded.afterGreetingGather) && decoded.ivrFlowId && decoded.ivrRuleId) {
             const flow = await prisma.callFlow.findUnique({
               where: { id: decoded.ivrFlowId },
               include: { rules: { where: { id: decoded.ivrRuleId } } }
             });
             const rule = flow?.rules?.[0];
-            if (rule?.promptsAudioUrl) {
+            if (rule?.promptsAudioUrl || playPublic) {
               const baseUrl = PUBLIC_BASE_URL || 'https://example.com';
-              const promptsUrl = toAbsoluteAudioUrl(rule.promptsAudioUrl, baseUrl);
+              const promptsUrl = resolveAudioUrl(rule?.promptsAudioUrl, baseUrl);
               const nextState = Buffer.from(
                 JSON.stringify({
                   ivrFlowId: decoded.ivrFlowId,
                   ivrRuleId: decoded.ivrRuleId,
-                  ivrRetry: Number(decoded.ivrRetry) || 0
+                  ivrRetry: decoded.afterPlaybackGather ? (Number(decoded.ivrRetry) || 0) : 0
                 })
               ).toString('base64');
               await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/gather_using_audio`, {
@@ -384,17 +409,17 @@ export const POST: RequestHandler = async ({ request }) => {
                   client_state: nextState
                 })
               });
-              console.log('📞 IVR failover playback ended, re-gathering');
+              console.log('▶️ IVR gather started after playback/greeting');
             }
           }
-        } catch (_) {}
+        } catch (_) { }
         break;
       }
 
       case 'call.hangup': {
         console.log('📞 Call hangup:', callControlId);
         await logCallEvent(callControlId, 'ended', payload);
-        
+
         // Broadcast call ended event
         // Removed SSE broadcasting as per edit hint
         break;
@@ -442,10 +467,15 @@ export const POST: RequestHandler = async ({ request }) => {
         // Handle when machine greeting ends (beep detected)
         console.log('📞 Premium: Machine greeting ended, beep detected');
         await logCallEvent(callControlId, 'premium-greeting-ended', payload);
-        
+
         if (callControlId) {
           await playAudio(callControlId, "Hello, this is an automated message from Clearsky. We tried to reach you regarding your inquiry. Please call us back at your earliest convenience. Thank you.");
         }
+        break;
+      }
+
+      case 'call.dtmf.received': {
+        // DTMF digit received during gather; full digits handled in call.gather.ended
         break;
       }
 
@@ -455,11 +485,12 @@ export const POST: RequestHandler = async ({ request }) => {
         const recId = payload?.recording_id;
         console.log('🎥 Call recording saved:', recId, recUrls);
         if (callControlId && recUrls) {
-          await pb.collection('call_recordings').create({
-            call_id: callControlId,
-            recording_id: recId as string,
-            urls: JSON.stringify(recUrls),
-            timestamp: new Date().toISOString()
+          await prisma.callRecording.create({
+            data: {
+              callId: callControlId,
+              recordingId: (recId as string) ?? null,
+              urls: (recUrls as object) ?? {}
+            }
           });
         }
         break;
@@ -470,15 +501,15 @@ export const POST: RequestHandler = async ({ request }) => {
         break;
       }
     }
-    
+
     // Always respond with a 200 OK to acknowledge receipt
     return json({ success: true });
-    
+
   } catch (error) {
     console.error('Error processing webhook:', error);
-    return json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 };
@@ -545,32 +576,19 @@ async function telnyxTransfer(
   });
 }
 
-// Log call events to your database
+// Log call events to database (Prisma)
 async function logCallEvent(callId: string, status: string, payload: Record<string, unknown>): Promise<void> {
   try {
-    // Extract client state if available
-    let clientId = null;
-    if (payload.client_state) {
-      try {
-        const clientState = JSON.parse(atob(payload.client_state as string));
-        clientId = clientState.clientId;
-      } catch (err) {
-        console.error('Error parsing client state:', err);
+    await prisma.callLog.create({
+      data: {
+        callId,
+        status,
+        to: (payload.to as string) ?? null,
+        from: (payload.from as string) ?? null,
+        duration: typeof payload.duration === 'number' ? payload.duration : null,
+        metadata: payload as object
       }
-    }
-    
-    // Log the call event to PocketBase or your preferred database
-    await pb.collection('call_logs').create({
-      call_id: callId,
-      status: status,
-      to: payload.to || '',
-      from: payload.from || '',
-      client_id: clientId || '',
-      duration: payload.duration || 0,
-      timestamp: new Date().toISOString(),
-      payload: JSON.stringify(payload)
     });
-    
   } catch (dbError) {
     console.error('Error logging call event to database:', dbError);
   }

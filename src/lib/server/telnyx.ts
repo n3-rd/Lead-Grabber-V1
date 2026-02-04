@@ -3,9 +3,6 @@ import { prisma } from '$lib/db';
 
 const TELNYX_API_BASE = 'https://api.telnyx.com/v2';
 
-/** App (messaging profile) ID to assign company numbers to */
-export const TELNYX_APP_ID = '2857574914418804336';
-
 const TELNYX_HEADERS = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${TELNYX_API_KEY}`
@@ -16,16 +13,18 @@ function phoneIdToPath(id: string): string {
     return id.startsWith('+') ? encodeURIComponent(id) : id;
 }
 
-/** PATCH phone number voice settings to assign to our Voice API connection. Id can be UUID or E.164. */
+/** PATCH base phone number resource to set connection_id (voice app). UUID as-is; E.164 must be encoded. */
 async function assignNumberVoice(phoneId: string): Promise<boolean> {
-    const res = await fetch(`${TELNYX_API_BASE}/phone_numbers/${phoneIdToPath(phoneId)}/voice`, {
+    const path = phoneId.startsWith('+') ? encodeURIComponent(phoneId) : phoneId;
+    const url = `${TELNYX_API_BASE}/phone_numbers/${path}`;
+    const res = await fetch(url, {
         method: 'PATCH',
         headers: TELNYX_HEADERS,
         body: JSON.stringify({ connection_id: String(TELNYX_CONNECTION_ID) })
     });
     if (!res.ok) {
         const errorBody = await res.json();
-        console.error('assignNumberVoice failed:', res.status, phoneId, errorBody);
+        console.error('Individual PATCH failed:', res.status, phoneId, errorBody);
     }
     return res.ok;
 }
@@ -64,6 +63,14 @@ interface PhoneNumberOrder {
     }>;
     created_at: string;
     updated_at: string;
+}
+
+interface TelnyxPhoneNumber {
+	id: string;
+	phone_number: string;
+	record_type: 'phone_number';
+	connection_id: string | null;
+	messaging_profile_id: string | null;
 }
 
 interface BulkNumberOrder {
@@ -121,6 +128,44 @@ async function telnyxRequest<T>(
     }
 
     return data;
+}
+
+/**
+ * List all phone numbers from Telnyx account, handling pagination.
+ */
+export async function listAllTelnyxPhoneNumbers(): Promise<TelnyxPhoneNumber[]> {
+	const allNumbers: TelnyxPhoneNumber[] = [];
+	let page = 1;
+	const size = 100; // Max size supported by Telnyx API
+
+	while (true) {
+		try {
+			// Note: The structure of the response is { data: [...], meta: {...} }
+			const response = await telnyxRequest<TelnyxPhoneNumber[]>(
+				`/phone_numbers?page[number]=${page}&page[size]=${size}`
+			);
+
+			const { data } = response;
+
+			if (!data || data.length === 0) {
+				break; // No more numbers, exit loop
+			}
+
+			allNumbers.push(...data);
+
+			// If we received fewer numbers than requested, it's the last page
+			if (data.length < size) {
+				break;
+			}
+
+			page++;
+		} catch (error) {
+			console.error(`Error fetching page ${page} of phone numbers from Telnyx:`, error);
+			// Break on error to avoid infinite loop
+			break;
+		}
+	}
+	return allNumbers;
 }
 
 /**
@@ -346,39 +391,160 @@ export async function setupCompanyPhoneNumbers(
  * Ensure all company numbers in our DB are assigned to the voice app (connection).
  * Voice only: PATCH /phone_numbers/{id}/voice with connection_id. Only touches company numbers in DB.
  */
-export async function ensureCompanyNumbersAssignedToApp(): Promise<{ assigned: number; skipped: number; failed: number }> {
-    const companyNumbers = await prisma.companyPhoneNumber.findMany({
-        where: { telnyxPhoneNumberId: { not: null } },
-        select: { phoneNumber: true, telnyxPhoneNumberId: true }
+/**
+ * Batch update response from Telnyx
+ */
+interface BatchUpdateResponse {
+    id: string;
+    record_type: string;
+    status: string;
+}
+
+/**
+ * Batch update phone numbers to assign them to a voice connection.
+ * This is an asynchronous operation - returns a job_id that can be polled for status.
+ * 
+ * @param phoneNumbers - List of phone numbers in E.164 format (e.g., +15551234567)
+ *                       OR list of Telnyx phone number IDs
+ * @param connectionId - The voice connection/app ID to assign numbers to (defaults to TELNYX_CONNECTION_ID)
+ * @returns The batch job details including job ID
+ */
+export async function batchUpdatePhoneNumbers(
+    phoneNumbers: string[],
+    connectionId: string = TELNYX_CONNECTION_ID
+): Promise<BatchUpdateResponse> {
+    if (phoneNumbers.length === 0) {
+        throw new Error('No phone numbers provided for batch update');
+    }
+
+    console.log(`Batch updating ${phoneNumbers.length} phone number(s) to connection ${connectionId}`);
+
+    const response = await fetch(`${TELNYX_API_BASE}/phone_numbers/update_batch`, {
+        method: 'POST',
+        headers: TELNYX_HEADERS,
+        body: JSON.stringify({
+            phone_numbers: phoneNumbers,
+            connection_id: connectionId
+        })
     });
 
-    let assigned = 0;
-    let skipped = 0;
-    let failed = 0;
-
-    for (const row of companyNumbers) {
-        const telnyxId = row.telnyxPhoneNumberId!;
-        const e164 = row.phoneNumber;
-        try {
-            // Voice only: PATCH /phone_numbers/{id}/voice. Id can be UUID or E.164; try UUID then E.164 on 404
-            let ok = await assignNumberVoice(telnyxId);
-            if (!ok && e164) {
-                ok = await assignNumberVoice(e164);
-            }
-            if (ok) {
-                assigned++;
-            } else {
-                console.error(`Failed to assign voice for ${e164}`);
-                failed++;
-            }
-        } catch (e) {
-            console.error(`Error ensuring voice for ${e164}:`, e);
-            failed++;
-        }
+    if (response.status === 202) {
+        const data = await response.json();
+        console.log(`✓ Batch update initiated! Job ID: ${data.data.id}`);
+        return data.data as BatchUpdateResponse;
     }
 
-    if (assigned > 0 || failed > 0) {
-        console.log(`ensureCompanyNumbersAssignedToApp: assigned=${assigned} skipped=${skipped} failed=${failed}`);
+    const errorData = await response.json();
+    console.error('Batch update failed:', response.status, errorData);
+    throw new Error(`Batch update failed: ${response.status} - ${JSON.stringify(errorData)}`);
+}
+
+/**
+ * Batch update phone numbers by Telnyx ID. Uses jobs/update_number_settings (filter + settings).
+ */
+export async function batchUpdatePhoneNumbersByIds(
+    telnyxIds: string[],
+    connectionId: string = TELNYX_CONNECTION_ID
+): Promise<BatchUpdateResponse> {
+    if (telnyxIds.length === 0) throw new Error('No phone number IDs provided');
+
+    console.log(`Batch updating ${telnyxIds.length} ID(s) to connection ${connectionId}`);
+
+    const response = await fetch(`${TELNYX_API_BASE}/phone_numbers/jobs/update_number_settings`, {
+        method: 'POST',
+        headers: TELNYX_HEADERS,
+        body: JSON.stringify({
+            filter: {
+                id: { in: telnyxIds }
+            },
+            settings: {
+                connection_id: connectionId
+            }
+        })
+    });
+
+    if (response.status === 202) {
+        const data = await response.json();
+        return data.data as BatchUpdateResponse;
     }
-    return { assigned, skipped, failed };
+
+    const errorData = await response.json();
+    throw new Error(`Batch update failed: ${response.status} - ${JSON.stringify(errorData)}`);
+}
+
+export async function ensureCompanyNumbersAssignedToApp(): Promise<{
+	assigned: number;
+	skipped: number;
+	failed: number;
+}> {
+	// 1. Get all company numbers from DB with a valid telnyxPhoneNumberId
+	const companyNumbers = await prisma.companyPhoneNumber.findMany({
+		where: { telnyxPhoneNumberId: { not: null } },
+		select: { phoneNumber: true, telnyxPhoneNumberId: true }
+	});
+
+	if (companyNumbers.length === 0) {
+		console.log('No company numbers with telnyxPhoneNumberId found to check for assignment.');
+		return { assigned: 0, skipped: 0, failed: 0 };
+	}
+
+	try {
+		// 2. Get all phone numbers from Telnyx to check their current assignment
+		const allTelnyxNumbers = await listAllTelnyxPhoneNumbers();
+
+		// Create a map for quick lookup: phone_number -> connection_id
+		const telnyxConnectionMap = new Map(allTelnyxNumbers.map((n) => [n.phone_number, n.connection_id]));
+
+		// 3. Identify numbers that are not assigned to the correct voice app (keep Telnyx ID for PATCH)
+		const numbersToUpdate: Array<{ phoneNumber: string; telnyxPhoneNumberId: string }> = [];
+		let skippedCount = 0;
+
+		for (const dbNumber of companyNumbers) {
+			const phoneNumber = dbNumber.phoneNumber!;
+			const id = dbNumber.telnyxPhoneNumberId!;
+			const currentConnectionId = telnyxConnectionMap.get(phoneNumber);
+
+			if (telnyxConnectionMap.has(phoneNumber)) {
+				if (currentConnectionId !== TELNYX_CONNECTION_ID) {
+					numbersToUpdate.push({ phoneNumber, telnyxPhoneNumberId: id });
+				} else {
+					skippedCount++;
+				}
+			}
+		}
+
+		// 4. Batch assign via Telnyx batch API (or fallback to per-number PATCH)
+		if (numbersToUpdate.length > 0) {
+			const idsToUpdate = numbersToUpdate.map((n) => n.telnyxPhoneNumberId);
+			console.log(
+				`Found ${idsToUpdate.length} numbers to assign to voice app ${TELNYX_CONNECTION_ID}.`
+			);
+			try {
+				await batchUpdatePhoneNumbersByIds(idsToUpdate, TELNYX_CONNECTION_ID);
+				return {
+					assigned: idsToUpdate.length,
+					skipped: skippedCount,
+					failed: 0
+				};
+			} catch (err) {
+				console.error('Batch assignment failed, falling back to per-number PATCH:', err);
+				let assigned = 0;
+				// Use E.164 for PATCH: Telnyx accepts it and DB may have wrong/stale telnyxPhoneNumberId (e.g. UUID vs numeric id)
+				for (const { phoneNumber } of numbersToUpdate) {
+					if (await assignNumberVoice(phoneNumber)) assigned++;
+				}
+				return {
+					assigned,
+					skipped: skippedCount,
+					failed: idsToUpdate.length - assigned
+				};
+			}
+		} else {
+			console.log('All company numbers are already correctly assigned.');
+			return { assigned: 0, skipped: companyNumbers.length, failed: 0 };
+		}
+	} catch (error) {
+		console.error('Error in ensureCompanyNumbersAssignedToApp:', error);
+		return { assigned: 0, skipped: 0, failed: companyNumbers.length };
+	}
 }

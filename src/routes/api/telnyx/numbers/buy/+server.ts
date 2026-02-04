@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { TELNYX_API_KEY } from '$env/static/private';
 import { prisma } from '$lib/db';
-import { TELNYX_APP_ID, assignNumberToApp } from '$lib/server/telnyx';
+import { assignNumberToApp } from '$lib/server/telnyx';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {

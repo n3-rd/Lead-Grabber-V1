@@ -10,7 +10,7 @@
  *   node --loader ts-node/esm scripts/telnyx-example.ts
  */
 
-import { prisma } from '../src/lib/server/prisma';
+import { prisma } from '../src/lib/db';
 import {
     setupCompanyPhoneNumbers,
     ensureBillingGroup,

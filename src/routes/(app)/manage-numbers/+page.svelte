@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ChevronDown, Search, Pencil, Trash2, Phone, MessageSquare, Mail, Image as ImageIcon, Play, FileText, Settings, User, Plus, Download, Copy } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { toast } from 'svelte-sonner';
 
 	let activeTab = $state<'myNumber' | 'messaging' | 'voice'>('myNumber');
@@ -222,6 +223,11 @@
 </script>
 
 <div class="min-h-screen bg-[#ECEEF3] p-4">
+	{#if $page.url.searchParams.get('buy_number_first') === '1'}
+		<div class="mb-4 rounded-[3px] border border-amber-500 bg-amber-50 px-4 py-3 font-['Poppins'] text-[15px] leading-[22px] text-amber-900">
+			<strong>IVR requires a phone number.</strong> You must buy or assign at least one phone number to your company before using Call Flows (IVR). Buy or assign a number below, then return to IVR.
+		</div>
+	{/if}
 	<!-- Header -->
 	<div class="mb-4 rounded-[3px] bg-white px-4 py-3">
 		<h1 class="font-['Poppins'] text-[23px] font-semibold leading-[30px] text-[#747474]">

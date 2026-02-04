@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { prisma } from '$lib/server/prisma';
+import { prisma } from '$lib/db';
 import {
     setupCompanyPhoneNumbers,
     orderPhoneNumbers,

@@ -113,13 +113,15 @@
 				<div class="rounded-[2px] border border-[#969696] bg-white p-4">
 					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
 						<p class="mb-2 font-['Poppins'] text-base text-[#969696]">Drag a file to upload or</p>
-						<label class="inline-block">
+						<label class="inline-block cursor-pointer">
 							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'greeting')} class="hidden" />
-							<button type="button" class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base text-white">
+							<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white">
 								Browse...
-							</button>
+							</span>
 						</label>
-						{#if flow?.greetingAudioUrl}
+						{#if greetingFile}
+							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {greetingFile.name}</p>
+						{:else if flow?.greetingAudioUrl}
 							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {flow.greetingAudioUrl}</p>
 							<audio src={flow.greetingAudioUrl} controls class="mt-2 max-w-full"></audio>
 						{/if}
@@ -130,13 +132,15 @@
 				<p class="font-['Poppins'] text-lg font-semibold text-[#808080]">All representatives on call (hold music):</p>
 				<div class="rounded border border-[#808080] bg-white p-4">
 					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<label class="inline-block">
+						<label class="inline-block cursor-pointer">
 							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'allOnCall')} class="hidden" />
-							<button type="button" class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base text-white">
+							<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white">
 								Browse...
-							</button>
+							</span>
 						</label>
-						{#if flow?.queueHoldAudioUrl}
+						{#if allOnCallFile}
+							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {allOnCallFile.name}</p>
+						{:else if flow?.queueHoldAudioUrl}
 							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {flow.queueHoldAudioUrl}</p>
 							<audio src={flow.queueHoldAudioUrl} controls class="mt-2 max-w-full"></audio>
 						{/if}
@@ -147,13 +151,15 @@
 				<p class="font-['Poppins'] text-lg font-semibold text-[#808080]">All unavailable:</p>
 				<div class="rounded border border-[#808080] bg-white p-4">
 					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<label class="inline-block">
+						<label class="inline-block cursor-pointer">
 							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'unavailable')} class="hidden" />
-							<button type="button" class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base text-white">
-								Browse (unavailable)
-							</button>
+							<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white">
+								Browse...
+							</span>
 						</label>
-						{#if flow?.allUnavailableAudioUrl}
+						{#if unavailableFile}
+							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {unavailableFile.name}</p>
+						{:else if flow?.allUnavailableAudioUrl}
 							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {flow.allUnavailableAudioUrl}</p>
 							<audio src={flow.allUnavailableAudioUrl} controls class="mt-2 max-w-full"></audio>
 						{/if}
@@ -164,13 +170,15 @@
 				<p class="font-['Poppins'] text-lg font-semibold text-[#808080]">Backup cell audio:</p>
 				<div class="rounded border border-[#808080] bg-white p-4">
 					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<label class="inline-block">
+						<label class="inline-block cursor-pointer">
 							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'backupCell')} class="hidden" />
-							<button type="button" class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base text-white">
-								Browse (backup)
-							</button>
+							<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white">
+								Browse...
+							</span>
 						</label>
-						{#if flow?.backupCellAudioUrl}
+						{#if backupCellFile}
+							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {backupCellFile.name}</p>
+						{:else if flow?.backupCellAudioUrl}
 							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {flow.backupCellAudioUrl}</p>
 							<audio src={flow.backupCellAudioUrl} controls class="mt-2 max-w-full"></audio>
 						{/if}

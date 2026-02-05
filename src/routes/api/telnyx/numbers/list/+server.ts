@@ -14,7 +14,9 @@ export const GET: RequestHandler = async ({ url, locals }) => {
       where: { companyId },
       select: { phoneNumber: true }
     });
-    const companyNumberSet = new Set(companyNumbers.map((n) => n.phoneNumber));
+    // Normalize to digits only for comparison (handles +1xxx vs 1xxx differences)
+    const normalizeDigits = (phone: string) => phone.replace(/\D/g, '');
+    const companyNumberSet = new Set(companyNumbers.map((n) => normalizeDigits(n.phoneNumber)));
 
     const page = url.searchParams.get('page') || '1';
     const limit = url.searchParams.get('limit') || '50';
@@ -63,9 +65,16 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
     // Only include numbers that belong to this company
     const allNumbers = data.data || [];
+    
+    // Debug logging
+    console.log('[numbers/list] Company numbers in DB:', Array.from(companyNumberSet));
+    console.log('[numbers/list] Telnyx returned', allNumbers.length, 'numbers:', allNumbers.map((n: any) => n.phone_number));
+    
     const numbersForCompany = companyNumberSet.size > 0
-      ? allNumbers.filter((num: any) => companyNumberSet.has(num.phone_number))
+      ? allNumbers.filter((num: any) => companyNumberSet.has(normalizeDigits(num.phone_number)))
       : [];
+    
+    console.log('[numbers/list] After filtering:', numbersForCompany.length, 'numbers match');
 
     const numbers = numbersForCompany.map((num: any) => ({
       number: num.phone_number,

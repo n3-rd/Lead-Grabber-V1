@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Clock, Play } from 'lucide-svelte';
+	import { ArrowLeft, Clock, Pencil, Play } from 'lucide-svelte';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import { page } from '$app/stores';
 
 	type KeyPrompt = { key: string; name: string; extension: string; transferAudioUrl?: string };
@@ -68,6 +69,10 @@
 	let promptTransferFiles = $state<(File | null)[]>([]);
 	let failoverCount = $state(2);
 	let failoverDelayMinutes = $state(2);
+	let showPromptsEditDialog = $state(false);
+	let promptsFileInput: HTMLInputElement | undefined;
+	let failoverFileInput: HTMLInputElement | undefined;
+	let hangupFileInput: HTMLInputElement | undefined;
 
 	$effect(() => {
 		if (promptTransferFiles.length < keyPrompts.length) {
@@ -256,13 +261,36 @@
 				</div>
 			</div>
 			<div class="space-y-4">
-				<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">Upload your audio file for prompts</h2>
+				<div class="flex items-center justify-between">
+					<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">Upload your audio file for prompts</h2>
+					<button
+						type="button"
+						onclick={() => (showPromptsEditDialog = true)}
+						class="flex items-center gap-2 rounded border border-[#577AB7] bg-white px-3 py-1.5 font-['Poppins'] text-sm text-[#577AB7] transition-colors hover:bg-[#f0f4ff]"
+					>
+						<Pencil class="h-4 w-4" />
+						Edit
+					</button>
+				</div>
 				<div class="rounded border border-[#808080] bg-white p-4">
 					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<label class="inline-block">
-							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'prompts')} class="hidden" />
-							<button type="button" class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base text-white">Browse...</button>
-						</label>
+						<input
+							type="file"
+							accept="audio/*"
+							bind:this={promptsFileInput}
+							onchange={(e) => handleFileUpload(e, 'prompts')}
+							class="hidden"
+						/>
+						<button
+							type="button"
+							onclick={() => promptsFileInput?.click()}
+							class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base text-white"
+						>
+							Browse...
+						</button>
+						{#if promptsFile}
+							<p class="mt-2 font-['Poppins'] text-sm text-[#577AB7]">Selected: {promptsFile.name}</p>
+						{/if}
 						{#if rule?.promptsAudioUrl}
 							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {rule.promptsAudioUrl}</p>
 							<audio src={rule.promptsAudioUrl} controls class="mt-2 max-w-full"></audio>
@@ -270,6 +298,45 @@
 					</div>
 				</div>
 			</div>
+
+			<Dialog.Root bind:open={showPromptsEditDialog}>
+				<Dialog.Content class="sm:max-w-[425px]">
+					<Dialog.Header>
+						<Dialog.Title>Replace prompts audio</Dialog.Title>
+						<Dialog.Description>Choose a new audio file to replace the current prompts.</Dialog.Description>
+					</Dialog.Header>
+					<div class="py-4">
+						<label class="block cursor-pointer">
+							<input
+								type="file"
+								accept="audio/*"
+								onchange={(e) => {
+									handleFileUpload(e, 'prompts');
+									showPromptsEditDialog = false;
+								}}
+								class="hidden"
+							/>
+							<span
+								class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white"
+								role="button"
+								tabindex="0"
+								onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}
+							>
+								Choose file...
+							</span>
+						</label>
+					</div>
+					<Dialog.Footer>
+						<button
+							type="button"
+							onclick={() => (showPromptsEditDialog = false)}
+							class="h-[36px] rounded border border-[#577AB7] bg-white px-4 font-['Poppins'] text-base text-[#577AB7]"
+						>
+							Cancel
+						</button>
+					</Dialog.Footer>
+				</Dialog.Content>
+			</Dialog.Root>
 			<div class="space-y-4">
 				<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">Configure your prompts</h2>
 				<div class="space-y-4">
@@ -316,10 +383,11 @@
 				<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">No Response Fail Over</h2>
 				<div class="rounded border border-[#808080] bg-white p-4">
 					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<label class="inline-block">
-							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'failover')} class="hidden" />
-							<button type="button" class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base text-white">Browse...</button>
-						</label>
+						<input type="file" accept="audio/*" bind:this={failoverFileInput} onchange={(e) => handleFileUpload(e, 'failover')} class="hidden" />
+						<button type="button" onclick={() => failoverFileInput?.click()} class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base text-white">Browse...</button>
+						{#if failoverFile}
+							<p class="mt-2 font-['Poppins'] text-sm text-[#577AB7]">Selected: {failoverFile.name}</p>
+						{/if}
 						{#if rule?.failoverAudioUrl}
 							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {rule.failoverAudioUrl}</p>
 							<audio src={rule.failoverAudioUrl} controls class="mt-2 max-w-full"></audio>
@@ -341,10 +409,11 @@
 				<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">Hang Up Audio</h2>
 				<div class="rounded border border-[#808080] bg-white p-4">
 					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<label class="inline-block">
-							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'hangup')} class="hidden" />
-							<button type="button" class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base text-white">Browse...</button>
-						</label>
+						<input type="file" accept="audio/*" bind:this={hangupFileInput} onchange={(e) => handleFileUpload(e, 'hangup')} class="hidden" />
+						<button type="button" onclick={() => hangupFileInput?.click()} class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base text-white">Browse...</button>
+						{#if hangupFile}
+							<p class="mt-2 font-['Poppins'] text-sm text-[#577AB7]">Selected: {hangupFile.name}</p>
+						{/if}
 						{#if rule?.hangupAudioUrl}
 							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {rule.hangupAudioUrl}</p>
 							<audio src={rule.hangupAudioUrl} controls class="mt-2 max-w-full"></audio>

@@ -332,8 +332,17 @@ export const POST: RequestHandler = async ({ request }) => {
         if (match?.extension) {
           const to = String(match.extension).trim();
           const transferAudioUrl = match.transferAudioUrl ? resolveAudioUrl(match.transferAudioUrl, baseUrl) : null;
-          await telnyxTransfer(callControlId, to, transferAudioUrl);
-          console.log('📞 IVR transfer to', to, match.name ?? digit);
+          if (transferAudioUrl) {
+            // Play transfer audio first, then transfer on playback.ended
+            const transferState = Buffer.from(
+              JSON.stringify({ afterPlaybackTransfer: true, transferTo: to })
+            ).toString('base64');
+            await telnyxPlayback(callControlId, transferAudioUrl, transferState);
+            console.log('▶️ IVR playing transfer audio for', match.name ?? digit);
+          } else {
+            await telnyxTransfer(callControlId, to);
+            console.log('📞 IVR transfer to', to, match.name ?? digit);
+          }
         } else {
           // Unknown key: treat like timeout, failover or hangup
           if (ivrRetry >= failoverCount) {
@@ -379,6 +388,11 @@ export const POST: RequestHandler = async ({ request }) => {
           if (decoded.afterPlaybackHangup) {
             await telnyxHangup(callControlId);
             console.log('📞 IVR playback (hangup) ended, hanging up');
+            break;
+          }
+          if (decoded.afterPlaybackTransfer && decoded.transferTo) {
+            await telnyxTransfer(callControlId, decoded.transferTo);
+            console.log('📞 IVR transfer to', decoded.transferTo, 'after transfer audio');
             break;
           }
           if ((decoded.afterPlaybackGather || decoded.afterGreetingGather) && decoded.ivrFlowId && decoded.ivrRuleId) {
@@ -561,18 +575,11 @@ async function telnyxHangup(callControlId: string): Promise<void> {
   });
 }
 
-async function telnyxTransfer(
-  callControlId: string,
-  to: string,
-  audioUrl?: string | null
-): Promise<void> {
+async function telnyxTransfer(callControlId: string, to: string): Promise<void> {
   await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/transfer`, {
     method: 'POST',
     headers: TELNYX_HEADERS,
-    body: JSON.stringify({
-      to,
-      ...(audioUrl && { audio_url: audioUrl })
-    })
+    body: JSON.stringify({ to })
   });
 }
 

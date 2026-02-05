@@ -70,9 +70,6 @@
 	let failoverCount = $state(2);
 	let failoverDelayMinutes = $state(2);
 	let showPromptsEditDialog = $state(false);
-	let promptsFileInput: HTMLInputElement | undefined;
-	let failoverFileInput: HTMLInputElement | undefined;
-	let hangupFileInput: HTMLInputElement | undefined;
 
 	$effect(() => {
 		if (promptTransferFiles.length < keyPrompts.length) {
@@ -274,24 +271,18 @@
 				</div>
 				<div class="rounded border border-[#808080] bg-white p-4">
 					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<input
-							type="file"
-							accept="audio/*"
-							bind:this={promptsFileInput}
-							onchange={(e) => handleFileUpload(e, 'prompts')}
-							class="hidden"
-						/>
-						<button
-							type="button"
-							onclick={() => promptsFileInput?.click()}
-							class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base text-white"
-						>
-							Browse...
-						</button>
+						<label class="inline-block cursor-pointer">
+							<input
+								type="file"
+								accept="audio/*"
+								onchange={(e) => handleFileUpload(e, 'prompts')}
+								class="hidden"
+							/>
+							<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white">Browse...</span>
+						</label>
 						{#if promptsFile}
-							<p class="mt-2 font-['Poppins'] text-sm text-[#577AB7]">Selected: {promptsFile.name}</p>
-						{/if}
-						{#if rule?.promptsAudioUrl}
+							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {promptsFile.name}</p>
+						{:else if rule?.promptsAudioUrl}
 							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {rule.promptsAudioUrl}</p>
 							<audio src={rule.promptsAudioUrl} controls class="mt-2 max-w-full"></audio>
 						{/if}
@@ -383,12 +374,13 @@
 				<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">No Response Fail Over</h2>
 				<div class="rounded border border-[#808080] bg-white p-4">
 					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<input type="file" accept="audio/*" bind:this={failoverFileInput} onchange={(e) => handleFileUpload(e, 'failover')} class="hidden" />
-						<button type="button" onclick={() => failoverFileInput?.click()} class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base text-white">Browse...</button>
+						<label class="inline-block cursor-pointer">
+							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'failover')} class="hidden" />
+							<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white">Browse...</span>
+						</label>
 						{#if failoverFile}
-							<p class="mt-2 font-['Poppins'] text-sm text-[#577AB7]">Selected: {failoverFile.name}</p>
-						{/if}
-						{#if rule?.failoverAudioUrl}
+							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {failoverFile.name}</p>
+						{:else if rule?.failoverAudioUrl}
 							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {rule.failoverAudioUrl}</p>
 							<audio src={rule.failoverAudioUrl} controls class="mt-2 max-w-full"></audio>
 						{/if}
@@ -409,12 +401,13 @@
 				<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">Hang Up Audio</h2>
 				<div class="rounded border border-[#808080] bg-white p-4">
 					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<input type="file" accept="audio/*" bind:this={hangupFileInput} onchange={(e) => handleFileUpload(e, 'hangup')} class="hidden" />
-						<button type="button" onclick={() => hangupFileInput?.click()} class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base text-white">Browse...</button>
+						<label class="inline-block cursor-pointer">
+							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'hangup')} class="hidden" />
+							<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white">Browse...</span>
+						</label>
 						{#if hangupFile}
-							<p class="mt-2 font-['Poppins'] text-sm text-[#577AB7]">Selected: {hangupFile.name}</p>
-						{/if}
-						{#if rule?.hangupAudioUrl}
+							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {hangupFile.name}</p>
+						{:else if rule?.hangupAudioUrl}
 							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {rule.hangupAudioUrl}</p>
 							<audio src={rule.hangupAudioUrl} controls class="mt-2 max-w-full"></audio>
 						{/if}

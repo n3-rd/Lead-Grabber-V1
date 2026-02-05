@@ -251,21 +251,21 @@
 							Drag a file to upload or
 						</p>
 						<div class="mt-4">
-							<label class="inline-block">
+							<label class="inline-block cursor-pointer">
 								<input
 									type="file"
 									accept="audio/*"
 									onchange={(e) => handleFileUpload(e, 'prompts')}
 									class="hidden"
 								/>
-								<button
-									type="button"
-									class="h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[19px] text-white"
-								>
+								<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[36px] text-white">
 									Browse...
-								</button>
+								</span>
 							</label>
 						</div>
+						{#if promptsFile}
+							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {promptsFile.name}</p>
+						{/if}
 					</div>
 				</div>
 			</div>
@@ -367,9 +367,12 @@
 							<div class="mt-4">
 								<label class="inline-block cursor-pointer">
 									<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'failover')} class="hidden" />
-									<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[19px] text-white" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}>Browse...</span>
+									<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[36px] text-white">Browse...</span>
 								</label>
 							</div>
+							{#if failoverFile}
+								<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {failoverFile.name}</p>
+							{/if}
 						</div>
 					</div>
 					<div class="grid grid-cols-2 gap-4">
@@ -417,9 +420,12 @@
 							<div class="mt-4">
 								<label class="inline-block cursor-pointer">
 									<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'hangup')} class="hidden" />
-									<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[19px] text-white" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}>Browse...</span>
+									<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[36px] text-white">Browse...</span>
 								</label>
 							</div>
+							{#if hangupFile}
+								<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {hangupFile.name}</p>
+							{/if}
 						</div>
 					</div>
 				</div>

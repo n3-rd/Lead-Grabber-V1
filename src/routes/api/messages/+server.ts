@@ -1,7 +1,6 @@
 import { prisma } from '$lib/db'
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { notifyMessageUpdate } from '$lib/utils/realtime'
 import { getLogsForMessage } from '$lib/utils/inbox-log-link'
 import { logCommunication } from '$lib/utils/communication-log'
 import { createNotification } from '$lib/utils/notifications'
@@ -132,7 +131,6 @@ export const POST: RequestHandler = async ({ request }) => {
       metadata: logMetadata,
     })
 
-    await notifyMessageUpdate(companyId, 'update', message.id, message.threadId)
 
     return new Response(JSON.stringify(message), {
       status: 201,
@@ -255,7 +253,6 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
         },
       })
       await syncLogAssignment(updated, newAssignedToId ?? undefined)
-      await notifyMessageUpdate(existing.companyId, 'update', id, updated.threadId)
       // Notify when a new message (e.g. agent reply) was added to the thread
       const prevLen = Array.isArray(existing.messages) ? existing.messages.length : 0
       const newLen = Array.isArray(updateData.messages) ? updateData.messages.length : 0
@@ -287,7 +284,6 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
         },
       })
       await syncLogAssignment(updated, updated.assignedToId ?? undefined)
-      await notifyMessageUpdate(existing.companyId, 'update', id, updated.threadId)
       return json(updated)
     }
   } catch (error: any) {

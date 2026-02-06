@@ -1,36 +1,19 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
-	import { invalidate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index';
 	import Button from '@//components/ui/button/button.svelte';
 	import Separator from '@//components/ui/separator/separator.svelte';
 	import { pb } from '@//pocketbase';
 	import { Bell, LogOut } from 'lucide-svelte';
-	import { requestNotificationPermission, showDesktopNotification } from '$lib/utils/browser-notifications';
+	import { requestNotificationPermission } from '$lib/utils/browser-notifications';
 
 	let { data } = $props();
 	let { user } = data;
 
 	onMount(() => {
 		requestNotificationPermission();
-
-		// Global notifications SSE: show desktop notification from any page when a new one arrives
-		const eventSource = new EventSource('/api/notifications/realtime', { withCredentials: true });
-		eventSource.onmessage = (e) => {
-			try {
-				const payload = JSON.parse(e.data);
-				if (payload.type === 'notification' && payload.notificationId) {
-					const title = payload.sourceName ? `From ${payload.sourceName}` : 'New notification';
-					const body = payload.messagePreview ?? 'You have a new message.';
-					showDesktopNotification(title, { body });
-					invalidate('app:notifications');
-				}
-			} catch (_) {}
-		};
-		eventSource.onerror = () => eventSource.close();
-		return () => eventSource.close();
 	});
 
 	function handleLogout() {

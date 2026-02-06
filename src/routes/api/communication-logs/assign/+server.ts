@@ -1,7 +1,6 @@
 import { prisma } from '$lib/db'
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { notifyMessageUpdate } from '$lib/utils/realtime'
 import { getMessagesForLog } from '$lib/utils/inbox-log-link'
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -89,7 +88,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 where: { id: m.id },
                 data: { assignedToId: firstMemberId, status: 'assigned' },
               })
-              await notifyMessageUpdate(m.companyId, 'update', m.id, m.threadId)
               messagesUpdated++
             }
           }
@@ -149,7 +147,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 where: { id: m.id },
                 data: { assignedToId: firstMemberId, status: 'assigned' },
               })
-              await notifyMessageUpdate(m.companyId, 'update', m.id, m.threadId)
               messagesUpdated++
             }
           }

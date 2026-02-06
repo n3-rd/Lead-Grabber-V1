@@ -41,9 +41,8 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     if (event.request.method !== 'GET') return;
 
     const url = new URL(event.request.url);
-    // Don't intercept realtime/SSE/streaming API — let the browser handle them (avoids SW breaking long-lived connections)
+    // Don't intercept SSE/streaming API — let the browser handle them (avoids SW breaking long-lived connections)
     if (url.pathname.includes('/api/') && (
-        url.pathname.includes('realtime') ||
         url.pathname.includes('/api/events') ||
         url.pathname.includes('/api/ws')
     )) {

@@ -2,8 +2,6 @@ import { prisma } from '$lib/db'
 import { logCommunication } from '$lib/utils/communication-log'
 import { createNotification } from '$lib/utils/notifications'
 import { createOrUpdateContact } from '$lib/utils/contacts'
-import { notifyMessageUpdate } from '$lib/utils/realtime'
-
 export interface InboundEmailPayload {
     from: string
     fromName?: string
@@ -102,9 +100,6 @@ export async function processInboundEmail(payload: InboundEmailPayload) {
             content: content,
             metadata: { thread_id: threadId, email_message_id: payload.messageId }
         })
-
-        // 6. Notify Realtime
-        await notifyMessageUpdate(companyId, 'update', messageRecord.id, messageRecord.threadId)
 
         return { success: true, messageId: messageRecord.id }
     } catch (error) {

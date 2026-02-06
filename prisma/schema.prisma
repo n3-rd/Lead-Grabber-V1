@@ -190,6 +190,7 @@ model CallFlowRule {
   failoverAudioUrl     String?
   hangupAudioUrl       String?
   leaveMessageOnHash   Boolean   @default(true)
+  backDigit            String?   // e.g. * or 0 — replay prompts when pressed; null = disabled
   created              DateTime  @default(now())
   updated              DateTime  @updatedAt
 

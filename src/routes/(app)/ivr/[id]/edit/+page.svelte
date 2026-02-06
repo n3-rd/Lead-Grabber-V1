@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { ArrowLeft, ChevronDown, Clock, Pencil } from 'lucide-svelte';
+	import DialerDialog from '$lib/components/DialerDialog.svelte';
 
 	let { data }: { data: { flow?: { id: string; title?: string }; flowId?: string } } = $props();
 	const flowId = $derived(data?.flowId ?? data?.flow?.id ?? '');
@@ -36,6 +37,10 @@
 
 	let failoverCount = $state(2);
 	let failoverDelayMinutes = $state(2);
+	let backDigit = $state('');
+	let backDigitDialerOpen = $state(false);
+	let dialerOpen = $state(false);
+	let dialerEditingIndex = $state(0);
 
 	async function uploadFile(file: File, type: string): Promise<string | null> {
 		const form = new FormData();
@@ -138,6 +143,7 @@
 					keyPrompts: keyPromptsPayload,
 					failoverCount,
 					failoverDelayMinutes,
+					backDigit: backDigit.trim() || null,
 					failoverAudioUrl,
 					hangupAudioUrl,
 					leaveMessageOnHash: true
@@ -269,7 +275,23 @@
 					</div>
 				</div>
 			</div>
-
+			<div class="space-y-2">
+				<label class="block font-['Poppins'] text-lg font-semibold text-[#808080]">Back / repeat menu digit</label>
+				<button
+					type="button"
+					onclick={() => (backDigitDialerOpen = true)}
+					class="flex h-[45px] w-24 items-center rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-base text-[#808080] outline-none transition-colors hover:border-[#577AB7] hover:bg-[#ECF3FF]"
+				>
+					{backDigit || '—'}
+				</button>
+				<DialerDialog
+					bind:open={backDigitDialerOpen}
+					title="Back / repeat menu digit"
+					keys={['*', '#']}
+					onSelect={(k) => (backDigit = k)}
+				/>
+				<p class="font-['Poppins'] text-sm text-[#808080]">When the caller presses this key, the menu prompts are replayed. Leave unset to disable.</p>
+			</div>
 			<!-- Configure your prompts base on audio file -->
 			<div class="space-y-4">
 				<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">
@@ -283,12 +305,13 @@
 									<label class="block font-['Poppins'] text-lg font-normal leading-[29px] text-[#808080]">
 										Select one key (0-9)
 									</label>
-									<input
-										type="text"
-										bind:value={prompt.key}
-										placeholder="Select Key"
-										class="h-[45px] w-full rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-base font-normal leading-[19px] text-[rgba(128,128,128,0.47)] outline-none placeholder:text-[rgba(128,128,128,0.47)]"
-									/>
+									<button
+										type="button"
+										onclick={() => { dialerEditingIndex = index; dialerOpen = true; }}
+										class="flex h-[45px] w-full items-center rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-base text-[#808080] outline-none transition-colors hover:border-[#577AB7] hover:bg-[#ECF3FF]"
+									>
+										{prompt.key || 'Select key'}
+									</button>
 								</div>
 								<div class="space-y-2">
 									<label class="block font-['Poppins'] text-lg font-semibold leading-[29px] text-[#808080]">
@@ -341,6 +364,15 @@
 							</button>
 						</div>
 					{/each}
+					<DialerDialog
+						bind:open={dialerOpen}
+						title="Select one key (0-9)"
+						onSelect={(k) => {
+							const next = [...keyPrompts];
+							if (next[dialerEditingIndex]) next[dialerEditingIndex] = { ...next[dialerEditingIndex], key: k };
+							keyPrompts = next;
+						}}
+					/>
 					<button
 						onclick={addKeyPrompt}
 						class="h-[45px] rounded-[4px] border border-[#577AB7] bg-[#577AB7] px-4 font-['Poppins'] text-base font-semibold leading-[19px] text-white transition-colors hover:bg-[#4a6ba5]"

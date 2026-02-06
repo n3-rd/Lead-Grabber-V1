@@ -37,7 +37,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
     failoverDelayMinutes,
     failoverAudioUrl,
     hangupAudioUrl,
-    leaveMessageOnHash
+    leaveMessageOnHash,
+    backDigit
   } = body
   if (!ruleTitle || typeof ruleTitle !== 'string') {
     return json({ error: 'ruleTitle is required' }, { status: 400 })
@@ -57,7 +58,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
       failoverDelayMinutes: typeof failoverDelayMinutes === 'number' ? failoverDelayMinutes : 2,
       failoverAudioUrl: failoverAudioUrl ?? null,
       hangupAudioUrl: hangupAudioUrl ?? null,
-      leaveMessageOnHash: leaveMessageOnHash !== false
+      leaveMessageOnHash: leaveMessageOnHash !== false,
+      backDigit: backDigit === '' || backDigit == null ? null : String(backDigit).trim()
     }
   })
   return json({ rule })

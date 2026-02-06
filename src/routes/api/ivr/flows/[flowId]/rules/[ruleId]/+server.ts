@@ -36,7 +36,8 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
     failoverDelayMinutes,
     failoverAudioUrl,
     hangupAudioUrl,
-    leaveMessageOnHash
+    leaveMessageOnHash,
+    backDigit
   } = body
   const updated = await prisma.callFlowRule.update({
     where: { id: params.ruleId },
@@ -49,7 +50,8 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
       ...(failoverDelayMinutes !== undefined && { failoverDelayMinutes: Number(failoverDelayMinutes) }),
       ...(failoverAudioUrl !== undefined && { failoverAudioUrl: failoverAudioUrl || null }),
       ...(hangupAudioUrl !== undefined && { hangupAudioUrl: hangupAudioUrl || null }),
-      ...(leaveMessageOnHash !== undefined && { leaveMessageOnHash: Boolean(leaveMessageOnHash) })
+      ...(leaveMessageOnHash !== undefined && { leaveMessageOnHash: Boolean(leaveMessageOnHash) }),
+      ...(backDigit !== undefined && { backDigit: backDigit === '' || backDigit == null ? null : String(backDigit).trim() })
     }
   })
   return json({ rule: updated })

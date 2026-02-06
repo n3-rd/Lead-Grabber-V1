@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { ArrowLeft, Clock, Pencil, Play } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
+	import DialerDialog from '$lib/components/DialerDialog.svelte';
 	import { page } from '$app/stores';
 
 	type KeyPrompt = { key: string; name: string; extension: string; transferAudioUrl?: string };
@@ -14,6 +15,7 @@
 		promptsAudioUrl?: string | null;
 		failoverAudioUrl?: string | null;
 		hangupAudioUrl?: string | null;
+		backDigit?: string | null;
 	};
 	type PageData = { flow?: { title?: string }; rule?: RuleData; flowId?: string; ruleId?: string };
 	let { data: propsData }: { data: PageData } = $props();
@@ -69,7 +71,11 @@
 	let promptTransferFiles = $state<(File | null)[]>([]);
 	let failoverCount = $state(2);
 	let failoverDelayMinutes = $state(2);
+	let backDigit = $state('');
 	let showPromptsEditDialog = $state(false);
+	let dialerOpen = $state(false);
+	let dialerEditingIndex = $state(0);
+	let backDigitDialerOpen = $state(false);
 
 	$effect(() => {
 		if (promptTransferFiles.length < keyPrompts.length) {
@@ -84,6 +90,7 @@
 			schedule = scheduleFromRule(r);
 			failoverCount = r.failoverCount ?? 2;
 			failoverDelayMinutes = r.failoverDelayMinutes ?? 2;
+			backDigit = r.backDigit ?? '';
 			keyPrompts =
 				Array.isArray(r.keyPrompts) && r.keyPrompts.length
 					? r.keyPrompts.map((pk) => ({
@@ -190,6 +197,7 @@
 				keyPrompts: keyPromptsPayload,
 				failoverCount,
 				failoverDelayMinutes,
+				backDigit: backDigit.trim() || null,
 				leaveMessageOnHash: true
 			};
 			if (promptsFile) body.promptsAudioUrl = await uploadFile(promptsFile, 'prompts');
@@ -289,7 +297,23 @@
 					</div>
 				</div>
 			</div>
-
+			<div class="space-y-2">
+				<label class="block font-['Poppins'] text-lg font-semibold text-[#808080]">Back / repeat menu digit</label>
+				<button
+					type="button"
+					onclick={() => (backDigitDialerOpen = true)}
+					class="flex h-[45px] w-24 items-center rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-base text-[#808080] outline-none transition-colors hover:border-[#577AB7] hover:bg-[#ECF3FF]"
+				>
+					{backDigit || '—'}
+				</button>
+				<DialerDialog
+					bind:open={backDigitDialerOpen}
+					title="Back / repeat menu digit"
+					keys={['*', '#']}
+					onSelect={(k) => (backDigit = k)}
+				/>
+				<p class="font-['Poppins'] text-sm text-[#808080]">When the caller presses this key, the menu prompts are replayed. Leave unset to disable.</p>
+			</div>
 			<Dialog.Root bind:open={showPromptsEditDialog}>
 				<Dialog.Content class="sm:max-w-[425px]">
 					<Dialog.Header>
@@ -336,7 +360,13 @@
 							<div class="grid grid-cols-3 gap-4">
 								<div class="space-y-2">
 									<label class="block font-['Poppins'] text-lg text-[#808080]">Select one key (0-9)</label>
-									<input type="text" bind:value={prompt.key} placeholder="Key" class="h-[45px] w-full rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-base text-[#808080] outline-none" />
+									<button
+										type="button"
+										onclick={() => { dialerEditingIndex = index; dialerOpen = true; }}
+										class="flex h-[45px] w-full items-center rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-base text-[#808080] outline-none transition-colors hover:border-[#577AB7] hover:bg-[#ECF3FF]"
+									>
+										{prompt.key || 'Select key'}
+									</button>
 								</div>
 								<div class="space-y-2">
 									<label class="block font-['Poppins'] text-lg font-semibold text-[#808080]">Give a Name</label>
@@ -367,6 +397,15 @@
 							</div>
 						</div>
 					{/each}
+					<DialerDialog
+						bind:open={dialerOpen}
+						title="Select one key (0-9)"
+						onSelect={(k) => {
+							const next = [...keyPrompts];
+							if (next[dialerEditingIndex]) next[dialerEditingIndex] = { ...next[dialerEditingIndex], key: k };
+							keyPrompts = next;
+						}}
+					/>
 					<button onclick={addKeyPrompt} class="h-[45px] rounded-[4px] border border-[#577AB7] bg-[#577AB7] px-4 font-['Poppins'] text-base font-semibold text-white hover:bg-[#4a6ba5]">Add Another Key Prompts</button>
 				</div>
 			</div>

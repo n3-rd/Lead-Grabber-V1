@@ -328,6 +328,26 @@ export const POST: RequestHandler = async ({ request }) => {
           break;
         }
 
+        // Back / repeat menu digit — replay prompts
+        const backDigit = (rule as { backDigit?: string | null }).backDigit?.trim();
+        if (backDigit && digit === backDigit && promptsUrl) {
+          const nextState = encodeClientState({ ivrRetry: 0 });
+          await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/gather_using_audio`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TELNYX_API_KEY}` },
+            body: JSON.stringify({
+              audio_url: promptsUrl,
+              minimum_digits: 1,
+              maximum_digits: 1,
+              timeout_millis: 10000,
+              terminating_digit: '#',
+              client_state: nextState
+            })
+          });
+          console.log('📞 IVR back/repeat menu, replaying prompts');
+          break;
+        }
+
         const match = keyPrompts.find((p) => String(p.key).trim() === digit);
         if (match?.extension) {
           const to = String(match.extension).trim();

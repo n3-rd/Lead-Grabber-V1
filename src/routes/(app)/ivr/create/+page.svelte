@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { ArrowLeft, ChevronDown, Check, X } from 'lucide-svelte';
+	import DialerDialog from '$lib/components/DialerDialog.svelte';
 
 	let callFlowTitle = $state('');
 	let greetingFile = $state<File | null>(null);
 	let scheduleRule = $state('noRules');
 	let addFailover = $state(false);
 	let failoverKey = $state('');
+	let failoverDialerOpen = $state(false);
 	let failoverName = $state('');
 	let failoverDuration = $state('');
 	let failoverFile = $state<File | null>(null);
@@ -381,13 +383,20 @@
 									<label class="block font-['Poppins'] text-lg font-semibold leading-[26px] text-[#808080]">
 										Select one key (4-9)
 									</label>
-									<input
-										type="text"
-										bind:value={failoverKey}
-										placeholder="Select Key"
-										class="h-[45px] w-full rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-base font-normal leading-[19px] text-[rgba(128,128,128,0.47)] outline-none placeholder:text-[rgba(128,128,128,0.47)]"
-									/>
+									<button
+										type="button"
+										onclick={() => (failoverDialerOpen = true)}
+										class="flex h-[45px] w-full items-center rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-base text-[#808080] outline-none transition-colors hover:border-[#577AB7] hover:bg-[#ECF3FF]"
+									>
+										{failoverKey || 'Select key'}
+									</button>
 								</div>
+								<DialerDialog
+									bind:open={failoverDialerOpen}
+									title="Select one key (4-9)"
+									keys={['4', '5', '6', '7', '8', '9']}
+									onSelect={(k) => (failoverKey = k)}
+								/>
 								<div class="space-y-2">
 									<label class="block font-['Poppins'] text-lg font-semibold leading-[26px] text-[#808080]">
 										Give a Name

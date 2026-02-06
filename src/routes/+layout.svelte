@@ -35,18 +35,14 @@
 
 		isPolling = true;
 		try {
-			const response = await fetch('/api/calls/pending');
+			const response = await fetch('/api/calls/pending', { credentials: 'same-origin' });
 			
 			if (!response.ok) {
-				// Handle rate limiting with exponential backoff
-				if (response.status === 429) {
+				// 502/503 = gateway/upstream issue — back off like 429
+				if (response.status === 429 || response.status === 502 || response.status === 503) {
 					consecutiveErrors++;
 					pollDelay = Math.min(BASE_POLL_DELAY * Math.pow(2, consecutiveErrors), MAX_POLL_DELAY);
-					
-					// Restart polling with new delay
-					if (pollInterval) {
-						clearInterval(pollInterval);
-					}
+					if (pollInterval) clearInterval(pollInterval);
 					pollInterval = setInterval(checkForIncomingCalls, pollDelay);
 					return;
 				}

@@ -40,16 +40,18 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     // ignore POST requests etc
     if (event.request.method !== 'GET') return;
 
-    async function respond() {
-        const url = new URL(event.request.url);
-        const cache = await caches.open(CACHE);
+    const url = new URL(event.request.url);
+    // Don't intercept realtime/SSE/streaming API — let the browser handle them (avoids SW breaking long-lived connections)
+    if (url.pathname.includes('/api/') && (
+        url.pathname.includes('realtime') ||
+        url.pathname.includes('/api/events') ||
+        url.pathname.includes('/api/ws')
+    )) {
+        return;
+    }
 
-        // Don't cache SSE endpoints or WebSocket endpoints
-        if (url.pathname.includes('/api/events') || 
-            url.pathname.includes('/api/ws') ||
-            url.pathname.includes('event-stream')) {
-            return fetch(event.request);
-        }
+    async function respond() {
+        const cache = await caches.open(CACHE);
 
         // `build`/`files` can always be served from the cache
         if (ASSETS.includes(url.pathname)) {

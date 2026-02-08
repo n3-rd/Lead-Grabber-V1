@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { ChevronDown, Search, Trash2, Phone, MessageSquare, Plus, Download, Copy } from 'lucide-svelte';
+	import { ChevronDown, Search, Trash2, Phone, MessageSquare, Mail, Image as ImageIcon, Play, FileText, Settings, User, Plus, Download, Copy, AlertTriangle } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { toast } from 'svelte-sonner';
-	import * as Dialog from '$lib/components/ui/dialog';
+	import * as Dialog from '$lib/components/ui/dialog/index';
+	import { Button } from '$lib/components/ui/button/index';
 
 	let activeTab = $state<'myNumber' | 'messaging' | 'voice'>('myNumber');
 	let messagingSubTab = $state<'numbers' | 'orders'>('numbers');
@@ -18,7 +19,8 @@
 	let numberOrders = $state<any[]>([]);
 	let isLoading = $state(false);
 	let updatingFlowId = $state<string | null>(null);
-	let deleteTarget = $state<{ id: string; number: string } | null>(null);
+	let numberToDelete = $state<{ id: string; number: string } | null>(null);
+	let deleteDialogOpen = $state(false);
 	let isDeleting = $state(false);
 
 	// Mock data for numbers (fallback)
@@ -189,17 +191,23 @@
 		}
 	});
 
-	async function handleDelete(numberId: string, phoneNumber: string) {
+	function openDeleteDialog(num: { id: string; number: string }) {
+		numberToDelete = { id: num.id, number: num.number };
+		deleteDialogOpen = true;
+	}
+
+	async function confirmDelete() {
+		if (!numberToDelete) return;
 		isDeleting = true;
 		try {
-			const response = await fetch(`/api/telnyx/numbers/${numberId}`, {
+			const response = await fetch(`/api/telnyx/numbers/${numberToDelete.id}`, {
 				method: 'DELETE'
 			});
 			const result = await response.json();
-
 			if (result.success) {
-				toast.success('Number deleted successfully');
-				deleteTarget = null;
+				toast.success('Number deleted');
+				deleteDialogOpen = false;
+				numberToDelete = null;
 				await loadNumbers();
 			} else {
 				toast.error(result.error || 'Failed to delete number');
@@ -686,7 +694,7 @@
 								</td>
 								<td class="py-3">
 									<button
-										onclick={() => (deleteTarget = { id: num.id, number: num.number })}
+										onclick={() => openDeleteDialog(num)}
 										class="text-[#666666] hover:text-red-500 transition-colors"
 										aria-label="Delete"
 									>
@@ -702,34 +710,33 @@
 		</div>
 		{/if}
 	</div>
-</div>
 
-<!-- Delete number danger dialog -->
-<Dialog.Root open={deleteTarget !== null} onOpenChange={(open) => !open && (deleteTarget = null)}>
-	<Dialog.Content class="sm:max-w-[425px]">
-		<Dialog.Header>
-			<Dialog.Title class="font-['Poppins'] text-lg font-semibold text-red-600">Delete phone number?</Dialog.Title>
-			<Dialog.Description class="font-['Poppins'] text-sm text-[#666]">
-				You are about to permanently delete <strong>{deleteTarget?.number ?? ''}</strong>. This cannot be undone.
-				You will need to pay for a new number if you want to use this number again; the deleted number cannot be recovered.
-			</Dialog.Description>
-		</Dialog.Header>
-		<Dialog.Footer class="flex gap-2 justify-end pt-4">
-			<button
-				type="button"
-				onclick={() => (deleteTarget = null)}
-				class="rounded-[4px] border border-[#949494] bg-white px-4 py-2 font-['Poppins'] text-sm text-[#757575] hover:bg-gray-50"
-			>
-				Cancel
-			</button>
-			<button
-				type="button"
-				disabled={isDeleting}
-				onclick={() => deleteTarget && handleDelete(deleteTarget.id, deleteTarget.number)}
-				class="rounded-[4px] bg-red-600 px-4 py-2 font-['Poppins'] text-sm text-white hover:bg-red-700 disabled:opacity-50"
-			>
-				{isDeleting ? 'Deleting…' : 'Delete number'}
-			</button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+	<!-- Delete number danger dialog -->
+	<Dialog.Root bind:open={deleteDialogOpen}>
+		<Dialog.Portal>
+			<Dialog.Overlay />
+			<Dialog.Content class="max-w-md border-red-200 bg-white shadow-lg">
+				<Dialog.Header>
+					<Dialog.Title class="flex items-center gap-2 text-red-700">
+						<AlertTriangle class="h-5 w-5 shrink-0" />
+						Delete phone number
+					</Dialog.Title>
+					<Dialog.Description class="text-[#555]">
+						{#if numberToDelete}
+							You are about to delete <strong>{numberToDelete.number}</strong>. This action cannot be undone.
+							You will need to pay for a new number, the deleted number cannot be recovered.
+						{/if}
+					</Dialog.Description>
+				</Dialog.Header>
+				<div class="flex justify-end gap-2 pt-4">
+					<Button variant="outline" onclick={() => (deleteDialogOpen = false)} disabled={isDeleting}>
+						Cancel
+					</Button>
+					<Button variant="destructive" onclick={confirmDelete} disabled={isDeleting}>
+						{isDeleting ? 'Deleting…' : 'Delete number'}
+					</Button>
+				</div>
+			</Dialog.Content>
+		</Dialog.Portal>
+	</Dialog.Root>
+</div>

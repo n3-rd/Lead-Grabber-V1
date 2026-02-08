@@ -23,6 +23,9 @@ importers:
       jose:
         specifier: ^6.1.3
         version: 6.1.3
+      mespeak:
+        specifier: ^2.0.2
+        version: 2.0.2
       nodemailer:
         specifier: ^6.9.16
         version: 6.9.16
@@ -1318,6 +1321,9 @@ packages:
   merge2@1.4.1:
     resolution: {integrity: sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg==}
     engines: {node: '>= 8'}
+
+  mespeak@2.0.2:
+    resolution: {integrity: sha512-vrSqilK/IXXpgPqyFQjuJLqwO6TYgVXd84hGj76F1jQ/DEBna4wjSntyTz/zlaH/6oJm8cRj50AkpKcLzQiuxQ==}
 
   micromatch@4.0.8:
     resolution: {integrity: sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==}
@@ -3199,6 +3205,8 @@ snapshots:
   math-intrinsics@1.1.0: {}
 
   merge2@1.4.1: {}
+
+  mespeak@2.0.2: {}
 
   micromatch@4.0.8:
     dependencies:

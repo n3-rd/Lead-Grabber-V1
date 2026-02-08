@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { ArrowLeft, ChevronDown, Check, X } from 'lucide-svelte';
 	import DialerDialog from '$lib/components/DialerDialog.svelte';
+	import AudioPreview from '$lib/components/AudioPreview.svelte';
 
 	let callFlowTitle = $state('');
 	let greetingFile = $state<File | null>(null);
@@ -193,12 +194,7 @@
 									<span class="text-sm text-[#808080]">({formatSize(greetingFile.size)})</span>
 								</div>
 								{#if greetingPreviewUrl}
-									<audio
-										controls
-										class="mx-auto h-9 w-full max-w-md"
-										src={greetingPreviewUrl}
-										preload="metadata"
-									></audio>
+									<AudioPreview src={greetingPreviewUrl} />
 								{/if}
 								<div class="flex items-center justify-center gap-2">
 									<label class="inline-block cursor-pointer">
@@ -296,7 +292,7 @@
 										<span class="text-sm text-[#808080]">({formatSize(allOnCallFile.size)})</span>
 									</div>
 									{#if allOnCallPreviewUrl}
-										<audio controls class="mx-auto h-9 w-full max-w-md" src={allOnCallPreviewUrl} preload="metadata"></audio>
+										<AudioPreview src={allOnCallPreviewUrl} />
 									{/if}
 									<div class="flex items-center justify-center gap-2">
 										<label class="inline-block cursor-pointer">
@@ -337,7 +333,7 @@
 										<span class="text-sm text-[#808080]">({formatSize(unavailableFile.size)})</span>
 									</div>
 									{#if unavailablePreviewUrl}
-										<audio controls class="mx-auto h-9 w-full max-w-md" src={unavailablePreviewUrl} preload="metadata"></audio>
+										<AudioPreview src={unavailablePreviewUrl} />
 									{/if}
 									<div class="flex items-center justify-center gap-2">
 										<label class="inline-block cursor-pointer">
@@ -434,7 +430,7 @@
 													<span class="text-sm text-[#808080]">({formatSize(failoverFile.size)})</span>
 												</div>
 												{#if failoverPreviewUrl}
-													<audio controls class="mx-auto h-9 w-full max-w-md" src={failoverPreviewUrl} preload="metadata"></audio>
+													<AudioPreview src={failoverPreviewUrl} />
 												{/if}
 												<div class="flex items-center justify-center gap-2">
 													<label class="inline-block cursor-pointer">
@@ -499,7 +495,7 @@
 											<span class="text-sm text-[#808080]">({formatSize(backupCellFile.size)})</span>
 										</div>
 										{#if backupCellPreviewUrl}
-											<audio controls class="mx-auto h-9 w-full max-w-md" src={backupCellPreviewUrl} preload="metadata"></audio>
+											<AudioPreview src={backupCellPreviewUrl} />
 										{/if}
 										<div class="flex items-center justify-center gap-2">
 											<label class="inline-block cursor-pointer">

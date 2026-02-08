@@ -10,6 +10,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 	try {
 		const numbers = await prisma.companyPhoneNumber.findMany({
 			where: { companyId: locals.user.company.id },
+			include: { callFlow: { select: { id: true, title: true } } },
 			orderBy: { created: 'asc' }
 		});
 		return json({ success: true, numbers });

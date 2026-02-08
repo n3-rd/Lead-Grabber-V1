@@ -5,7 +5,7 @@ import { TELNYX_API_KEY } from '$env/static/private';
 import { addPendingCall } from '$lib/utils/callStore';
 import { prisma } from '$lib/db';
 import { getActiveCallFlow, toAbsoluteAudioUrl } from '$lib/ivr';
-import { getCompanyIdByPhoneNumber } from '$lib/company-numbers';
+import { getCompanyAndFlowByPhoneNumber } from '$lib/company-numbers';
 import { PUBLIC_BASE_URL } from '$env/static/public';
 
 const TELNYX_PUBLIC_KEY = process.env.TELNYX_PUBLIC_KEY;
@@ -105,17 +105,26 @@ export const POST: RequestHandler = async ({ request }) => {
         const isIncomingCall = payload?.direction === 'incoming';
 
         if (isIncomingCall) {
-          const companyId = await getCompanyIdByPhoneNumber(prisma, toRaw);
-          console.log('🔔 Incoming call to:', toRaw, 'from:', fromNumber, 'companyId:', companyId ?? 'none');
+          const numberInfo = await getCompanyAndFlowByPhoneNumber(prisma, toRaw);
+          console.log('🔔 Incoming call to:', toRaw, 'from:', fromNumber, 'companyId:', numberInfo?.companyId ?? 'none', 'callFlowId:', numberInfo?.callFlowId ?? 'none');
 
-          if (companyId) {
+          if (!numberInfo) {
+            addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });
+            console.log('📞 Number not assigned to a company - stored in pending calls');
+          } else if (!numberInfo.callFlowId) {
+            addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });
+            console.log('📞 Number not assigned to IVR - stored in pending calls');
+          } else {
             const company = await prisma.company.findUnique({
-              where: { id: companyId },
+              where: { id: numberInfo.companyId },
               select: { settings: true }
             });
             const timezone =
               (company?.settings as { timezone?: string } | null)?.timezone ?? 'America/New_York';
-            const active = await getActiveCallFlow(prisma, companyId, new Date(), { timezone });
+            const active = await getActiveCallFlow(prisma, numberInfo.companyId, new Date(), {
+              timezone,
+              flowId: numberInfo.callFlowId
+            });
             if (active) {
               const clientState = Buffer.from(
                 JSON.stringify({ ivrFlowId: active.flow.id, ivrRuleId: active.rule.id })
@@ -141,9 +150,6 @@ export const POST: RequestHandler = async ({ request }) => {
               addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });
               console.log('📞 No active IVR rule for this time - stored in pending calls');
             }
-          } else {
-            addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });
-            console.log('📞 Number not assigned to a company - stored in pending calls');
           }
         } else {
           // For outbound calls, we can still auto-answer

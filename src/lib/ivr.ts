@@ -93,10 +93,12 @@ export async function getActiveCallFlow(
 	prisma: PrismaClient,
 	companyId: string,
 	now: Date = new Date(),
-	opts?: { timezone?: string }
+	opts?: { timezone?: string; flowId?: string }
 ): Promise<{ flow: { id: string; title: string; greetingAudioUrl: string | null }; rule: { id: string; ruleTitle: string; promptsAudioUrl: string | null; keyPrompts: unknown; failoverCount: number; failoverDelayMinutes: number; failoverAudioUrl: string | null; hangupAudioUrl: string | null } } | null> {
+	const where: { companyId: string; id?: string } = { companyId };
+	if (opts?.flowId) where.id = opts.flowId;
 	const flows = await prisma.callFlow.findMany({
-		where: { companyId },
+		where,
 		include: { rules: true },
 		orderBy: { updated: 'desc' }
 	});

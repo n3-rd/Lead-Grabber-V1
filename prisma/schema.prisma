@@ -146,32 +146,36 @@ model Company {
 
 // Numbers bought via Telnyx and assigned to a company for dialing, IVR, SMS
 model CompanyPhoneNumber {
-  id                   String   @id @default(cuid())
+  id                   String    @id @default(cuid())
   companyId            String
-  company              Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  phoneNumber          String   // E.164 e.g. +17051234567
-  telnyxPhoneNumberId  String?  // Telnyx phone_number id if needed
-  created              DateTime @default(now())
-  updated              DateTime @updatedAt
+  company              Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  phoneNumber          String    // E.164 e.g. +17051234567
+  telnyxPhoneNumberId  String?   // Telnyx phone_number id if needed
+  callFlowId           String?   // When set, this number uses this IVR flow; when null, no IVR (pending call)
+  callFlow             CallFlow? @relation(fields: [callFlowId], references: [id], onDelete: SetNull)
+  created              DateTime  @default(now())
+  updated              DateTime  @updatedAt
 
   @@unique([phoneNumber])
   @@index([companyId])
+  @@index([callFlowId])
   @@map("company_phone_numbers")
 }
 
 model CallFlow {
-  id                     String         @id @default(cuid())
+  id                     String                 @id @default(cuid())
   companyId              String
-  company                Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company                Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
   title                  String
   greetingAudioUrl       String?
   queueHoldAudioUrl      String?   // hold music when all reps on call
   allUnavailableAudioUrl String?   // when offline/no forwarding
   backupCellAudioUrl     String?   // after attempt 5 rings, no answer
   failoverConfig         Json?     // [{ key, name, durationSec, audioUrl }] for Add Failover keys 4-9
-  created                DateTime       @default(now())
-  updated                DateTime       @updatedAt
+  created                DateTime               @default(now())
+  updated                DateTime               @updatedAt
   rules                  CallFlowRule[]
+  companyPhoneNumbers    CompanyPhoneNumber[]
 
   @@index([companyId])
   @@map("call_flows")

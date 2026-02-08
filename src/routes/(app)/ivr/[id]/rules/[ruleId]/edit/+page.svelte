@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Clock, Pencil, Play } from 'lucide-svelte';
+	import { ArrowLeft, Pencil, Play } from 'lucide-svelte';
+	import TimePicker from '$lib/components/TimePicker.svelte';
+	import AudioPreview from '$lib/components/AudioPreview.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import DialerDialog from '$lib/components/DialerDialog.svelte';
 	import { page } from '$app/stores';
@@ -251,14 +253,8 @@
 							<div class="space-y-2">
 								<div class="font-['Poppins'] text-[22px] font-semibold leading-[26px] text-[#808080]">{day}</div>
 								<div class="space-y-2">
-									<div class="relative">
-										<input type="time" bind:value={schedule[day].start1} class="h-[40px] w-full rounded-[3px] border border-black bg-white px-3 pr-10 font-['Poppins'] text-lg text-[#808080] outline-none" />
-										<Clock class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-									</div>
-									<div class="relative">
-										<input type="time" bind:value={schedule[day].end1} class="h-[40px] w-full rounded-[3px] border border-black bg-white px-3 pr-10 font-['Poppins'] text-lg text-[#808080] outline-none" />
-										<Clock class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-									</div>
+									<TimePicker bind:value={schedule[day].start1} class="w-full" />
+									<TimePicker bind:value={schedule[day].end1} class="w-full" />
 								</div>
 							</div>
 						{/if}
@@ -291,8 +287,8 @@
 						{#if promptsFile}
 							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {promptsFile.name}</p>
 						{:else if rule?.promptsAudioUrl}
-							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {rule.promptsAudioUrl}</p>
-							<audio src={rule.promptsAudioUrl} controls class="mt-2 max-w-full"></audio>
+							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current recording</p>
+							<AudioPreview src={rule.promptsAudioUrl} class="mt-2" />
 						{/if}
 					</div>
 				</div>

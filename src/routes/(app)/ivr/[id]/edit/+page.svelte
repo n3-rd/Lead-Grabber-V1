@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, ChevronDown, Clock, Pencil } from 'lucide-svelte';
+	import { ArrowLeft, ChevronDown, Pencil } from 'lucide-svelte';
 	import DialerDialog from '$lib/components/DialerDialog.svelte';
+	import TimePicker from '$lib/components/TimePicker.svelte';
 
 	let { data }: { data: { flow?: { id: string; title?: string }; flowId?: string } } = $props();
 	const flowId = $derived(data?.flowId ?? data?.flow?.id ?? '');
@@ -208,38 +209,10 @@
 								{day}
 							</div>
 							<div class="space-y-2">
-								<div class="relative">
-									<input
-										type="time"
-										bind:value={schedule[day].start1}
-										class="h-[40px] w-full rounded-[3px] border border-black bg-white px-3 pr-10 font-['Poppins'] text-lg font-light leading-[21px] text-[#808080] outline-none"
-									/>
-									<Clock class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-								</div>
-								<div class="relative">
-									<input
-										type="time"
-										bind:value={schedule[day].end1}
-										class="h-[40px] w-full rounded-[3px] border border-black bg-white px-3 pr-10 font-['Poppins'] text-lg font-light leading-[21px] text-[#808080] outline-none"
-									/>
-									<Clock class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-								</div>
-								<div class="relative">
-									<input
-										type="time"
-										bind:value={schedule[day].start2}
-										class="h-[40px] w-full rounded-[3px] border border-black bg-white px-3 pr-10 font-['Poppins'] text-lg font-light leading-[21px] text-[#808080] outline-none"
-									/>
-									<Clock class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-								</div>
-								<div class="relative">
-									<input
-										type="time"
-										bind:value={schedule[day].end2}
-										class="h-[40px] w-full rounded-[3px] border border-black bg-white px-3 pr-10 font-['Poppins'] text-lg font-light leading-[21px] text-[#808080] outline-none"
-									/>
-									<Clock class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-								</div>
+								<TimePicker bind:value={schedule[day].start1} class="w-full" />
+								<TimePicker bind:value={schedule[day].end1} class="w-full" />
+								<TimePicker bind:value={schedule[day].start2} class="w-full" />
+								<TimePicker bind:value={schedule[day].end2} class="w-full" />
 							</div>
 						</div>
 					{/each}

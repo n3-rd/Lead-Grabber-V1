@@ -14,13 +14,22 @@ export async function getCompanyIdByPhoneNumber(
 	prisma: PrismaClient,
 	phoneNumber: string
 ): Promise<string | null> {
+	const r = await getCompanyAndFlowByPhoneNumber(prisma, phoneNumber);
+	return r?.companyId ?? null;
+}
+
+/** Get company and IVR flow for this number. When callFlowId is null, number is not used for IVR (pending call). */
+export async function getCompanyAndFlowByPhoneNumber(
+	prisma: PrismaClient,
+	phoneNumber: string
+): Promise<{ companyId: string; callFlowId: string | null } | null> {
 	const e164 = toE164(phoneNumber);
 	if (!e164) return null;
 	const row = await prisma.companyPhoneNumber.findUnique({
 		where: { phoneNumber: e164 },
-		select: { companyId: true }
+		select: { companyId: true, callFlowId: true }
 	});
-	return row?.companyId ?? null;
+	return row ? { companyId: row.companyId, callFlowId: row.callFlowId } : null;
 }
 
 /** Get first number assigned to company (for outbound dial/SMS). */

@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { ChevronDown, Search, Pencil, Trash2, Phone, MessageSquare, Mail, Image as ImageIcon, Play, FileText, Settings, User, Plus, Download, Copy } from 'lucide-svelte';
+	import { ChevronDown, Search, Trash2, Phone, MessageSquare, Plus, Download, Copy } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { toast } from 'svelte-sonner';
+	import * as Dialog from '$lib/components/ui/dialog';
 
 	let activeTab = $state<'myNumber' | 'messaging' | 'voice'>('myNumber');
 	let messagingSubTab = $state<'numbers' | 'orders'>('numbers');
@@ -11,9 +12,14 @@
 	let selectedNumbers = $state<Set<string>>(new Set());
 	let numbers = $state<any[]>([]);
 	let verifiedNumbers = $state<any[]>([]);
-	let companyNumbers = $state<{ id: string; phoneNumber: string }[]>([]);
+	type CompanyNumber = { id: string; phoneNumber: string; callFlowId?: string | null; callFlow?: { id: string; title: string } | null };
+	let companyNumbers = $state<CompanyNumber[]>([]);
+	let ivrFlows = $state<{ id: string; title: string }[]>([]);
 	let numberOrders = $state<any[]>([]);
 	let isLoading = $state(false);
+	let updatingFlowId = $state<string | null>(null);
+	let deleteTarget = $state<{ id: string; number: string } | null>(null);
+	let isDeleting = $state(false);
 
 	// Mock data for numbers (fallback)
 	const mockNumbers = [
@@ -69,15 +75,18 @@
 	async function loadNumbers() {
 		isLoading = true;
 		try {
-			const [listRes, companyRes] = await Promise.all([
+			const [listRes, companyRes, flowsRes] = await Promise.all([
 				fetch(`/api/telnyx/numbers/list?${new URLSearchParams(searchQuery ? { search: searchQuery } : {}).toString()}`),
-				fetch('/api/company-numbers')
+				fetch('/api/company-numbers'),
+				fetch('/api/ivr/flows')
 			]);
 			const listResult = await listRes.json();
 			const companyResult = await companyRes.json();
+			const flowsResult = await flowsRes.json();
 			if (listResult.success) numbers = listResult.numbers;
 			else toast.error(listResult.error || 'Failed to load numbers');
 			if (companyResult.success) companyNumbers = companyResult.numbers;
+			if (flowsResult.flows) ivrFlows = flowsResult.flows.map((f: { id: string; title: string }) => ({ id: f.id, title: f.title }));
 		} catch (error) {
 			console.error('Error loading numbers:', error);
 			toast.error('Error loading numbers');
@@ -86,43 +95,31 @@
 		}
 	}
 
-	function isAssigned(phoneNumber: string): { id: string } | null {
+	function isAssigned(phoneNumber: string): CompanyNumber | null {
 		const n = phoneNumber.replace(/\D/g, '');
 		const match = companyNumbers.find((c) => (c.phoneNumber || '').replace(/\D/g, '') === n);
-		return match ? { id: match.id } : null;
+		return match ?? null;
 	}
 
-	async function handleAssign(num: { number: string; id: string }) {
+	async function handleIvrFlowChange(cpId: string, callFlowId: string | null) {
+		updatingFlowId = cpId;
 		try {
-			const res = await fetch('/api/company-numbers', {
-				method: 'POST',
+			const res = await fetch(`/api/company-numbers/${cpId}`, {
+				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ phoneNumber: num.number, telnyxPhoneNumberId: num.id })
+				body: JSON.stringify({ callFlowId: callFlowId || null })
 			});
 			const result = await res.json();
-			if (result.success) {
-				toast.success('Number assigned to your company');
-				companyNumbers = [...companyNumbers, { id: result.number.id, phoneNumber: result.number.phoneNumber }];
+			if (result.success && result.number) {
+				companyNumbers = companyNumbers.map((c) => (c.id === cpId ? result.number : c));
+				toast.success(result.number.callFlowId ? 'IVR flow assigned' : 'IVR removed from number');
 			} else {
-				toast.error(result.error || 'Failed to assign');
+				toast.error(result.error || 'Failed to update IVR');
 			}
 		} catch (e) {
-			toast.error('Failed to assign number');
-		}
-	}
-
-	async function handleUnassign(cpId: string) {
-		try {
-			const res = await fetch(`/api/company-numbers/${cpId}`, { method: 'DELETE' });
-			const result = await res.json();
-			if (result.success) {
-				toast.success('Number unassigned');
-				companyNumbers = companyNumbers.filter((c) => c.id !== cpId);
-			} else {
-				toast.error(result.error || 'Failed to unassign');
-			}
-		} catch (e) {
-			toast.error('Failed to unassign number');
+			toast.error('Failed to update IVR flow');
+		} finally {
+			updatingFlowId = null;
 		}
 	}
 
@@ -193,10 +190,7 @@
 	});
 
 	async function handleDelete(numberId: string, phoneNumber: string) {
-		if (!confirm(`Are you sure you want to delete ${phoneNumber}?`)) {
-			return;
-		}
-
+		isDeleting = true;
 		try {
 			const response = await fetch(`/api/telnyx/numbers/${numberId}`, {
 				method: 'DELETE'
@@ -205,6 +199,7 @@
 
 			if (result.success) {
 				toast.success('Number deleted successfully');
+				deleteTarget = null;
 				await loadNumbers();
 			} else {
 				toast.error(result.error || 'Failed to delete number');
@@ -212,13 +207,9 @@
 		} catch (error) {
 			console.error('Error deleting number:', error);
 			toast.error('Error deleting number');
+		} finally {
+			isDeleting = false;
 		}
-	}
-
-	function handleEdit(number: any) {
-		// TODO: Open edit modal/dialog
-		console.log('Edit:', number);
-		toast.info('Edit functionality coming soon');
 	}
 </script>
 
@@ -612,7 +603,7 @@
 								Tags
 							</th>
 							<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
-								Company
+								IVR Flow
 							</th>
 							<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
 								Action
@@ -676,43 +667,31 @@
 										<Plus class="h-4 w-4" />
 									</button>
 								</td>
-								<td class="py-3 font-['Poppins'] text-[14px] text-[#808080]">
+								<td class="py-3">
 									{#if assigned}
-										<span class="text-green-600">Assigned</span>
-										<button
-											type="button"
-											onclick={() => handleUnassign(assigned.id)}
-											class="ml-2 text-xs text-[#577AB7] hover:underline"
+										<select
+											class="min-w-[140px] rounded border border-[#969696] bg-white px-2 py-1 font-['Poppins'] text-sm text-[#808080] outline-none disabled:opacity-50"
+											disabled={updatingFlowId === assigned.id}
+											value={assigned.callFlowId ?? ''}
+											onchange={(e) => handleIvrFlowChange(assigned.id, (e.currentTarget.value || null) as string | null)}
 										>
-											Unassign
-										</button>
+											<option value="">No IVR</option>
+											{#each ivrFlows as flow}
+												<option value={flow.id}>{flow.title}</option>
+											{/each}
+										</select>
 									{:else}
-										<button
-											type="button"
-											onclick={() => handleAssign(num)}
-											class="rounded bg-[#577AB7] px-2 py-1 text-xs text-white hover:bg-[#4a6ba5]"
-										>
-											Assign to company
-										</button>
+										<span class="text-[#B6B6B6]">—</span>
 									{/if}
 								</td>
 								<td class="py-3">
-									<div class="flex items-center gap-2">
-										<button
-											onclick={() => handleEdit(num)}
-											class="text-[#666666] hover:text-[#577AB7] transition-colors"
-											aria-label="Edit"
-										>
-											<Pencil class="h-4 w-4" />
-										</button>
-										<button
-											onclick={() => handleDelete(num.id, num.number)}
-											class="text-[#666666] hover:text-red-500 transition-colors"
-											aria-label="Delete"
-										>
-											<Trash2 class="h-4 w-4" />
-										</button>
-									</div>
+									<button
+										onclick={() => (deleteTarget = { id: num.id, number: num.number })}
+										class="text-[#666666] hover:text-red-500 transition-colors"
+										aria-label="Delete"
+									>
+										<Trash2 class="h-4 w-4" />
+									</button>
 								</td>
 							</tr>
 						{/each}
@@ -724,3 +703,33 @@
 		{/if}
 	</div>
 </div>
+
+<!-- Delete number danger dialog -->
+<Dialog.Root open={deleteTarget !== null} onOpenChange={(open) => !open && (deleteTarget = null)}>
+	<Dialog.Content class="sm:max-w-[425px]">
+		<Dialog.Header>
+			<Dialog.Title class="font-['Poppins'] text-lg font-semibold text-red-600">Delete phone number?</Dialog.Title>
+			<Dialog.Description class="font-['Poppins'] text-sm text-[#666]">
+				You are about to permanently delete <strong>{deleteTarget?.number ?? ''}</strong>. This cannot be undone.
+				You will need to pay for a new number if you want to use this number again; the deleted number cannot be recovered.
+			</Dialog.Description>
+		</Dialog.Header>
+		<Dialog.Footer class="flex gap-2 justify-end pt-4">
+			<button
+				type="button"
+				onclick={() => (deleteTarget = null)}
+				class="rounded-[4px] border border-[#949494] bg-white px-4 py-2 font-['Poppins'] text-sm text-[#757575] hover:bg-gray-50"
+			>
+				Cancel
+			</button>
+			<button
+				type="button"
+				disabled={isDeleting}
+				onclick={() => deleteTarget && handleDelete(deleteTarget.id, deleteTarget.number)}
+				class="rounded-[4px] bg-red-600 px-4 py-2 font-['Poppins'] text-sm text-white hover:bg-red-700 disabled:opacity-50"
+			>
+				{isDeleting ? 'Deleting…' : 'Delete number'}
+			</button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>

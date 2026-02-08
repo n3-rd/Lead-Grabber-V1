@@ -56,6 +56,27 @@
 		return data.url ?? null;
 	}
 
+	function timeToMinutes(s: string): number | null {
+		if (!s?.trim() || s === '-- : --') return null;
+		const parts = s.trim().split(':');
+		const h = parseInt(parts[0], 10);
+		const m = parseInt(parts[1] ?? '0', 10);
+		if (Number.isNaN(h) || Number.isNaN(m)) return null;
+		return h * 60 + m;
+	}
+
+	function validateSchedule(): string | null {
+		for (const d of days) {
+			const s = schedule[d];
+			if (!s?.start1?.trim() || s.start1 === '-- : --') continue;
+			const startM = timeToMinutes(s.start1);
+			const endRaw = s.end1?.trim() ? s.end1 : s.start1;
+			const endM = timeToMinutes(endRaw);
+			if (startM != null && endM != null && endM <= startM) return `${d}: Close must be after Open.`;
+		}
+		return null;
+	}
+
 	function scheduleToPayload(): Record<string, { start: string; end: string } | null> {
 		const out: Record<string, { start: string; end: string } | null> = {};
 		for (const d of days) {
@@ -99,6 +120,8 @@
 		fieldErrors = {};
 		const err: Record<string, string> = {};
 		if (!callFlowRuleTitle.trim()) err.callFlowRuleTitle = 'Rule title is required';
+		const scheduleErr = validateSchedule();
+		if (scheduleErr) err.schedule = scheduleErr;
 		if (!flowId) {
 			err.flow = 'Missing flow. Go back and try again.';
 		} else {
@@ -211,8 +234,11 @@
 					<SectionHelp text="When this rule is active: set Open and Close for each day. Leave empty for closed." />
 				</div>
 				<p class="font-['Poppins'] text-sm text-[#808080]">
-					When this rule is active: set Open and Close for each day. Leave empty for closed.
+					When this rule is active: set Open and Close for each day. Leave empty for closed. Close must be after Open.
 				</p>
+				{#if fieldErrors.schedule}
+					<p class="font-['Poppins'] text-sm text-red-600">{fieldErrors.schedule}</p>
+				{/if}
 				<div class="grid grid-cols-7 gap-4">
 					{#each days as day}
 						<div class="space-y-2">

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { ArrowLeft } from 'lucide-svelte';
+	import AudioUpload from '$lib/components/AudioUpload.svelte';
+	import SectionHelp from '$lib/components/SectionHelp.svelte';
 
 	type FlowData = {
 		id?: string;
@@ -21,6 +23,7 @@
 	let backupCellFile = $state<File | null>(null);
 	let saving = $state(false);
 	let error = $state('');
+	let fieldErrors = $state<Record<string, string>>({});
 
 	$effect(() => {
 		const f = data?.flow;
@@ -43,21 +46,12 @@
 		goto(`/ivr/${flowId}`);
 	}
 
-	function handleFileUpload(event: Event, type: string) {
-		const target = event.target as HTMLInputElement;
-		const file = target.files?.[0];
-		if (file) {
-			if (type === 'greeting') greetingFile = file;
-			else if (type === 'allOnCall') allOnCallFile = file;
-			else if (type === 'unavailable') unavailableFile = file;
-			else if (type === 'backupCell') backupCellFile = file;
-		}
-	}
-
 	async function handleSave() {
 		error = '';
+		fieldErrors = {};
 		if (!callFlowTitle.trim()) {
-			error = 'Call Flow Title is required';
+			fieldErrors = { callFlowTitle: 'Call Flow Title is required' };
+			error = fieldErrors.callFlowTitle;
 			return;
 		}
 		saving = true;
@@ -99,91 +93,42 @@
 	<div class="max-h-[calc(100vh-120px)] overflow-y-auto rounded-lg bg-white p-6">
 		<div class="space-y-8">
 			<div class="space-y-2">
-				<label for="edit-flow-title" class="block font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">Call Flow Title:</label>
+				<div class="flex items-center gap-2">
+					<label for="edit-flow-title" class="block font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">Call Flow Title:</label>
+					<SectionHelp text="A name for this call flow so you can identify it later." />
+				</div>
 				<input
 					id="edit-flow-title"
 					type="text"
 					bind:value={callFlowTitle}
 					placeholder="Enter your Call Flow Title"
-					class="h-[56px] w-full rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-base font-medium leading-[19px] text-[#808080] outline-none"
+					class="h-[56px] w-full rounded-[2px] border bg-white px-3 font-['Poppins'] text-base font-medium leading-[19px] text-[#808080] outline-none {fieldErrors.callFlowTitle ? 'border-red-500' : 'border-[#969696]'}"
 				/>
+				{#if fieldErrors.callFlowTitle}
+					<p class="font-['Poppins'] text-sm text-red-600">{fieldErrors.callFlowTitle}</p>
+				{/if}
+			</div>
+			<AudioUpload label="Greeting:" bind:file={greetingFile} existingUrl={flow?.greetingAudioUrl ?? null} />
+			<div class="space-y-2">
+				<div class="flex items-center gap-2">
+					<p class="font-['Poppins'] text-lg font-semibold text-[#808080]">All representatives on call (hold music):</p>
+					<SectionHelp text="Hold music or message played while the caller waits in the queue." />
+				</div>
+				<AudioUpload bind:file={allOnCallFile} existingUrl={flow?.queueHoldAudioUrl ?? null} />
 			</div>
 			<div class="space-y-2">
-				<span class="block font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">Greeting:</span>
-				<div class="rounded-[2px] border border-[#969696] bg-white p-4">
-					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<p class="mb-2 font-['Poppins'] text-base text-[#969696]">Drag a file to upload or</p>
-						<label class="inline-block cursor-pointer">
-							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'greeting')} class="hidden" />
-							<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white">
-								Browse...
-							</span>
-						</label>
-						{#if greetingFile}
-							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {greetingFile.name}</p>
-						{:else if flow?.greetingAudioUrl}
-							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {flow.greetingAudioUrl}</p>
-							<audio src={flow.greetingAudioUrl} controls class="mt-2 max-w-full"></audio>
-						{/if}
-					</div>
+				<div class="flex items-center gap-2">
+					<p class="font-['Poppins'] text-lg font-semibold text-[#808080]">All unavailable:</p>
+					<SectionHelp text="Message played when no one can take the call." />
 				</div>
+				<AudioUpload bind:file={unavailableFile} existingUrl={flow?.allUnavailableAudioUrl ?? null} />
 			</div>
 			<div class="space-y-2">
-				<p class="font-['Poppins'] text-lg font-semibold text-[#808080]">All representatives on call (hold music):</p>
-				<div class="rounded border border-[#808080] bg-white p-4">
-					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<label class="inline-block cursor-pointer">
-							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'allOnCall')} class="hidden" />
-							<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white">
-								Browse...
-							</span>
-						</label>
-						{#if allOnCallFile}
-							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {allOnCallFile.name}</p>
-						{:else if flow?.queueHoldAudioUrl}
-							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {flow.queueHoldAudioUrl}</p>
-							<audio src={flow.queueHoldAudioUrl} controls class="mt-2 max-w-full"></audio>
-						{/if}
-					</div>
+				<div class="flex items-center gap-2">
+					<p class="font-['Poppins'] text-lg font-semibold text-[#808080]">Backup cell audio:</p>
+					<SectionHelp text="Audio played when the system is trying to reach your backup number." />
 				</div>
-			</div>
-			<div class="space-y-2">
-				<p class="font-['Poppins'] text-lg font-semibold text-[#808080]">All unavailable:</p>
-				<div class="rounded border border-[#808080] bg-white p-4">
-					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<label class="inline-block cursor-pointer">
-							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'unavailable')} class="hidden" />
-							<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white">
-								Browse...
-							</span>
-						</label>
-						{#if unavailableFile}
-							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {unavailableFile.name}</p>
-						{:else if flow?.allUnavailableAudioUrl}
-							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {flow.allUnavailableAudioUrl}</p>
-							<audio src={flow.allUnavailableAudioUrl} controls class="mt-2 max-w-full"></audio>
-						{/if}
-					</div>
-				</div>
-			</div>
-			<div class="space-y-2">
-				<p class="font-['Poppins'] text-lg font-semibold text-[#808080]">Backup cell audio:</p>
-				<div class="rounded border border-[#808080] bg-white p-4">
-					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<label class="inline-block cursor-pointer">
-							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'backupCell')} class="hidden" />
-							<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white">
-								Browse...
-							</span>
-						</label>
-						{#if backupCellFile}
-							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {backupCellFile.name}</p>
-						{:else if flow?.backupCellAudioUrl}
-							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {flow.backupCellAudioUrl}</p>
-							<audio src={flow.backupCellAudioUrl} controls class="mt-2 max-w-full"></audio>
-						{/if}
-					</div>
-				</div>
+				<AudioUpload bind:file={backupCellFile} existingUrl={flow?.backupCellAudioUrl ?? null} />
 			</div>
 			{#if error}
 				<p class="font-['Poppins'] text-base text-red-600">{error}</p>

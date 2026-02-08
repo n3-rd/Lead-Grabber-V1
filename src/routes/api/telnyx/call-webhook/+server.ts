@@ -516,27 +516,28 @@ export const POST: RequestHandler = async ({ request }) => {
       }
 
       case 'call.dtmf.received': {
-        // Handle * as "back" during transfer audio playback
+        // Handle back/repeat digit during transfer audio playback (use rule's backDigit, not hardcoded *)
         const dtmfDigit = (payload?.digit as string) ?? '';
-        if (dtmfDigit === '*' && payload?.client_state) {
+        if (payload?.client_state) {
           try {
             const decoded = JSON.parse(
               Buffer.from(payload.client_state as string, 'base64').toString('utf8')
             );
-            // If we're in a transfer playback, stop it and return to menu
+            // If we're in a transfer playback, check if pressed digit is this rule's back digit
             if (decoded.afterPlaybackTransfer && decoded.ivrFlowId && decoded.ivrRuleId) {
-              // Stop current playback
-              await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/playback_stop`, {
-                method: 'POST',
-                headers: TELNYX_HEADERS,
-                body: JSON.stringify({})
-              });
-              // Restart gather with prompts
               const flow = await prisma.callFlow.findUnique({
                 where: { id: decoded.ivrFlowId },
                 include: { rules: { where: { id: decoded.ivrRuleId } } }
               });
               const rule = flow?.rules?.[0];
+              const backDigit = (rule as { backDigit?: string | null })?.backDigit?.trim();
+              if (!backDigit || dtmfDigit !== backDigit) break;
+              // Stop current playback and return to menu
+              await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/playback_stop`, {
+                method: 'POST',
+                headers: TELNYX_HEADERS,
+                body: JSON.stringify({})
+              });
               if (rule?.promptsAudioUrl || playPublic) {
                 const baseUrl = PUBLIC_BASE_URL || 'https://example.com';
                 const promptsUrl = resolveAudioUrl(rule?.promptsAudioUrl, baseUrl);
@@ -555,7 +556,7 @@ export const POST: RequestHandler = async ({ request }) => {
                     client_state: nextState
                   })
                 });
-                console.log('📞 IVR * pressed during transfer, returning to menu');
+                console.log('📞 IVR back digit pressed during transfer, returning to menu');
               }
             }
           } catch (_) { }

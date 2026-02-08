@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, ChevronDown, Check, X } from 'lucide-svelte';
+	import { ArrowLeft, ChevronDown } from 'lucide-svelte';
 	import DialerDialog from '$lib/components/DialerDialog.svelte';
-	import AudioPreview from '$lib/components/AudioPreview.svelte';
+	import AudioUpload from '$lib/components/AudioUpload.svelte';
+	import SectionHelp from '$lib/components/SectionHelp.svelte';
 
 	let callFlowTitle = $state('');
 	let greetingFile = $state<File | null>(null);
@@ -15,47 +16,11 @@
 	let failoverFile = $state<File | null>(null);
 	let saving = $state(false);
 	let error = $state('');
+	let fieldErrors = $state<Record<string, string>>({});
 
 	let allOnCallFile = $state<File | null>(null);
 	let unavailableFile = $state<File | null>(null);
 	let backupCellFile = $state<File | null>(null);
-
-	// Preview URLs for playback (revoked when file changes)
-	let greetingPreviewUrl = $state<string | null>(null);
-	let allOnCallPreviewUrl = $state<string | null>(null);
-	let unavailablePreviewUrl = $state<string | null>(null);
-	let failoverPreviewUrl = $state<string | null>(null);
-	let backupCellPreviewUrl = $state<string | null>(null);
-
-	function formatSize(bytes: number): string {
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-	}
-
-	function setFileWithPreview(
-		file: File | null,
-		setFile: (f: File | null) => void,
-		setPreview: (u: string | null) => void,
-		currentPreview: string | null
-	) {
-		if (currentPreview) URL.revokeObjectURL(currentPreview);
-		setFile(file);
-		setPreview(file ? URL.createObjectURL(file) : null);
-	}
-
-	function clearFile(
-		type: 'greeting' | 'allOnCall' | 'unavailable' | 'failover' | 'backupCell',
-		inputId: string
-	) {
-		if (type === 'greeting') setFileWithPreview(null, (f) => (greetingFile = f), (u) => (greetingPreviewUrl = u), greetingPreviewUrl);
-		else if (type === 'allOnCall') setFileWithPreview(null, (f) => (allOnCallFile = f), (u) => (allOnCallPreviewUrl = u), allOnCallPreviewUrl);
-		else if (type === 'unavailable') setFileWithPreview(null, (f) => (unavailableFile = f), (u) => (unavailablePreviewUrl = u), unavailablePreviewUrl);
-		else if (type === 'failover') setFileWithPreview(null, (f) => (failoverFile = f), (u) => (failoverPreviewUrl = u), failoverPreviewUrl);
-		else if (type === 'backupCell') setFileWithPreview(null, (f) => (backupCellFile = f), (u) => (backupCellPreviewUrl = u), backupCellPreviewUrl);
-		const el = document.getElementById(inputId) as HTMLInputElement | null;
-		if (el) el.value = '';
-	}
 
 	async function uploadFile(file: File, type: string): Promise<string | null> {
 		const form = new FormData();
@@ -82,24 +47,15 @@
 		goto('/ivr');
 	}
 
-	function handleFileUpload(
-		event: Event,
-		type: 'greeting' | 'allOnCall' | 'unavailable' | 'failover' | 'backupCell'
-	) {
-		const target = event.target as HTMLInputElement;
-		const file = target.files?.[0];
-		if (!file) return;
-		if (type === 'greeting') setFileWithPreview(file, (f) => (greetingFile = f), (u) => (greetingPreviewUrl = u), greetingPreviewUrl);
-		else if (type === 'allOnCall') setFileWithPreview(file, (f) => (allOnCallFile = f), (u) => (allOnCallPreviewUrl = u), allOnCallPreviewUrl);
-		else if (type === 'unavailable') setFileWithPreview(file, (f) => (unavailableFile = f), (u) => (unavailablePreviewUrl = u), unavailablePreviewUrl);
-		else if (type === 'failover') setFileWithPreview(file, (f) => (failoverFile = f), (u) => (failoverPreviewUrl = u), failoverPreviewUrl);
-		else if (type === 'backupCell') setFileWithPreview(file, (f) => (backupCellFile = f), (u) => (backupCellPreviewUrl = u), backupCellPreviewUrl);
-	}
-
 	async function handleSave() {
 		error = '';
-		if (!callFlowTitle.trim()) {
-			error = 'Call Flow Title is required';
+		fieldErrors = {};
+		const err: Record<string, string> = {};
+		if (!callFlowTitle.trim()) err.callFlowTitle = 'Call Flow Title is required';
+		if (addFailover && !failoverFile) err.failover = 'Please upload failover audio when Add Failover is enabled.';
+		if (Object.keys(err).length > 0) {
+			fieldErrors = err;
+			error = Object.values(err)[0];
 			return;
 		}
 		saving = true;
@@ -168,96 +124,34 @@
 		<div class="space-y-8">
 			<!-- Call Flow Title -->
 			<div class="space-y-2">
-				<label class="block font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
-					Call Flow Title:
-				</label>
+				<div class="flex items-center gap-2">
+					<label class="block font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
+						Call Flow Title:
+					</label>
+					<SectionHelp text="A name for this call flow so you can identify it later (e.g. Main Line, Support)." />
+				</div>
 				<input
 					type="text"
 					bind:value={callFlowTitle}
 					placeholder="Enter your Call Flow Title"
-					class="h-[56px] w-full rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-base font-medium leading-[19px] text-[rgba(128,128,128,0.54)] outline-none placeholder:text-[rgba(128,128,128,0.54)]"
+					class="h-[56px] w-full rounded-[2px] border bg-white px-3 font-['Poppins'] text-base font-medium leading-[19px] text-[rgba(128,128,128,0.54)] outline-none placeholder:text-[rgba(128,128,128,0.54)] {fieldErrors.callFlowTitle ? 'border-red-500' : 'border-[#969696]'}"
 				/>
+				{#if fieldErrors.callFlowTitle}
+					<p class="font-['Poppins'] text-sm text-red-600">{fieldErrors.callFlowTitle}</p>
+				{/if}
 			</div>
 
 			<!-- Greeting -->
-			<div class="space-y-2">
-				<label class="block font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
-					Greeting:
-				</label>
-				<div class="rounded-[2px] border border-[#969696] bg-white p-4">
-					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						{#if greetingFile}
-							<div class="space-y-3">
-								<div class="flex items-center justify-center gap-2 font-['Poppins'] text-[#577AB7]">
-									<Check class="h-5 w-5 shrink-0" />
-									<span class="font-medium">{greetingFile.name}</span>
-									<span class="text-sm text-[#808080]">({formatSize(greetingFile.size)})</span>
-								</div>
-								{#if greetingPreviewUrl}
-									<AudioPreview src={greetingPreviewUrl} />
-								{/if}
-								<div class="flex items-center justify-center gap-2">
-									<label class="inline-block cursor-pointer">
-										<input
-											id="input-greeting"
-											type="file"
-											accept="audio/*"
-											onchange={(e) => handleFileUpload(e, 'greeting')}
-											class="hidden"
-										/>
-										<span
-											class="inline-block h-[32px] rounded border border-[#577AB7] bg-white px-3 font-['Poppins'] text-sm text-[#577AB7]"
-											role="button"
-											tabindex="0"
-											onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}
-										>
-											Change
-										</span>
-									</label>
-									<button
-										type="button"
-										onclick={() => clearFile('greeting', 'input-greeting')}
-										class="inline-flex h-[32px] items-center gap-1 rounded border border-red-400 bg-white px-3 font-['Poppins'] text-sm text-red-600 hover:bg-red-50"
-									>
-										<X class="h-4 w-4" />
-										Clear
-									</button>
-								</div>
-							</div>
-						{:else}
-							<p class="mb-2 font-['Poppins'] text-base font-normal leading-[19px] text-[#969696]">
-								Drag a file to upload
-							</p>
-							<span class="font-['Poppins'] text-[13px] font-normal leading-[15px] text-[#969696]">or</span>
-							<div class="mt-4">
-								<label class="inline-block cursor-pointer">
-									<input
-										id="input-greeting"
-										type="file"
-										accept="audio/*"
-										onchange={(e) => handleFileUpload(e, 'greeting')}
-										class="hidden"
-									/>
-									<span
-										class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[19px] text-white"
-										role="button"
-										tabindex="0"
-										onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}
-									>
-										Browse...
-									</span>
-								</label>
-							</div>
-						{/if}
-					</div>
-				</div>
-			</div>
+			<AudioUpload label="Greeting:" bind:file={greetingFile} />
 
 			<!-- Call Flow / Schedule Rule -->
 			<div class="space-y-2">
-				<label class="block font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
-					Call Flow / Schedule Rule:
-				</label>
+				<div class="flex items-center gap-2">
+					<label class="block font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
+						Call Flow / Schedule Rule:
+					</label>
+					<SectionHelp text="Choose No Rules for a simple flow, or Create New Set Rule to define when this flow is active (e.g. business hours)." />
+				</div>
 				<div class="relative">
 					<select
 						bind:value={scheduleRule}
@@ -273,90 +167,33 @@
 
 			<!-- General Call Flow Rules -->
 			<div class="space-y-6">
-				<h2 class="font-['Poppins'] text-2xl font-semibold leading-[28px] text-[#808080]">
-					General Call Flow Rules
-				</h2>
+				<div class="flex items-center gap-2">
+					<h2 class="font-['Poppins'] text-2xl font-semibold leading-[28px] text-[#808080]">
+						General Call Flow Rules
+					</h2>
+					<SectionHelp text="Audio played in different scenarios: when all reps are on a call, when all are unavailable, and when forwarding to a backup number." />
+				</div>
 
 				<!-- All representatives are currently on call -->
 				<div class="space-y-2">
-					<p class="font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
-						All representatives are currently on call.
-					</p>
-					<div class="rounded border border-[#808080] bg-white p-4">
-						<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-							{#if allOnCallFile}
-								<div class="space-y-3">
-									<div class="flex items-center justify-center gap-2 font-['Poppins'] text-[#577AB7]">
-										<Check class="h-5 w-5 shrink-0" />
-										<span class="font-medium">{allOnCallFile.name}</span>
-										<span class="text-sm text-[#808080]">({formatSize(allOnCallFile.size)})</span>
-									</div>
-									{#if allOnCallPreviewUrl}
-										<AudioPreview src={allOnCallPreviewUrl} />
-									{/if}
-									<div class="flex items-center justify-center gap-2">
-										<label class="inline-block cursor-pointer">
-											<input id="input-allOnCall" type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'allOnCall')} class="hidden" />
-											<span class="inline-block h-[32px] rounded border border-[#577AB7] bg-white px-3 font-['Poppins'] text-sm text-[#577AB7]" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}>Change</span>
-										</label>
-										<button type="button" onclick={() => clearFile('allOnCall', 'input-allOnCall')} class="inline-flex h-[32px] items-center gap-1 rounded border border-red-400 bg-white px-3 font-['Poppins'] text-sm text-red-600 hover:bg-red-50">
-											<X class="h-4 w-4" /> Clear
-										</button>
-									</div>
-								</div>
-							{:else}
-								<p class="mb-2 font-['Poppins'] text-base font-normal leading-[19px] text-[#969696]">Drag a file to upload</p>
-								<span class="font-['Poppins'] text-[13px] text-[#969696]">or</span>
-								<div class="mt-4">
-									<label class="inline-block cursor-pointer">
-										<input id="input-allOnCall" type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'allOnCall')} class="hidden" />
-										<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[19px] text-white" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}>Browse...</span>
-									</label>
-								</div>
-							{/if}
-						</div>
+					<div class="flex items-center gap-2">
+						<p class="font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
+							All representatives are currently on call.
+						</p>
+						<SectionHelp text="Hold music or message played to the caller while they wait in the queue." />
 					</div>
+					<AudioUpload bind:file={allOnCallFile} />
 				</div>
 
 				<!-- All representatives are currently unavailable -->
 				<div class="space-y-2">
-					<p class="font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
-						All representatives are currently unavailable (offline or no active forwarding number).
-					</p>
-					<div class="rounded border border-[#808080] bg-white p-4">
-						<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-							{#if unavailableFile}
-								<div class="space-y-3">
-									<div class="flex items-center justify-center gap-2 font-['Poppins'] text-[#577AB7]">
-										<Check class="h-5 w-5 shrink-0" />
-										<span class="font-medium">{unavailableFile.name}</span>
-										<span class="text-sm text-[#808080]">({formatSize(unavailableFile.size)})</span>
-									</div>
-									{#if unavailablePreviewUrl}
-										<AudioPreview src={unavailablePreviewUrl} />
-									{/if}
-									<div class="flex items-center justify-center gap-2">
-										<label class="inline-block cursor-pointer">
-											<input id="input-unavailable" type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'unavailable')} class="hidden" />
-											<span class="inline-block h-[32px] rounded border border-[#577AB7] bg-white px-3 font-['Poppins'] text-sm text-[#577AB7]" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}>Change</span>
-										</label>
-										<button type="button" onclick={() => clearFile('unavailable', 'input-unavailable')} class="inline-flex h-[32px] items-center gap-1 rounded border border-red-400 bg-white px-3 font-['Poppins'] text-sm text-red-600 hover:bg-red-50">
-											<X class="h-4 w-4" /> Clear
-										</button>
-									</div>
-								</div>
-							{:else}
-								<p class="mb-2 font-['Poppins'] text-base font-normal leading-[19px] text-[#969696]">Drag a file to upload</p>
-								<span class="font-['Poppins'] text-[13px] text-[#969696]">or</span>
-								<div class="mt-4">
-									<label class="inline-block cursor-pointer">
-										<input id="input-unavailable" type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'unavailable')} class="hidden" />
-										<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[19px] text-white" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}>Browse...</span>
-									</label>
-								</div>
-							{/if}
-						</div>
+					<div class="flex items-center gap-2">
+						<p class="font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
+							All representatives are currently unavailable (offline or no active forwarding number).
+						</p>
+						<SectionHelp text="Message played when no one can take the call (e.g. “We’re closed” or “Leave a message”)." />
 					</div>
+					<AudioUpload bind:file={unavailableFile} />
 				</div>
 
 				<!-- Add Failover -->
@@ -370,10 +207,11 @@
 						<label class="font-['Poppins'] text-lg font-semibold leading-[26px] text-[#808080]">
 							Add Failover
 						</label>
+						<SectionHelp text="Optional: let callers press a key (e.g. 4) to leave a voicemail or hear a message when no one is available." />
 					</div>
 
 					{#if addFailover}
-						<div class="space-y-4 rounded border border-[#808080] bg-white p-4">
+						<div class="space-y-4 rounded border bg-white p-4 {fieldErrors.failover ? 'border-red-500' : 'border-[#808080]'}">
 							<div class="grid grid-cols-3 gap-4">
 								<div class="space-y-2">
 									<label class="block font-['Poppins'] text-lg font-semibold leading-[26px] text-[#808080]">
@@ -420,40 +258,10 @@
 								<p class="mb-2 font-['Poppins'] text-lg font-normal leading-[21px] text-[#808080]">
 									Upload your audio file below.
 								</p>
-								<div class="rounded border border-[#808080] bg-white p-4">
-									<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-										{#if failoverFile}
-											<div class="space-y-3">
-												<div class="flex items-center justify-center gap-2 font-['Poppins'] text-[#577AB7]">
-													<Check class="h-5 w-5 shrink-0" />
-													<span class="font-medium">{failoverFile.name}</span>
-													<span class="text-sm text-[#808080]">({formatSize(failoverFile.size)})</span>
-												</div>
-												{#if failoverPreviewUrl}
-													<AudioPreview src={failoverPreviewUrl} />
-												{/if}
-												<div class="flex items-center justify-center gap-2">
-													<label class="inline-block cursor-pointer">
-														<input id="input-failover" type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'failover')} class="hidden" />
-														<span class="inline-block h-[32px] rounded border border-[#577AB7] bg-white px-3 font-['Poppins'] text-sm text-[#577AB7]" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}>Change</span>
-													</label>
-													<button type="button" onclick={() => clearFile('failover', 'input-failover')} class="inline-flex h-[32px] items-center gap-1 rounded border border-red-400 bg-white px-3 font-['Poppins'] text-sm text-red-600 hover:bg-red-50">
-														<X class="h-4 w-4" /> Clear
-													</button>
-												</div>
-											</div>
-										{:else}
-											<p class="mb-2 font-['Poppins'] text-base font-normal leading-[19px] text-[#969696]">Drag a file to upload</p>
-											<span class="font-['Poppins'] text-[13px] text-[#969696]">or</span>
-											<div class="mt-4">
-												<label class="inline-block cursor-pointer">
-													<input id="input-failover" type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'failover')} class="hidden" />
-													<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[19px] text-white" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}>Browse...</span>
-												</label>
-											</div>
-										{/if}
-									</div>
-								</div>
+								<AudioUpload bind:file={failoverFile} />
+								{#if fieldErrors.failover}
+									<p class="mt-1 font-['Poppins'] text-sm text-red-600">{fieldErrors.failover}</p>
+								{/if}
 							</div>
 						</div>
 					{/if}
@@ -461,9 +269,12 @@
 
 				<!-- All representatives unavailable — forward calls to backup cell number -->
 				<div class="space-y-4">
-					<p class="font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
-						All representatives unavailable — forward calls to backup cell number
-					</p>
+					<div class="flex items-center gap-2">
+						<p class="font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
+							All representatives unavailable — forward calls to backup cell number
+						</p>
+						<SectionHelp text="Audio played when the system tries to reach your backup number. The call will ring that number; if no answer, the flow continues (e.g. to voicemail)." />
+					</div>
 					<!-- Flow Diagram -->
 					<div class="flex items-center gap-4">
 						<div class="flex flex-col items-center gap-2">
@@ -486,38 +297,7 @@
 							Upload your audio file below.
 						</p>
 						<div class="rounded border border-[#808080] bg-white p-4">
-							<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-								{#if backupCellFile}
-									<div class="space-y-3">
-										<div class="flex items-center justify-center gap-2 font-['Poppins'] text-[#577AB7]">
-											<Check class="h-5 w-5 shrink-0" />
-											<span class="font-medium">{backupCellFile.name}</span>
-											<span class="text-sm text-[#808080]">({formatSize(backupCellFile.size)})</span>
-										</div>
-										{#if backupCellPreviewUrl}
-											<AudioPreview src={backupCellPreviewUrl} />
-										{/if}
-										<div class="flex items-center justify-center gap-2">
-											<label class="inline-block cursor-pointer">
-												<input id="input-backupCell" type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'backupCell')} class="hidden" />
-												<span class="inline-block h-[32px] rounded border border-[#577AB7] bg-white px-3 font-['Poppins'] text-sm text-[#577AB7]" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}>Change</span>
-											</label>
-											<button type="button" onclick={() => clearFile('backupCell', 'input-backupCell')} class="inline-flex h-[32px] items-center gap-1 rounded border border-red-400 bg-white px-3 font-['Poppins'] text-sm text-red-600 hover:bg-red-50">
-												<X class="h-4 w-4" /> Clear
-											</button>
-										</div>
-									</div>
-								{:else}
-									<p class="mb-2 font-['Poppins'] text-base font-normal leading-[19px] text-[#969696]">Drag a file to upload</p>
-									<span class="font-['Poppins'] text-[13px] text-[#969696]">or</span>
-									<div class="mt-4">
-										<label class="inline-block cursor-pointer">
-											<input id="input-backupCell" type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'backupCell')} class="hidden" />
-											<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base font-normal leading-[19px] text-white" role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}>Browse...</span>
-										</label>
-									</div>
-								{/if}
-							</div>
+							<AudioUpload bind:file={backupCellFile} />
 						</div>
 					</div>
 				</div>

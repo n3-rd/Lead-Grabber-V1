@@ -55,8 +55,9 @@ function isActiveBySchedule(
 	if (!schedule || Object.keys(schedule).length === 0) return true;
 	const daySchedule = schedule[day];
 	if (daySchedule == null || typeof daySchedule !== 'object') return false;
-	const start = daySchedule.start;
-	const end = daySchedule.end;
+	// Accept both API shape (start/end) and form shape (start1/end1)
+	const start = (daySchedule as { start?: string; end?: string; start1?: string; end1?: string }).start ?? (daySchedule as { start1?: string; end1?: string }).start1;
+	const end = (daySchedule as { start?: string; end?: string; start1?: string; end1?: string }).end ?? (daySchedule as { start1?: string; end1?: string }).end1;
 	if (!start || !end) return false;
 	const startMin = parseTime(start);
 	const endMin = parseTime(end);

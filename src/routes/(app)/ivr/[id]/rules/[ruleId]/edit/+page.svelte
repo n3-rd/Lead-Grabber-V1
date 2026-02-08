@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Pencil, Play } from 'lucide-svelte';
+	import { ArrowLeft, Play, Square } from 'lucide-svelte';
 	import TimePicker from '$lib/components/TimePicker.svelte';
-	import AudioPreview from '$lib/components/AudioPreview.svelte';
+	import AudioUpload from '$lib/components/AudioUpload.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import DialerDialog from '$lib/components/DialerDialog.svelte';
+	import SectionHelp from '$lib/components/SectionHelp.svelte';
 	import { page } from '$app/stores';
 
 	type KeyPrompt = { key: string; name: string; extension: string; transferAudioUrl?: string };
@@ -68,13 +69,13 @@
 	let hangupFile = $state<File | null>(null);
 	let saving = $state(false);
 	let error = $state('');
+	let fieldErrors = $state<Record<string, string>>({});
 	let schedule = $state<Record<string, { start1: string; end1: string; start2: string; end2: string }>>(emptySchedule);
 	let keyPrompts = $state<KeyPrompt[]>(defaultKeyPrompts());
 	let promptTransferFiles = $state<(File | null)[]>([]);
 	let failoverCount = $state(2);
 	let failoverDelayMinutes = $state(2);
 	let backDigit = $state('');
-	let showPromptsEditDialog = $state(false);
 	let dialerOpen = $state(false);
 	let dialerEditingIndex = $state(0);
 	let backDigitDialerOpen = $state(false);
@@ -135,16 +136,6 @@
 		goto(`/ivr/${flowId}`);
 	}
 
-	function handleFileUpload(event: Event, type: string) {
-		const target = event.target as HTMLInputElement;
-		const file = target.files?.[0];
-		if (file) {
-			if (type === 'prompts') promptsFile = file;
-			else if (type === 'failover') failoverFile = file;
-			else if (type === 'hangup') hangupFile = file;
-		}
-	}
-
 	function handlePromptTransferFile(event: Event, index: number) {
 		const target = event.target as HTMLInputElement;
 		const file = target.files?.[0] ?? null;
@@ -154,9 +145,25 @@
 		promptTransferFiles = next;
 	}
 
-	function playPromptAudio(url: string) {
+	let playingPromptIndex = $state<number | null>(null);
+	let playingAudioRef = $state<HTMLAudioElement | null>(null);
+
+	function stopPromptAudio() {
+		if (playingAudioRef) {
+			playingAudioRef.pause();
+			playingAudioRef.currentTime = 0;
+			playingAudioRef = null;
+		}
+		playingPromptIndex = null;
+	}
+
+	function playPromptAudio(url: string, index: number) {
+		stopPromptAudio();
 		const audio = new Audio(url);
-		audio.play().catch(() => {});
+		playingAudioRef = audio;
+		playingPromptIndex = index;
+		audio.addEventListener('ended', stopPromptAudio);
+		audio.play().catch(stopPromptAudio);
 	}
 
 	function toggleEdit(_index: number) {
@@ -170,8 +177,14 @@
 
 	async function handleSave() {
 		error = '';
-		if (!callFlowRuleTitle.trim()) {
-			error = 'Rule title is required';
+		fieldErrors = {};
+		const err: Record<string, string> = {};
+		if (!callFlowRuleTitle.trim()) err.callFlowRuleTitle = 'Rule title is required';
+		const hasCompletePrompt = keyPrompts.some((p) => p.key.trim() && p.name.trim() && p.extension.trim());
+		if (!hasCompletePrompt) err.keyPrompts = 'At least one key prompt must have Key, Name, and Extension filled.';
+		if (Object.keys(err).length > 0) {
+			fieldErrors = err;
+			error = Object.values(err)[0];
 			return;
 		}
 		saving = true;
@@ -237,24 +250,42 @@
 	<div class="max-h-[calc(100vh-120px)] overflow-y-auto rounded-lg bg-white p-6">
 		<div class="space-y-8">
 			<div class="space-y-2">
-				<label class="block font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">Call Flow Rule Title:</label>
+				<div class="flex items-center gap-2">
+					<label class="block font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">Call Flow Rule Title:</label>
+					<SectionHelp text="A name for this rule (e.g. Business Hours, After Hours) so you can tell it apart from other rules." />
+				</div>
 				<input
 					type="text"
 					bind:value={callFlowRuleTitle}
 					placeholder="Enter Call Rule Title"
-					class="h-[46px] w-full rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-lg font-medium leading-[24px] text-[#808080] outline-none"
+					class="h-[46px] w-full rounded-[2px] border bg-white px-3 font-['Poppins'] text-lg font-medium leading-[24px] text-[#808080] outline-none {fieldErrors.callFlowRuleTitle ? 'border-red-500' : 'border-[#969696]'}"
 				/>
+				{#if fieldErrors.callFlowRuleTitle}
+					<p class="font-['Poppins'] text-sm text-red-600">{fieldErrors.callFlowRuleTitle}</p>
+				{/if}
 			</div>
 			<div class="space-y-4">
-				<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">Set Schedule Rule:</h2>
+				<div class="flex items-center gap-2">
+					<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">Set Schedule Rule</h2>
+					<SectionHelp text="When this rule is active: set Open and Close for each day. Leave empty for closed." />
+				</div>
+				<p class="font-['Poppins'] text-sm text-[#808080]">
+					When this rule is active: set Open and Close for each day. Leave empty for closed.
+				</p>
 				<div class="grid grid-cols-7 gap-4">
 					{#each days as day}
 						{#if schedule[day]}
 							<div class="space-y-2">
 								<div class="font-['Poppins'] text-[22px] font-semibold leading-[26px] text-[#808080]">{day}</div>
 								<div class="space-y-2">
-									<TimePicker bind:value={schedule[day].start1} class="w-full" />
-									<TimePicker bind:value={schedule[day].end1} class="w-full" />
+									<div>
+										<label class="mb-0.5 block font-['Poppins'] text-xs text-[#808080]">Open</label>
+										<TimePicker bind:value={schedule[day].start1} class="w-full" />
+									</div>
+									<div>
+										<label class="mb-0.5 block font-['Poppins'] text-xs text-[#808080]">Close</label>
+										<TimePicker bind:value={schedule[day].end1} class="w-full" />
+									</div>
 								</div>
 							</div>
 						{/if}
@@ -262,39 +293,17 @@
 				</div>
 			</div>
 			<div class="space-y-4">
-				<div class="flex items-center justify-between">
+				<div class="flex items-center gap-2">
 					<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">Upload your audio file for prompts</h2>
-					<button
-						type="button"
-						onclick={() => (showPromptsEditDialog = true)}
-						class="flex items-center gap-2 rounded border border-[#577AB7] bg-white px-3 py-1.5 font-['Poppins'] text-sm text-[#577AB7] transition-colors hover:bg-[#f0f4ff]"
-					>
-						<Pencil class="h-4 w-4" />
-						Edit
-					</button>
+					<SectionHelp text="Main menu message callers hear (e.g. “Press 1 for Sales, 2 for Support”). One file for the whole menu." />
 				</div>
-				<div class="rounded border border-[#808080] bg-white p-4">
-					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<label class="inline-block cursor-pointer">
-							<input
-								type="file"
-								accept="audio/*"
-								onchange={(e) => handleFileUpload(e, 'prompts')}
-								class="hidden"
-							/>
-							<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white">Browse...</span>
-						</label>
-						{#if promptsFile}
-							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {promptsFile.name}</p>
-						{:else if rule?.promptsAudioUrl}
-							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current recording</p>
-							<AudioPreview src={rule.promptsAudioUrl} class="mt-2" />
-						{/if}
-					</div>
-				</div>
+				<AudioUpload bind:file={promptsFile} existingUrl={rule?.promptsAudioUrl ?? null} />
 			</div>
 			<div class="space-y-2">
-				<label class="block font-['Poppins'] text-lg font-semibold text-[#808080]">Back / repeat menu digit</label>
+				<div class="flex items-center gap-2">
+					<label class="block font-['Poppins'] text-lg font-semibold text-[#808080]">Back / repeat menu digit</label>
+					<SectionHelp text="Key (e.g. * or #) that replays the menu. Leave unset to disable." />
+				</div>
 				<button
 					type="button"
 					onclick={() => (backDigitDialerOpen = true)}
@@ -306,50 +315,19 @@
 					bind:open={backDigitDialerOpen}
 					title="Back / repeat menu digit"
 					keys={['*', '#']}
+					disabledKeys={keyPrompts.map((p) => p.key).filter((k) => k && ['*', '#'].includes(k))}
 					onSelect={(k) => (backDigit = k)}
 				/>
 				<p class="font-['Poppins'] text-sm text-[#808080]">When the caller presses this key, the menu prompts are replayed. Leave unset to disable.</p>
 			</div>
-			<Dialog.Root bind:open={showPromptsEditDialog}>
-				<Dialog.Content class="sm:max-w-[425px]">
-					<Dialog.Header>
-						<Dialog.Title>Replace prompts audio</Dialog.Title>
-						<Dialog.Description>Choose a new audio file to replace the current prompts.</Dialog.Description>
-					</Dialog.Header>
-					<div class="py-4">
-						<label class="block cursor-pointer">
-							<input
-								type="file"
-								accept="audio/*"
-								onchange={(e) => {
-									handleFileUpload(e, 'prompts');
-									showPromptsEditDialog = false;
-								}}
-								class="hidden"
-							/>
-							<span
-								class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white"
-								role="button"
-								tabindex="0"
-								onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}
-							>
-								Choose file...
-							</span>
-						</label>
-					</div>
-					<Dialog.Footer>
-						<button
-							type="button"
-							onclick={() => (showPromptsEditDialog = false)}
-							class="h-[36px] rounded border border-[#577AB7] bg-white px-4 font-['Poppins'] text-base text-[#577AB7]"
-						>
-							Cancel
-						</button>
-					</Dialog.Footer>
-				</Dialog.Content>
-			</Dialog.Root>
 			<div class="space-y-4">
-				<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">Configure your prompts</h2>
+				<div class="flex items-center gap-2">
+					<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">Configure your prompts</h2>
+					<SectionHelp text="Map keys (0–9) to options: name, extension to dial, and optional per-key audio (e.g. “Transferring to Sales”)." />
+				</div>
+				{#if fieldErrors.keyPrompts}
+					<p class="font-['Poppins'] text-sm text-red-600">{fieldErrors.keyPrompts}</p>
+				{/if}
 				<div class="space-y-4">
 					{#each keyPrompts as prompt, index}
 						<div class="rounded border border-[#969696] bg-white p-4">
@@ -380,15 +358,27 @@
 									{promptTransferFiles[index] ? promptTransferFiles[index]?.name ?? 'Change' : 'Upload audio'}
 								</label>
 								{#if prompt.transferAudioUrl}
-									<button
-										type="button"
-										onclick={() => playPromptAudio(prompt.transferAudioUrl!)}
-										class="flex items-center gap-2 rounded border border-[#577AB7] bg-[#577AB7] px-3 py-1.5 font-['Poppins'] text-sm text-white hover:bg-[#4a6ba5]"
-										title="Play audio for {prompt.name}"
-									>
-										<Play class="h-4 w-4" />
-										Play
-									</button>
+									{#if playingPromptIndex === index}
+										<button
+											type="button"
+											onclick={stopPromptAudio}
+											class="flex items-center gap-2 rounded border border-red-500 bg-red-500 px-3 py-1.5 font-['Poppins'] text-sm text-white hover:bg-red-600"
+											title="Stop"
+										>
+											<Square class="h-4 w-4" />
+											Stop
+										</button>
+									{:else}
+										<button
+											type="button"
+											onclick={() => playPromptAudio(prompt.transferAudioUrl!, index)}
+											class="flex items-center gap-2 rounded border border-[#577AB7] bg-[#577AB7] px-3 py-1.5 font-['Poppins'] text-sm text-white hover:bg-[#4a6ba5]"
+											title="Play audio for {prompt.name}"
+										>
+											<Play class="h-4 w-4" />
+											Play
+										</button>
+									{/if}
 								{/if}
 							</div>
 						</div>
@@ -396,6 +386,10 @@
 					<DialerDialog
 						bind:open={dialerOpen}
 						title="Select one key (0-9)"
+						disabledKeys={[
+							...keyPrompts.filter((_, i) => i !== dialerEditingIndex).map((p) => p.key).filter(Boolean),
+							...(backDigit.trim() ? [backDigit.trim()] : [])
+						]}
 						onSelect={(k) => {
 							const next = [...keyPrompts];
 							if (next[dialerEditingIndex]) next[dialerEditingIndex] = { ...next[dialerEditingIndex], key: k };
@@ -406,21 +400,11 @@
 				</div>
 			</div>
 			<div class="space-y-4">
-				<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">No Response Fail Over</h2>
-				<div class="rounded border border-[#808080] bg-white p-4">
-					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<label class="inline-block cursor-pointer">
-							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'failover')} class="hidden" />
-							<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white">Browse...</span>
-						</label>
-						{#if failoverFile}
-							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {failoverFile.name}</p>
-						{:else if rule?.failoverAudioUrl}
-							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {rule.failoverAudioUrl}</p>
-							<audio src={rule.failoverAudioUrl} controls class="mt-2 max-w-full"></audio>
-						{/if}
-					</div>
+				<div class="flex items-center gap-2">
+					<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">No Response Fail Over</h2>
+					<SectionHelp text="If the call isn’t answered after the set number of rings and delay, this audio is played (e.g. “Please leave a message”)." />
 				</div>
+				<AudioUpload bind:file={failoverFile} existingUrl={rule?.failoverAudioUrl ?? null} />
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-2">
 						<label class="block font-['Poppins'] text-xl text-[#808080]">How many times Failover</label>
@@ -433,21 +417,11 @@
 				</div>
 			</div>
 			<div class="space-y-4">
-				<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">Hang Up Audio</h2>
-				<div class="rounded border border-[#808080] bg-white p-4">
-					<div class="rounded-[4px] border-2 border-dashed border-[#4F4F4F] bg-[#ECF3FF] p-8 text-center">
-						<label class="inline-block cursor-pointer">
-							<input type="file" accept="audio/*" onchange={(e) => handleFileUpload(e, 'hangup')} class="hidden" />
-							<span class="inline-block h-[36px] rounded bg-[#577AB7] px-4 font-['Poppins'] text-base leading-[36px] text-white">Browse...</span>
-						</label>
-						{#if hangupFile}
-							<p class="mt-2 font-['Poppins'] text-sm text-green-600">Selected: {hangupFile.name}</p>
-						{:else if rule?.hangupAudioUrl}
-							<p class="mt-2 font-['Poppins'] text-sm text-[#808080]">Current: {rule.hangupAudioUrl}</p>
-							<audio src={rule.hangupAudioUrl} controls class="mt-2 max-w-full"></audio>
-						{/if}
-					</div>
+				<div class="flex items-center gap-2">
+					<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">Hang Up Audio</h2>
+					<SectionHelp text="Short message played right before the call ends (e.g. “Thank you for calling”)." />
 				</div>
+				<AudioUpload bind:file={hangupFile} existingUrl={rule?.hangupAudioUrl ?? null} />
 			</div>
 			{#if error}
 				<p class="font-['Poppins'] text-base text-red-600">{error}</p>

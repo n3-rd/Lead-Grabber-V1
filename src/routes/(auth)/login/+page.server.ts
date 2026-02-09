@@ -45,7 +45,7 @@ export const actions: Actions = {
 
       // Generate token and set cookie
       const token = await generateToken(updatedUser)
-      cookies.set('pb_auth', token, {
+      cookies.set('app_session', token, {
         path: '/',
         httpOnly: false,
         sameSite: 'lax',

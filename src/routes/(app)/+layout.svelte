@@ -5,7 +5,6 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index';
 	import Button from '@//components/ui/button/button.svelte';
 	import Separator from '@//components/ui/separator/separator.svelte';
-	import { pb } from '@//pocketbase';
 	import { Bell, LogOut } from 'lucide-svelte';
 	import { requestNotificationPermission } from '$lib/utils/browser-notifications';
 
@@ -17,8 +16,7 @@
 	});
 
 	function handleLogout() {
-		pb.authStore.clear();
-		goto('/login');
+		goto('/logout');
 	}
 
 	// Dynamically import heavy components

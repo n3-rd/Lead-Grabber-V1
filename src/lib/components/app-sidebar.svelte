@@ -6,14 +6,11 @@
 	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
 	import { LogOut } from "lucide-svelte";
 	import { goto } from "$app/navigation";
-	import { pb } from "$lib/pocketbase";
 
 	let { user, ref = $bindable(null), ...restProps } = $props();
-	console.log("user from sidebar", user);
-	
+
 	function handleLogout() {
-		pb.authStore.clear();
-		goto('/login');
+		goto('/logout');
 	}
 </script>
 

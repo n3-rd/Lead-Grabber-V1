@@ -1,21 +1,32 @@
 <script lang="ts">
-	import { Search, Mic, Mail, MessageSquare, Phone, Globe, Facebook, Bot, FileText, Square, MessageCircle } from 'lucide-svelte';
+	import {
+		Search,
+		Mic,
+		Mail,
+		MessageSquare,
+		Phone,
+		Globe,
+		Facebook,
+		Bot,
+		FileText,
+		MessageCircle
+	} from 'lucide-svelte';
 
 	export interface Communication {
 		id: string;
 		date: string;
 		time: string;
-		type?: "email" | "sms" | "voice" | "web" | "facebook" | "chatbot" | "leadform" | "leadbox";
-		typeIcon?: string; // For communication-log page compatibility
-		direction: "In" | "Out";
+		type?: 'email' | 'sms' | 'voice' | 'web' | 'facebook' | 'chatbot' | 'leadform' | 'leadbox';
+		typeIcon?: string;
+		direction: 'In' | 'Out';
 		source: string;
 		endpoint: string;
 		purpose: string | null;
 		summary: string | null;
 		commId: string | null;
-		status: "red" | "green" | "blue" | "in" | "out";
+		status: 'red' | 'green' | 'blue' | 'in' | 'out';
 		assignedMemberNames?: string[];
-		raw?: any; // For storing original data
+		raw?: any;
 	}
 
 	interface Props {
@@ -31,7 +42,17 @@
 
 	let {
 		communications = $bindable(),
-		filters = $bindable(['All', 'Email', 'SMS', 'Voice', 'Web', 'Facebook', 'Chatbot', 'Leadform', 'Leadbox']),
+		filters = $bindable([
+			'All',
+			'Email',
+			'SMS',
+			'Voice',
+			'Web',
+			'Facebook',
+			'Chatbot',
+			'Leadform',
+			'Leadbox'
+		]),
 		onSummaryClick,
 		onActionClick,
 		onAssignClick,
@@ -44,10 +65,8 @@
 	let searchQuery = $state('');
 	let openOptionsMenu = $state<string | null>(null);
 
-	const filteredCommunications = $derived(() => {
+	const filteredCommunications = $derived.by(() => {
 		let filtered = communications;
-
-		// Apply type filter
 		if (activeFilter !== 'All') {
 			const filterType = activeFilter.toLowerCase();
 			filtered = filtered.filter((comm) => {
@@ -55,45 +74,58 @@
 				return commType === filterType;
 			});
 		}
-
-		// Apply search query
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
-			filtered = filtered.filter((comm) =>
-				comm.source?.toLowerCase().includes(query) ||
-				comm.endpoint?.toLowerCase().includes(query) ||
-				comm.summary?.toLowerCase().includes(query) ||
-				comm.commId?.toLowerCase().includes(query) ||
-				comm.type?.toLowerCase().includes(query)
+			filtered = filtered.filter(
+				(comm) =>
+					comm.source?.toLowerCase().includes(query) ||
+					comm.endpoint?.toLowerCase().includes(query) ||
+					comm.summary?.toLowerCase().includes(query) ||
+					comm.commId?.toLowerCase().includes(query) ||
+					comm.type?.toLowerCase().includes(query)
 			);
 		}
-
 		return filtered;
 	});
 
 	function getStatusColor(status: string) {
 		switch (status) {
-			case "red": return "bg-[#FB2C36]";
-			case "green": return "bg-[#00C951]";
-			case "blue": return "bg-[#0077FE]";
-			case "in": return "bg-[#00C951]";
-			case "out": return "bg-[#FB2C36]";
-			default: return "bg-[#4A4A4A]";
+			case 'red':
+				return 'bg-[#FB2C36]';
+			case 'green':
+				return 'bg-[#00C951]';
+			case 'blue':
+				return 'bg-[#0077FE]';
+			case 'in':
+				return 'bg-[#00C951]';
+			case 'out':
+				return 'bg-[#FB2C36]';
+			default:
+				return 'bg-gray-400';
 		}
 	}
 
 	function getTypeIcon(type: string | undefined) {
-		const typeToCheck = type?.toLowerCase();
-		switch (typeToCheck) {
-			case "email": return Mail;
-			case "sms": return MessageSquare;
-			case "voice": return Phone;
-			case "web": return Globe;
-			case "facebook": return Facebook;
-			case "chatbot": return Bot;
-			case "leadform": return FileText;
-			case "leadbox": return MessageCircle;
-			default: return Mail;
+		const t = type?.toLowerCase();
+		switch (t) {
+			case 'email':
+				return Mail;
+			case 'sms':
+				return MessageSquare;
+			case 'voice':
+				return Phone;
+			case 'web':
+				return Globe;
+			case 'facebook':
+				return Facebook;
+			case 'chatbot':
+				return Bot;
+			case 'leadform':
+				return FileText;
+			case 'leadbox':
+				return MessageCircle;
+			default:
+				return Mail;
 		}
 	}
 
@@ -102,29 +134,27 @@
 	}
 
 	function handleSummaryClick(comm: Communication) {
-		if (onSummaryClick) {
-			onSummaryClick(comm);
-		}
+		onSummaryClick?.(comm);
 	}
 
 	function handleActionClick(action: string, comm: Communication) {
-		if (onActionClick) {
-			onActionClick(action, comm);
-		}
+		onActionClick?.(action, comm);
 		openOptionsMenu = null;
 	}
 </script>
 
-<div class="bg-white border border-[#ABABAB] rounded overflow-hidden">
-	<!-- Filter Tabs & Search -->
+<div class="bg-white border border-gray-300 rounded-lg overflow-hidden">
 	{#if showFilters || showSearch}
-		<div class="flex items-center justify-between p-4 border-b border-[#ABABAB]">
+		<div class="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-200">
 			{#if showFilters}
-				<div class="flex items-center gap-2">
+				<div class="flex flex-wrap items-center gap-2">
 					{#each filters as filter}
 						<button
-							class="px-4 py-2 rounded font-sans font-medium text-base leading-[1.29] transition-colors {activeFilter === filter ? 'bg-[#0F172A] text-white font-bold' : 'text-[#555555] hover:bg-gray-100'}"
-							onclick={() => activeFilter = filter}
+							type="button"
+							class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {activeFilter === filter
+								? 'bg-slate-900 text-white'
+								: 'text-gray-600 hover:bg-gray-100'}"
+							onclick={() => (activeFilter = filter)}
 						>
 							{filter}
 						</button>
@@ -132,134 +162,193 @@
 				</div>
 			{/if}
 			{#if showSearch}
-				<div class="w-[349px] h-[43px] bg-white border border-[#ADADAD] rounded flex items-center px-4 gap-2">
-					<Search class="w-4 h-4 text-[#555555]" />
+				<div
+					class="flex h-10 w-full max-w-xs items-center gap-2 rounded-md border border-gray-300 bg-white px-3"
+				>
+					<Search class="h-4 w-4 shrink-0 text-gray-500" />
 					<input
 						type="text"
 						bind:value={searchQuery}
-						placeholder="Search communications..."
-						class="flex-1 outline-none font-sans font-light text-sm leading-[1.29] text-[rgba(85,85,85,0.53)] placeholder:text-[rgba(85,85,85,0.53)]"
+						placeholder="Search..."
+						class="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-gray-400"
 					/>
-					<Mic class="w-4 h-4 text-[#555555]" />
+					<Mic class="h-4 w-4 shrink-0 text-gray-500" />
 				</div>
 			{/if}
 		</div>
 	{/if}
 
-	<!-- Communications Table -->
-	<div class="w-full">
-		<!-- Table Header -->
-		<div class="h-[46px] bg-[#F3F3F3] rounded-t-[4px] flex items-center px-4">
-			<div class="w-[30px]"></div>
-			<div class="w-[100px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">DATE</div>
-			<div class="w-[80px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">TYPE</div>
-			<div class="w-[130px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">SOURCE</div>
-			<div class="w-[150px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">ENDPOINT</div>
-			<div class="w-[110px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">PURPOSE</div>
-			<div class="w-[90px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">SUMMARY</div>
-			<div class="w-[100px] font-sans font-semibold text-xs leading-[1.29] text-[#555555]">COMM ID</div>
-			<div class="flex-1 font-sans font-semibold text-xs leading-[1.29] text-[#555555] text-right">ACTIONS</div>
-		</div>
-
-		<!-- Table Body -->
-		{#if filteredCommunications().length === 0}
-			<div class="h-[80px] bg-[#FBFCFD] border-b border-[#C6C6C6] flex items-center justify-center px-4">
-				<p class="font-sans font-normal text-sm text-[#555555]">No communications found</p>
-			</div>
-		{:else}
-			{#each filteredCommunications() as comm, index}
-				{@const commType = getTypeDisplay(comm)}
-				{@const IconComponent = getTypeIcon(commType)}
-				<div class="h-[80px] bg-[#FBFCFD] border-b border-[#C6C6C6] flex items-center px-4">
-					<div class="w-[30px]">
-						<div class="w-[18px] h-[18px] rounded-full {getStatusColor(comm.status)}"></div>
-					</div>
-					<div class="w-[100px]">
-						<p class="font-sans font-semibold text-sm leading-[1.29] text-[#555555]">{comm.date}</p>
-						<p class="font-sans font-normal text-xs leading-[1.29] text-[#555555]">{comm.time}</p>
-					</div>
-					<div class="w-[80px] flex items-center gap-1">
-						<IconComponent class="w-[23px] h-4 text-black" />
-						<span class="font-sans font-medium text-sm leading-[1.29] text-[#555555]">{comm.direction}</span>
-					</div>
-					<div class="w-[130px] font-sans font-medium text-sm leading-[1.29] text-[#555555] truncate">{comm.source}</div>
-					<div class="w-[150px]">
-						{#if showAssignButton && onAssignClick}
-							<div class="flex flex-col gap-1">
-								<span class="font-sans font-medium text-sm leading-[1.29] text-[#555555] truncate">{comm.endpoint}</span>
-								<button
-									class="text-left font-sans text-xs font-normal leading-[1.29] text-[#0023D7] underline hover:no-underline"
-									onclick={() => onAssignClick(comm)}
-								>
-									assign
-								</button>
-							</div>
-						{:else}
-							<span class="font-sans font-medium text-sm leading-[1.29] text-[#555555] truncate">{comm.endpoint}</span>
-						{/if}
-					</div>
-					<div class="w-[110px]">
-						{#if comm.purpose}
-							{#if comm.purpose === "Confirm"}
-								<button class="px-4 py-1.5 bg-[#577AB7] rounded text-white font-sans font-medium text-sm">Confirm</button>
-							{:else}
-								<span class="font-sans font-medium text-sm leading-[1.29] text-[#555555]">{comm.purpose}</span>
-							{/if}
-						{/if}
-					</div>
-					<div class="w-[90px]">
-						{#if comm.summary}
-							<button
-								onclick={() => handleSummaryClick(comm)}
-								class="font-sans font-normal text-sm leading-[1.29] text-[#0023D7] underline cursor-pointer hover:text-[#001ba3]"
-							>
-								{comm.summary.length > 20 ? comm.summary.substring(0, 20) + '...' : comm.summary}
-							</button>
-						{/if}
-					</div>
-					<div class="w-[100px] font-sans font-normal text-sm leading-[1.29] text-[#555555] truncate">{comm.commId || ''}</div>
-					<div class="flex-1 flex justify-end relative">
-						<button 
-							class="w-6 h-6 rounded-full border border-[#515151] flex items-center justify-center gap-0.5 hover:bg-gray-100"
-							aria-label="More actions"
-							onclick={(e) => { e.stopPropagation(); openOptionsMenu = openOptionsMenu === comm.id ? null : comm.id; }}
+	<div class="overflow-x-auto">
+		<table class="w-full min-w-[900px] border-collapse">
+			<thead>
+				<tr class="bg-gray-100">
+					<th class="w-8 px-3 py-3 text-left"></th>
+					<th class="w-24 whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+						Date
+					</th>
+					<th class="w-20 whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+						Type
+					</th>
+					<th class="min-w-[120px] max-w-[160px] whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+						Source
+					</th>
+					<th class="min-w-[120px] max-w-[180px] whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+						Endpoint
+					</th>
+					<th class="min-w-[100px] max-w-[140px] whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+						Purpose
+					</th>
+					<th class="min-w-[180px] whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+						Summary
+					</th>
+					<th class="w-28 whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+						Comm ID
+					</th>
+					<th class="w-14 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-600">
+						Actions
+					</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#if filteredCommunications.length === 0}
+					<tr>
+						<td colspan="9" class="px-3 py-8 text-center text-sm text-gray-500">
+							No communications found
+						</td>
+					</tr>
+				{:else}
+					{#each filteredCommunications as comm}
+						{@const commType = getTypeDisplay(comm)}
+						{@const IconComponent = getTypeIcon(commType)}
+						<tr
+							class="border-b border-gray-200 bg-white transition-colors hover:bg-gray-50/80"
 						>
-							<span class="w-1 h-1 rounded-full bg-[#515151]"></span>
-							<span class="w-1 h-1 rounded-full bg-[#515151]"></span>
-							<span class="w-1 h-1 rounded-full bg-[#515151]"></span>
-						</button>
-						
-						{#if openOptionsMenu === comm.id}
-							<div class="absolute right-0 top-8 w-[200px] bg-white rounded shadow-[0px_4px_4px_rgba(0,0,0,0.25)] border border-[#E5E5E5] z-50">
-							<button 
-								class="w-full px-4 py-2 text-left font-sans text-sm text-[#555555] hover:bg-[#F5F5F5] border-b border-[#E5E5E5]"
-								onclick={() => handleActionClick('view', comm)}
-							>
-								View Details
-							</button>
-							<button 
-								class="w-full px-4 py-2 text-left font-sans text-sm text-[#555555] hover:bg-[#F5F5F5] border-b border-[#E5E5E5]"
-								onclick={() => handleActionClick('call', comm)}
-							>
-								Call
-							</button>
-							<button 
-								class="w-full px-4 py-2 text-left font-sans text-sm text-[#555555] hover:bg-[#F5F5F5] border-b border-[#E5E5E5]"
-								onclick={() => handleActionClick('sms', comm)}
-							>
-								SMS
-							</button>
-							<button 
-								class="w-full px-4 py-2 text-left font-sans text-sm text-red-500 hover:bg-[#F5F5F5]"
-								onclick={() => handleActionClick('email', comm)}
-							>
-								Email
-							</button>
-						</div>
-						{/if}
-					</div>
-				</div>
-			{/each}
-		{/if}
+							<td class="px-3 py-2.5 align-top pt-4">
+								<div
+									class="h-4 w-4 shrink-0 rounded-full {getStatusColor(comm.status)}"
+									title={comm.status}
+								></div>
+							</td>
+							<td class="whitespace-nowrap px-3 py-2.5 text-sm text-gray-700">
+								<div class="font-medium">{comm.date}</div>
+								<div class="text-xs text-gray-500">{comm.time}</div>
+							</td>
+							<td class="whitespace-nowrap px-3 py-2.5">
+								<div class="flex items-center gap-1.5 text-sm text-gray-700">
+									<IconComponent class="h-4 w-4 shrink-0 text-gray-600" />
+									<span class="font-medium">{comm.direction}</span>
+								</div>
+							</td>
+							<td class="max-w-[160px] truncate px-3 py-2.5 text-sm text-gray-700" title={comm.source}>
+								{comm.source || '—'}
+							</td>
+							<td class="max-w-[180px] px-3 py-2.5 text-sm text-gray-700">
+								{#if showAssignButton && onAssignClick}
+									<div class="flex flex-col gap-0.5">
+										<span class="truncate" title={comm.endpoint}>{comm.endpoint || '—'}</span>
+										<button
+											type="button"
+											class="text-left text-xs text-blue-600 underline hover:no-underline"
+											onclick={() => onAssignClick(comm)}
+										>
+											Assign
+										</button>
+									</div>
+								{:else}
+									<span class="truncate block" title={comm.endpoint}>{comm.endpoint || '—'}</span>
+								{/if}
+							</td>
+							<td class="max-w-[140px] truncate px-3 py-2.5 text-sm text-gray-700">
+								{#if comm.purpose}
+									{#if comm.purpose === 'Confirm'}
+										<span
+											class="inline-block rounded bg-[#577AB7] px-2 py-0.5 text-xs font-medium text-white"
+										>
+											Confirm
+										</span>
+									{:else}
+										{comm.purpose}
+									{/if}
+								{:else}
+									—
+								{/if}
+							</td>
+							<td class="max-w-[240px] px-3 py-2.5 text-sm">
+								{#if comm.summary}
+									<button
+										type="button"
+										class="line-clamp-2 text-left text-blue-600 underline hover:no-underline"
+										onclick={() => handleSummaryClick(comm)}
+										title={comm.summary}
+									>
+										{comm.summary}
+									</button>
+								{:else}
+									<span class="text-gray-400">—</span>
+								{/if}
+							</td>
+							<td class="max-w-[120px] truncate px-3 py-2.5 font-mono text-xs text-gray-500" title={comm.commId ?? ''}>
+								{comm.commId ? comm.commId.slice(0, 8) + '…' : '—'}
+							</td>
+							<td class="px-3 py-2.5 text-right align-top">
+								<div class="relative inline-block">
+									<button
+										type="button"
+										class="flex h-7 w-7 items-center justify-center rounded-full border border-gray-400 hover:bg-gray-100"
+										aria-label="Actions"
+										onclick={(e) => {
+											e.stopPropagation();
+											openOptionsMenu = openOptionsMenu === comm.id ? null : comm.id;
+										}}
+									>
+										<span class="sr-only">Actions</span>
+										<span class="flex gap-0.5">
+											<span class="h-1 w-1 rounded-full bg-gray-500"></span>
+											<span class="h-1 w-1 rounded-full bg-gray-500"></span>
+											<span class="h-1 w-1 rounded-full bg-gray-500"></span>
+										</span>
+									</button>
+									{#if openOptionsMenu === comm.id}
+										<div
+											class="absolute right-0 top-9 z-50 min-w-[160px] rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+											role="menu"
+										>
+											<button
+												type="button"
+												class="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+												onclick={() => handleActionClick('view', comm)}
+											>
+												View Details
+											</button>
+											<button
+												type="button"
+												class="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+												onclick={() => handleActionClick('call', comm)}
+											>
+												Call
+											</button>
+											<button
+												type="button"
+												class="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+												onclick={() => handleActionClick('sms', comm)}
+											>
+												SMS
+											</button>
+											<button
+												type="button"
+												class="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-gray-100"
+												onclick={() => handleActionClick('email', comm)}
+											>
+												Email
+											</button>
+										</div>
+									{/if}
+								</div>
+							</td>
+						</tr>
+					{/each}
+				{/if}
+			</tbody>
+		</table>
 	</div>
 </div>

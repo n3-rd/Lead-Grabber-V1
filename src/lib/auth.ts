@@ -86,18 +86,14 @@ export async function getUserFromToken(token: string): Promise<UserWithCompany |
 }
 
 export function createSessionCookie(token: string): string {
-  // Create a cookie similar to PocketBase's pb_auth cookie format
-  // Using httpOnly: false to match PocketBase behavior for client-side access
-  return `pb_auth=${token}; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
+  return `app_session=${token}; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
 }
 
 export function parseSessionCookie(cookieHeader: string | null): string | null {
   if (!cookieHeader) return null
 
   const cookies = cookieHeader.split(';').map(c => c.trim())
-  const pbAuthCookie = cookies.find(c => c.startsWith('pb_auth='))
-
-  if (!pbAuthCookie) return null
-
-  return pbAuthCookie.split('=')[1] || null
+  const sessionCookie = cookies.find(c => c.startsWith('app_session='))
+  if (!sessionCookie) return null
+  return sessionCookie.split('=')[1] || null
 }

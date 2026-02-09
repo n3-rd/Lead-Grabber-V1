@@ -78,7 +78,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   } else if (!user && token) {
     // Clear invalid session
     console.log(`[Auth] Clearing session for ${event.url.pathname} - user is null but token exists`)
-    response.headers.set('set-cookie', 'pb_auth=; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=0')
+    response.headers.set('set-cookie', 'app_session=; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=0')
   }
 
   return response

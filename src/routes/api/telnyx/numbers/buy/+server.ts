@@ -15,11 +15,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       }, { status: 400 });
     }
 
-    // Require authenticated user with a company (session cookie pb_auth must be sent for API calls)
+    // Require authenticated user with a company (session cookie app_session must be sent for API calls)
     if (!locals.user) {
       return json({
         success: false,
-        error: 'Not logged in. Send the session cookie (e.g. pb_auth) for API requests.'
+        error: 'Not logged in. Send the session cookie (app_session) for API requests.'
       }, { status: 401 });
     }
     if (!locals.user.company?.id) {

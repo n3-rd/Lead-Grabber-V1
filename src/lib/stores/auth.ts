@@ -15,9 +15,9 @@ function createAuthStore() {
   // Load from cookie on client side
   if (typeof window !== 'undefined') {
     const cookies = document.cookie.split(';').map((c) => c.trim())
-    const pbAuthCookie = cookies.find((c) => c.startsWith('pb_auth='))
-    if (pbAuthCookie) {
-      const token = pbAuthCookie.split('=')[1]
+    const sessionCookie = cookies.find((c) => c.startsWith('app_session='))
+    if (sessionCookie) {
+      const token = sessionCookie.split('=')[1]
       // Token will be validated server-side, we just store it here
       update((store) => ({ ...store, token }))
     }
@@ -31,7 +31,7 @@ function createAuthStore() {
     logout: async () => {
       // Clear cookie
       if (typeof window !== 'undefined') {
-        document.cookie = 'pb_auth=; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=0'
+        document.cookie = 'app_session=; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=0'
       }
       set({ user: null, token: null })
     },

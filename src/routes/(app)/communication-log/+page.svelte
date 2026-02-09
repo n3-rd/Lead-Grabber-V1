@@ -63,27 +63,30 @@
 				.map((user: any) => user?.name || user?.email || '')
 				.filter(Boolean);
 
-			// Purpose: Groq (intent/sentiment) or A2P (category_gpt, urgency_gpt 1–5)
+			// Urgency: use urgency_gpt (1–5) only; high → red, mid → blue, low → green
 			const meta = log.metadata || {};
+			const urgencyGpt = typeof meta.urgency_gpt === 'number' ? meta.urgency_gpt : null;
+			const status: string =
+				urgencyGpt !== null
+					? urgencyGpt >= 4
+						? 'red'
+						: urgencyGpt >= 3
+							? 'blue'
+							: 'green'
+					: log.direction === 'inbound'
+						? 'in'
+						: 'out';
+			// Purpose: category_gpt or legacy intent/sentiment; prefix "Urgent " when urgency_gpt >= 4
 			const cap = (s: string) => (s ?? '').charAt(0).toUpperCase() + (s ?? '').slice(1).toLowerCase();
+			const urgentPrefix = urgencyGpt !== null && urgencyGpt >= 4 ? 'Urgent ' : '';
 			let purpose: string;
-			if (meta.intent || meta.sentiment) {
-				const urgent = meta.urgency === 'red' ? 'Urgent ' : '';
+			if (meta.category_gpt) {
+				purpose = urgentPrefix + cap(meta.category_gpt);
+			} else if (meta.intent || meta.sentiment) {
 				const word = meta.intent ? cap(meta.intent) : meta.sentiment ? cap(meta.sentiment) : 'General';
-				purpose = urgent + word;
-			} else if (meta.category_gpt) {
-				purpose = cap(meta.category_gpt);
+				purpose = urgentPrefix + word;
 			} else {
-				purpose = log.summary ? 'See Summary' : 'General';
-			}
-			// Status: Groq (green/blue/red), A2P urgency_gpt 1–5 (high→red, low→green), or in/out
-			let status: string;
-			if (meta.urgency === 'green' || meta.urgency === 'blue' || meta.urgency === 'red') {
-				status = meta.urgency;
-			} else if (typeof meta.urgency_gpt === 'number') {
-				status = meta.urgency_gpt >= 4 ? 'red' : meta.urgency_gpt >= 3 ? 'blue' : 'green';
-			} else {
-				status = log.direction === 'inbound' ? 'in' : 'out';
+				purpose = log.summary ? urgentPrefix + 'See Summary' : urgentPrefix + 'General';
 			}
 
 			return {
@@ -143,9 +146,8 @@
 	}
 </script>
 
-<div class="w-full min-w-0 overflow-x-auto">
-	<!-- Main Container -->
-	<div class="m-4 min-w-[1282px]">
+<div class="w-full min-w-0 p-4">
+	<div class="min-w-0">
 		<CommunicationTable
 			communications={tableCommunications}
 			{filters}

@@ -7,6 +7,7 @@ import { logCommunication } from '$lib/utils/communication-log';
 import { createOrUpdateContact } from '$lib/utils/contacts';
 import { getCompanyIdByPhoneNumber } from '$lib/company-numbers';
 import { prisma } from '$lib/db';
+import { isA2pEnabled, forwardSmsWebhook } from '$lib/server/a2p-client';
 
 // Define the handleWebhook function used by PUT
 async function handleWebhook(request: Request) {
@@ -15,9 +16,14 @@ async function handleWebhook(request: Request) {
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    // Log the raw request body for debugging
     const rawBody = await request.text();
     console.log('Webhook raw body:', rawBody);
+
+    // Forward to A2P backend when configured (replaces local SMS/messages/comm-log handling)
+    if (isA2pEnabled()) {
+      const { ok, status, body: a2pBody } = await forwardSmsWebhook(rawBody);
+      return json(a2pBody ?? { ok }, { status: status >= 200 && status < 300 ? 200 : status });
+    }
 
     // Parse the webhook payload
     const payload = JSON.parse(rawBody);

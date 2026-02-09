@@ -7,6 +7,7 @@ import { prisma } from '$lib/db';
 import { getActiveCallFlow, toAbsoluteAudioUrl } from '$lib/ivr';
 import { getCompanyAndFlowByPhoneNumber } from '$lib/company-numbers';
 import { PUBLIC_BASE_URL } from '$env/static/public';
+import { isA2pEnabled, forwardVoiceWebhook } from '$lib/server/a2p-client';
 
 const TELNYX_PUBLIC_KEY = process.env.TELNYX_PUBLIC_KEY;
 
@@ -63,6 +64,13 @@ export const POST: RequestHandler = async ({ request }) => {
     if (TELNYX_PUBLIC_KEY && !verifyTelnyxSignature(rawBody, timestamp, signature)) {
       return json({ error: 'Invalid webhook signature' }, { status: 401 });
     }
+
+    // Forward to A2P backend when configured (replaces local IVR/recording/comm-log handling)
+    if (isA2pEnabled()) {
+      const { ok, status, body: a2pBody } = await forwardVoiceWebhook(rawBody);
+      return json(a2pBody ?? { ok }, { status: status >= 200 && status < 300 ? 200 : status });
+    }
+
     const body = JSON.parse(rawBody);
 
     // Detect webhook format: Event API (wrapped) vs Call Control (direct)

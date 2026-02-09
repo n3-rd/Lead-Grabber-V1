@@ -39,6 +39,7 @@
 				email: string;
 				role: string;
 			}>;
+			useA2pCommLog?: boolean;
 		};
 	}>();
 
@@ -62,21 +63,28 @@
 				.map((user: any) => user?.name || user?.email || '')
 				.filter(Boolean);
 
-			// Groq: urgency (dot color), sentiment, intent → 1–2 word purpose
+			// Purpose: Groq (intent/sentiment) or A2P (category_gpt, urgency_gpt 1–5)
 			const meta = log.metadata || {};
-			const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+			const cap = (s: string) => (s ?? '').charAt(0).toUpperCase() + (s ?? '').slice(1).toLowerCase();
 			let purpose: string;
 			if (meta.intent || meta.sentiment) {
 				const urgent = meta.urgency === 'red' ? 'Urgent ' : '';
 				const word = meta.intent ? cap(meta.intent) : meta.sentiment ? cap(meta.sentiment) : 'General';
 				purpose = urgent + word;
+			} else if (meta.category_gpt) {
+				purpose = cap(meta.category_gpt);
 			} else {
 				purpose = log.summary ? 'See Summary' : 'General';
 			}
-			// Status dot: use urgency (green/blue/red) when from Groq, else direction (in/out)
-			const status = (meta.urgency === 'green' || meta.urgency === 'blue' || meta.urgency === 'red')
-				? meta.urgency
-				: (log.direction === 'inbound' ? 'in' : 'out');
+			// Status: Groq (green/blue/red), A2P urgency_gpt 1–5 (high→red, low→green), or in/out
+			let status: string;
+			if (meta.urgency === 'green' || meta.urgency === 'blue' || meta.urgency === 'red') {
+				status = meta.urgency;
+			} else if (typeof meta.urgency_gpt === 'number') {
+				status = meta.urgency_gpt >= 4 ? 'red' : meta.urgency_gpt >= 3 ? 'blue' : 'green';
+			} else {
+				status = log.direction === 'inbound' ? 'in' : 'out';
+			}
 
 			return {
 				date,
@@ -144,7 +152,7 @@
 			onSummaryClick={handleSummaryClick}
 			onActionClick={handleActionClick}
 			onAssignClick={handleAssignClick}
-			showAssignButton={true}
+			showAssignButton={!data.useA2pCommLog}
 		/>
 	</div>
 </div>
@@ -156,14 +164,14 @@
 		? `/api/recording/${selectedComm.commId || selectedComm.raw?.id}`
 		: (typeof meta.recording_urls === 'object' && meta.recording_urls !== null
 			? (meta.recording_urls.mp3 ?? meta.recording_urls.m4a ?? Object.values(meta.recording_urls).find((v) => typeof v === 'string' && v.startsWith('http')))
-			: null)}
+			: meta.voicemail_url ?? null)}
 	<CommunicationSummaryDialog
 		bind:open={summaryDialogOpen}
 		commId={selectedComm.commId || selectedComm.raw?.id || ''}
 		date={selectedComm.date}
 		time={selectedComm.time}
-		category={(meta.sentiment ?? 'sales').charAt(0).toUpperCase() + (meta.sentiment ?? 'sales').slice(1)}
-		subCategory={(meta.intent ?? 'Inquiry').charAt(0).toUpperCase() + (meta.intent ?? 'inquiry').slice(1)}
+		category={meta.category_gpt ? (meta.category_gpt as string).charAt(0).toUpperCase() + (meta.category_gpt as string).slice(1) : (meta.sentiment ?? 'sales').charAt(0).toUpperCase() + (meta.sentiment ?? 'sales').slice(1)}
+		subCategory={meta.subcat_gpt ? (meta.subcat_gpt as string).charAt(0).toUpperCase() + (meta.subcat_gpt as string).slice(1) : ((meta.intent as string) ?? 'Inquiry').charAt(0).toUpperCase() + ((meta.intent as string) ?? 'Inquiry').slice(1)}
 		sourceLabel={selectedComm.raw?.type === 'voice' ? 'Phone' : 'Email Address'}
 		email={selectedComm.source ?? ''}
 		subject={selectedComm.raw?.metadata?.subject || selectedComm.raw?.subject || 'No subject'}
@@ -179,15 +187,14 @@
 <AssignAgentDialog
 	bind:open={assignDialogOpen}
 	endpointName={selectedEndpoint || ''}
-	agents={data.members?.map(m => m.name) || []}
+	agents={data.members?.map((m: { name: string }) => m.name) || []}
 	preSelectedAgents={preSelectedAgents}
 	onAssign={async (selectedAgentNames) => {
 		if (!data.members) return;
 
-		// Map agent names back to member IDs
 		const selectedMemberIds = data.members
-			.filter(m => selectedAgentNames.includes(m.name))
-			.map(m => m.id);
+			.filter((m: { name: string }) => selectedAgentNames.includes(m.name))
+			.map((m: { id: string }) => m.id);
 
 		if (selectedMemberIds.length === 0) {
 			toast.error('No members selected');

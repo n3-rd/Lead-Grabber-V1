@@ -129,6 +129,8 @@ export const POST: RequestHandler = async ({ request }) => {
       summary: logSummary,
       content: messageContent,
       metadata: logMetadata,
+      contact_name: customerName !== 'Anonymous' ? customerName : undefined,
+      contact_company: company?.name,
     })
 
 

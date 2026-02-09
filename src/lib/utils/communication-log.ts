@@ -1,5 +1,6 @@
 import { prisma } from '$lib/db'
 import { createNotification } from '$lib/utils/notifications'
+import { isA2pDbEnabled, mirrorToA2p } from '$lib/server/a2p-db'
 
 export type CommunicationType = 'email' | 'sms' | 'voice' | 'web' | 'facebook' | 'chatbot' | 'leadform' | 'leadbox'
 export type CommunicationDirection = 'inbound' | 'outbound'
@@ -19,6 +20,9 @@ export interface CommunicationLogEntry {
   duration?: number
   metadata?: Record<string, any>
   assigned_members?: string[]
+  /** Optional: for A2P mirror (contact name/company) */
+  contact_name?: string
+  contact_company?: string
 }
 
 /**
@@ -72,6 +76,21 @@ export async function logCommunication(entry: CommunicationLogEntry) {
         communication_log_id: record.id,
         thread_id: (entry.metadata as { thread_id?: string })?.thread_id,
       })
+    }
+
+    // Mirror into A2P DB when configured (leadbox/leadform/email/etc. then appear on A2P comm log page)
+    if (isA2pDbEnabled()) {
+      mirrorToA2p({
+        type: entry.type,
+        direction: entry.direction,
+        source: entry.source,
+        destination: entry.destination,
+        summary: entry.summary,
+        content: entry.content,
+        metadata: entry.metadata,
+        contact_name: entry.contact_name,
+        contact_company: entry.contact_company,
+      }).catch((err) => console.error('A2P mirror failed:', err))
     }
 
     return record

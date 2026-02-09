@@ -13,6 +13,10 @@
 		body?: string;
 		summary?: string;
 		tasks?: string[];
+		/** For voice: phone number shown as source */
+		sourceLabel?: string;
+		/** For voice: call recording playback URL (mp3/m4a from metadata.recording_urls) */
+		recordingUrl?: string | null;
 	}
 
 	let {
@@ -26,14 +30,9 @@
 		subject = "Book Appointment time",
 		body = "",
 		summary = "Sarah wants an appointment to test drive the Ford 150 2026. between 2:00 and 3:30 on Friday Dec 12th.",
-		tasks = [
-			"Confirm Mark's Doe schedule availability",
-			"Send email appointment accept to Sarah",
-			"Update Mark Doe's appointment book",
-			"Update Sarah's profile",
-			"Send reminder to Sarah",
-			"Following appointment send CRM update request."
-		]
+		tasks = [],
+		sourceLabel = "Email Address",
+		recordingUrl = null
 	}: Props = $props();
 </script>
 
@@ -97,7 +96,7 @@
 							<span
 								class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] whitespace-nowrap flex-shrink-0"
 							>
-								Email Address:
+								{sourceLabel}:
 							</span>
 							<span
 								class="font-sans font-medium text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] break-words min-w-0"
@@ -105,6 +104,23 @@
 								{email}
 							</span>
 						</div>
+						{#if recordingUrl}
+							<div class="flex flex-col gap-1">
+								<span
+									class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] whitespace-nowrap flex-shrink-0"
+								>
+									Call recording:
+								</span>
+								<audio
+									controls
+									class="w-full max-w-sm h-9"
+									src={recordingUrl}
+									preload="metadata"
+								>
+									Your browser does not support the audio element.
+								</audio>
+							</div>
+						{/if}
 						<div class="flex items-start gap-4">
 							<span
 								class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] whitespace-nowrap flex-shrink-0"

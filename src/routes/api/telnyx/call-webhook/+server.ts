@@ -663,6 +663,8 @@ export const POST: RequestHandler = async ({ request }) => {
                   type: 'voice',
                   direction: direction === 'incoming' ? 'inbound' : 'outbound',
                   status: 'completed',
+                  source: contactNumber,
+                  destination: companyNumber,
                   companyId: numberInfo.companyId,
                   customerId: contact.id,
                   content: transcript || `Call recording available (${recDurationSeconds}s)`,

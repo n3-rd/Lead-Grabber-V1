@@ -150,18 +150,27 @@
 </div>
 
 {#if selectedComm}
+	{@const meta = selectedComm.raw?.metadata ?? {}}
+	{@const hasRecordingId = selectedComm.raw?.type === 'voice' && meta.recording_id}
+	{@const recordingUrl = hasRecordingId
+		? `/api/recording/${selectedComm.commId || selectedComm.raw?.id}`
+		: (typeof meta.recording_urls === 'object' && meta.recording_urls !== null
+			? (meta.recording_urls.mp3 ?? meta.recording_urls.m4a ?? Object.values(meta.recording_urls).find((v) => typeof v === 'string' && v.startsWith('http')))
+			: null)}
 	<CommunicationSummaryDialog
 		bind:open={summaryDialogOpen}
 		commId={selectedComm.commId || selectedComm.raw?.id || ''}
 		date={selectedComm.date}
 		time={selectedComm.time}
-		category={(selectedComm.raw?.metadata?.sentiment ?? 'sales').charAt(0).toUpperCase() + (selectedComm.raw?.metadata?.sentiment ?? 'sales').slice(1)}
-		subCategory={(selectedComm.raw?.metadata?.intent ?? 'Inquiry').charAt(0).toUpperCase() + (selectedComm.raw?.metadata?.intent ?? 'inquiry').slice(1)}
-		email={selectedComm.source}
+		category={(meta.sentiment ?? 'sales').charAt(0).toUpperCase() + (meta.sentiment ?? 'sales').slice(1)}
+		subCategory={(meta.intent ?? 'Inquiry').charAt(0).toUpperCase() + (meta.intent ?? 'inquiry').slice(1)}
+		sourceLabel={selectedComm.raw?.type === 'voice' ? 'Phone' : 'Email Address'}
+		email={selectedComm.source ?? ''}
 		subject={selectedComm.raw?.metadata?.subject || selectedComm.raw?.subject || 'No subject'}
 		body={selectedComm.raw?.content || selectedComm.summary || ''}
 		summary={selectedComm.summary}
-		tasks={selectedComm.raw?.metadata?.tasks || []}
+		tasks={meta.actionItems ?? meta.tasks ?? []}
+		recordingUrl={recordingUrl}
 	/>
 {/if}
 

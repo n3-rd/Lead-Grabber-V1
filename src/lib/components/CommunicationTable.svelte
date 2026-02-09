@@ -32,6 +32,8 @@
 	interface Props {
 		communications: Communication[];
 		filters?: string[];
+		searchQuery?: string;
+		selectedAgentName?: string | null;
 		onSummaryClick?: (comm: Communication) => void;
 		onActionClick?: (action: string, comm: Communication) => void;
 		onAssignClick?: (comm: Communication) => void;
@@ -53,6 +55,8 @@
 			'Leadform',
 			'Leadbox'
 		]),
+		searchQuery = $bindable(''),
+		selectedAgentName = null,
 		onSummaryClick,
 		onActionClick,
 		onAssignClick,
@@ -62,7 +66,6 @@
 	}: Props = $props();
 
 	let activeFilter = $state('All');
-	let searchQuery = $state('');
 	let openOptionsMenu = $state<string | null>(null);
 
 	const filteredCommunications = $derived.by(() => {
@@ -74,8 +77,9 @@
 				return commType === filterType;
 			});
 		}
-		if (searchQuery.trim()) {
-			const query = searchQuery.toLowerCase();
+		const q = (searchQuery ?? '').trim();
+		if (q) {
+			const query = q.toLowerCase();
 			filtered = filtered.filter(
 				(comm) =>
 					comm.source?.toLowerCase().includes(query) ||
@@ -83,6 +87,12 @@
 					comm.summary?.toLowerCase().includes(query) ||
 					comm.commId?.toLowerCase().includes(query) ||
 					comm.type?.toLowerCase().includes(query)
+			);
+		}
+		if (selectedAgentName) {
+			filtered = filtered.filter(
+				(comm) =>
+					comm.assignedMemberNames?.includes(selectedAgentName) ?? false
 			);
 		}
 		return filtered;
@@ -144,37 +154,19 @@
 </script>
 
 <div class="bg-white border border-gray-300 rounded-lg overflow-hidden">
-	{#if showFilters || showSearch}
-		<div class="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-200">
-			{#if showFilters}
-				<div class="flex flex-wrap items-center gap-2">
-					{#each filters as filter}
-						<button
-							type="button"
-							class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {activeFilter === filter
-								? 'bg-slate-900 text-white'
-								: 'text-gray-600 hover:bg-gray-100'}"
-							onclick={() => (activeFilter = filter)}
-						>
-							{filter}
-						</button>
-					{/each}
-				</div>
-			{/if}
-			{#if showSearch}
-				<div
-					class="flex h-10 w-full max-w-xs items-center gap-2 rounded-md border border-gray-300 bg-white px-3"
+	{#if showFilters}
+		<div class="flex flex-wrap items-center gap-3 p-4 border-b border-gray-200">
+			{#each filters as filter}
+				<button
+					type="button"
+					class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {activeFilter === filter
+						? 'bg-slate-900 text-white'
+						: 'text-gray-600 hover:bg-gray-100'}"
+					onclick={() => (activeFilter = filter)}
 				>
-					<Search class="h-4 w-4 shrink-0 text-gray-500" />
-					<input
-						type="text"
-						bind:value={searchQuery}
-						placeholder="Search..."
-						class="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-gray-400"
-					/>
-					<Mic class="h-4 w-4 shrink-0 text-gray-500" />
-				</div>
-			{/if}
+					{filter}
+				</button>
+			{/each}
 		</div>
 	{/if}
 

@@ -10,17 +10,44 @@ export const load: PageServerLoad = async ({ locals, depends, fetch }) => {
   }
 
   try {
+    // Company members for agent picker (same as settings/company)
+    const members = await prisma.companyMember.findMany({
+      where: {
+        companyId: locals.user.company.id,
+        status: 'active',
+      },
+      take: 50,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        created: 'desc',
+      },
+    });
+    const membersForPicker = members.map((m) => ({
+      id: m.user.id,
+      name: m.user.name || m.user.email || 'Unknown',
+      email: m.user.email || '',
+      role: m.role,
+    }));
+
     // A2P: fetch from our API (uses A2P_COMMLOG_API_URL if set, else A2P_DATABASE_URL)
     if (isA2pCommLogEnabled()) {
       const res = await fetch('/api/a2p/communication-log?limit=50');
       if (!res.ok) {
         console.error('A2P communication-log API failed:', res.status);
-        return { logs: [], members: [], useA2pCommLog: true };
+        return { logs: [], members: membersForPicker, useA2pCommLog: true };
       }
       const data = await res.json();
       return {
         logs: Array.isArray(data.logs) ? data.logs : [],
-        members: [],
+        members: membersForPicker,
         useA2pCommLog: true,
       };
     }
@@ -63,26 +90,6 @@ export const load: PageServerLoad = async ({ locals, depends, fetch }) => {
       },
     });
 
-    const members = await prisma.companyMember.findMany({
-      where: {
-        companyId: locals.user.company.id,
-        status: 'active',
-      },
-      take: 50,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: {
-        created: 'desc',
-      },
-    });
-
     return {
       logs: logs.map((log) => ({
         id: log.id,
@@ -103,12 +110,7 @@ export const load: PageServerLoad = async ({ locals, depends, fetch }) => {
           assigned_members: log.assignedMembers.map((am) => am.user),
         },
       })),
-      members: members.map((member) => ({
-        id: member.user.id,
-        name: member.user.name || member.user.email || 'Unknown',
-        email: member.user.email || '',
-        role: member.role,
-      })),
+      members: membersForPicker,
       useA2pCommLog: false,
     };
   } catch (err) {

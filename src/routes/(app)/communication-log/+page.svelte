@@ -1,15 +1,5 @@
 <script lang="ts">
-	import {
-		Search,
-		Mail,
-		Info,
-		MessageSquare,
-		Phone,
-		Globe,
-		Facebook,
-		Bot,
-		FileText
-	} from 'lucide-svelte';
+	import { Search, Mic, ChevronDown } from 'lucide-svelte';
 	import CommunicationTable from '$lib/components/CommunicationTable.svelte';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index';
 	import CommunicationSummaryDialog from '$lib/components/communication-summary-dialog.svelte';
@@ -18,9 +8,9 @@
 	import { toast } from 'svelte-sonner';
 	import { invalidateAll } from '$app/navigation';
 
-	let selectedFilter = $state('All');
 	const filters = ['All', 'Email', 'SMS', 'Voice', 'Web', 'Facebook', 'Chatbot', 'Leadform', 'Leadbox'];
 	let searchQuery = $state('');
+	let selectedAgentName = $state<string | null>(null);
 
 	let summaryDialogOpen = $state(false);
 	let selectedComm = $state<(typeof communications)[0] | null>(null);
@@ -32,6 +22,7 @@
 
 	let { data } = $props<{
 		data: {
+			user?: { name?: string | null } | null;
 			logs: any[];
 			members?: Array<{
 				id: string;
@@ -42,6 +33,7 @@
 			useA2pCommLog?: boolean;
 		};
 	}>();
+	const members = $derived(data.members ?? []);
 
 	// Transform API data to UI format
 	let communications = $derived(
@@ -146,15 +138,68 @@
 	}
 </script>
 
-<div class="w-full min-w-0 p-4">
-	<div class="min-w-0">
+<div class="w-full min-w-0 flex flex-col">
+	<!-- Header: greeting, search, agent picker (same row) -->
+	<div class="flex flex-wrap items-center justify-between gap-4 bg-white px-6 py-4 border-b border-gray-200">
+		<div class="flex items-center gap-4">
+			<img src="/img/profile.png" alt="" class="h-12 w-12 rounded-full object-cover" />
+			<div>
+				<h2 class="text-lg font-semibold text-gray-900">Good Morning, {data.user?.name ?? 'User'}!</h2>
+				<p class="text-sm text-gray-500">Simplify how you manage calls and messages.</p>
+			</div>
+		</div>
+		<div class="flex items-center gap-4 flex-1 justify-end">
+			<div class="flex h-10 w-full max-w-sm min-w-[200px] items-center gap-2 rounded-lg border border-gray-300 bg-white px-3">
+				<Search class="h-4 w-4 shrink-0 text-gray-500" />
+				<input
+					type="text"
+					bind:value={searchQuery}
+					placeholder="Search communications..."
+					class="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-gray-400"
+				/>
+				<Mic class="h-4 w-4 shrink-0 text-gray-500" />
+			</div>
+			{#if members.length > 0}
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger
+						class="ml-auto flex h-10 min-w-[140px] items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+					>
+						<span>Agents</span>
+						<ChevronDown class="h-4 w-4 shrink-0 text-gray-500" />
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content class="min-w-[180px] max-h-[min(60vh,400px)] overflow-y-auto" align="end" side="bottom" sideOffset={6} collisionPadding={12}>
+						<DropdownMenu.Item
+							class="cursor-pointer"
+							onSelect={() => (selectedAgentName = null)}
+						>
+							All agents
+						</DropdownMenu.Item>
+						<DropdownMenu.Separator />
+						{#each members as member}
+							<DropdownMenu.Item
+								class="cursor-pointer hover:text-white"
+								onSelect={() => (selectedAgentName = member.name)}
+							>
+								{member.name}
+							</DropdownMenu.Item>
+						{/each}
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+			{/if}
+		</div>
+	</div>
+
+	<div class="min-w-0 p-4 flex-1">
 		<CommunicationTable
 			communications={tableCommunications}
 			{filters}
+			bind:searchQuery
+			selectedAgentName={selectedAgentName}
 			onSummaryClick={handleSummaryClick}
 			onActionClick={handleActionClick}
 			onAssignClick={handleAssignClick}
 			showAssignButton={!data.useA2pCommLog}
+			showSearch={false}
 		/>
 	</div>
 </div>

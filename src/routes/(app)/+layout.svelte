@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index';
 	import Button from '@//components/ui/button/button.svelte';
@@ -10,6 +11,7 @@
 
 	let { data } = $props();
 	let { user } = data;
+	const isCommunicationLog = $derived($page.url.pathname === '/communication-log');
 
 	onMount(() => {
 		requestNotificationPermission();
@@ -37,28 +39,30 @@
 			<div class="flex items-center gap-4 mb-4 pt-4 flex-shrink-0">
 				<Sidebar.Trigger />
 			</div>
-			<div class="flex w-full justify-between bg-white px-9 py-5 flex-shrink-0">
-				<div class="flex items-center gap-4">
-					<img src="/img/profile.png" alt="" class="profile h-12 w-12" />
-					<div class="flex-col">
-						<h2 class="text-lg font-semibold">Good Morning, {user?.name || 'User'}!</h2>
-						<p class="text-sm text-gray-500">Simplify how you manage calls and messages.</p>
+			{#if !isCommunicationLog}
+				<div class="flex w-full justify-between bg-white px-9 py-5 flex-shrink-0">
+					<div class="flex items-center gap-4">
+						<img src="/img/profile.png" alt="" class="profile h-12 w-12" />
+						<div class="flex-col">
+							<h2 class="text-lg font-semibold">Good Morning, {user?.name || 'User'}!</h2>
+							<p class="text-sm text-gray-500">Simplify how you manage calls and messages.</p>
+						</div>
+					</div>
+
+					<div class="flex items-center gap-5">
+						<Bell class="h-6 w-6 cursor-pointer text-gray-500 transition-colors hover:text-primary" />
+						<Separator orientation="vertical" />
+						<Button class="rounded-xl bg-root-background text-foreground"
+						onclick={()=>{
+							handleLogout()
+						}}
+						>
+							Logout
+							<LogOut />
+						</Button>
 					</div>
 				</div>
-
-				<div class="flex items-center gap-5">
-					<Bell class="h-6 w-6 cursor-pointer text-gray-500 transition-colors hover:text-primary" />
-					<Separator orientation="vertical" />
-					<Button class="rounded-xl bg-root-background text-foreground"
-					onclick={()=>{
-						handleLogout()
-					}}
-					>
-						Logout
-						<LogOut />
-					</Button>
-				</div>
-			</div>
+			{/if}
 			<div class="flex-1 overflow-y-auto min-h-0">
 				<slot />
 			</div>

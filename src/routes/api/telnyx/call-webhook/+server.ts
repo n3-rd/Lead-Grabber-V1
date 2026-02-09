@@ -18,6 +18,20 @@ function resolveAudioUrl(path: string | null | undefined, baseUrl: string): stri
   return toAbsoluteAudioUrl(path, baseUrl);
 }
 
+/** Get first usable audio URL from recording_urls (mp3, m4a, or any URL string). */
+function getFirstAudioUrl(recUrls: unknown): string | null {
+  if (!recUrls || typeof recUrls !== 'object') return null;
+  const o = recUrls as Record<string, unknown>;
+  const keys = ['mp3', 'm4a', 'wav'];
+  for (const k of keys) {
+    if (typeof o[k] === 'string' && (o[k] as string).startsWith('http')) return o[k] as string;
+  }
+  for (const v of Object.values(o)) {
+    if (typeof v === 'string' && v.startsWith('http')) return v;
+  }
+  return null;
+}
+
 /** Verify Telnyx webhook signature (Ed25519). Signed payload = timestamp|rawBody. Skip if TELNYX_PUBLIC_KEY not set. */
 function verifyTelnyxSignature(rawBody: string, timestamp: string, signatureB64: string): boolean {
   if (!TELNYX_PUBLIC_KEY) return true;
@@ -568,8 +582,11 @@ export const POST: RequestHandler = async ({ request }) => {
         // Recording is available, save the URL(s)
         const recUrls = payload?.recording_urls;
         const recId = payload?.recording_id;
+        const recDurationSeconds = typeof payload?.duration === 'number' ? payload.duration : 0;
         console.log('🎥 Call recording saved:', recId, recUrls);
+
         if (callControlId && recUrls) {
+          // 1. Save reference call recording
           await prisma.callRecording.create({
             data: {
               callId: callControlId,
@@ -577,6 +594,95 @@ export const POST: RequestHandler = async ({ request }) => {
               urls: (recUrls as object) ?? {}
             }
           });
+
+          // 2. Find original call log to get directions/numbers
+          const callLog = await prisma.callLog.findFirst({
+            where: { callId: callControlId, status: 'initiated' }
+          });
+
+          if (callLog) {
+            // Resolve company by which number is the company's IVR (in CompanyPhoneNumber). The other is the contact.
+            const toInfo = callLog.to ? await getCompanyAndFlowByPhoneNumber(prisma, callLog.to) : null;
+            const fromInfo = callLog.from ? await getCompanyAndFlowByPhoneNumber(prisma, callLog.from) : null;
+
+            const numberInfo = toInfo ?? fromInfo;
+            const companyNumber = toInfo ? callLog.to : (fromInfo ? callLog.from : null);
+            const contactNumber = toInfo ? callLog.from : (fromInfo ? callLog.to : null);
+            const direction = (callLog.metadata as { direction?: string })?.direction ?? 'incoming';
+
+            if (!numberInfo?.companyId || !contactNumber) {
+              console.log('⚠️ Could not match call to a company: neither leg is a company number', { to: callLog.to, from: callLog.from });
+            } else if (companyNumber && contactNumber) {
+              // Find or create contact (caller) for this company
+              let contact = await prisma.contact.findFirst({
+                where: {
+                  companyId: numberInfo.companyId,
+                  phone: contactNumber
+                }
+              });
+
+              if (!contact) {
+                console.log('👤 Creating new contact for', contactNumber);
+                contact = await prisma.contact.create({
+                  data: {
+                    companyId: numberInfo.companyId,
+                    phone: contactNumber,
+                    name: null
+                  }
+                });
+              }
+
+              // Transcribe and analyze; add CommunicationLog to contact history
+              let transcript = '';
+              let summary = '';
+              let intent = '';
+              let urgency = 'medium';
+              let sentiment = '';
+              let actionItems: string[] = [];
+
+              const audioUrl = getFirstAudioUrl(recUrls);
+              if (audioUrl) {
+                try {
+                  const { transcribeAudio, analyzeCallLog } = await import('$lib/server/groq');
+                  transcript = await transcribeAudio(audioUrl);
+                  if (transcript) {
+                    const analysis = await analyzeCallLog(transcript);
+                    summary = analysis.summary;
+                    intent = analysis.intent;
+                    urgency = analysis.urgency;
+                    sentiment = analysis.sentiment;
+                    actionItems = analysis.actionItems;
+                  }
+                } catch (err) {
+                  console.error('❌ Groq processing failed:', err);
+                }
+              }
+
+              await prisma.communicationLog.create({
+                data: {
+                  type: 'voice',
+                  direction: direction === 'incoming' ? 'inbound' : 'outbound',
+                  status: 'completed',
+                  companyId: numberInfo.companyId,
+                  customerId: contact.id,
+                  content: transcript || `Call recording available (${recDurationSeconds}s)`,
+                  summary: summary || null,
+                  metadata: {
+                    recording_urls: recUrls as any,
+                    recording_id: recId as any,
+                    call_control_id: callControlId,
+                    urgency,
+                    sentiment,
+                    intent: intent || undefined,
+                    actionItems,
+                  }
+                }
+              });
+              console.log('📝 Created CommunicationLog for call', callControlId);
+            }
+          } else {
+            console.log('⚠️ No initiated call log found for', callControlId);
+          }
         }
         break;
       }

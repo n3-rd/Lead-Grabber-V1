@@ -1,12 +1,14 @@
 <script lang="ts">
-	import { Search, Mic, ChevronDown } from 'lucide-svelte';
+	import { Search, Mic, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-svelte';
 	import CommunicationTable from '$lib/components/CommunicationTable.svelte';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index';
 	import CommunicationSummaryDialog from '$lib/components/communication-summary-dialog.svelte';
 	import NotificationsDialog from '$lib/components/notifications/notifications-dialog.svelte';
 	import AssignAgentDialog from '$lib/components/assign-agent-dialog.svelte';
 	import { toast } from 'svelte-sonner';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, goto } from '$app/navigation';
+
+	const PAGE_SIZES = [10, 20, 50, 100] as const;
 
 	const filters = ['All', 'Email', 'SMS', 'Voice', 'Web', 'Facebook', 'Chatbot', 'Leadform', 'Leadbox'];
 	let searchQuery = $state('');
@@ -24,16 +26,37 @@
 		data: {
 			user?: { name?: string | null } | null;
 			logs: any[];
-			members?: Array<{
-				id: string;
-				name: string;
-				email: string;
-				role: string;
-			}>;
+			members?: Array<{ id: string; name: string; email: string; role: string }>;
 			useA2pCommLog?: boolean;
+			totalCount?: number | null;
+			limit?: number;
+			page?: number;
 		};
 	}>();
 	const members = $derived(data.members ?? []);
+	const limit = $derived(data.limit ?? 20);
+	const page = $derived(data.page ?? 1);
+	const totalCount = $derived(data.totalCount ?? null);
+	const totalPages = $derived(
+		totalCount != null ? Math.max(1, Math.ceil(totalCount / limit)) : null
+	);
+	const start = $derived((page - 1) * limit + 1);
+	const end = $derived(
+		totalCount != null
+			? Math.min(page * limit, totalCount)
+			: (page - 1) * limit + (data.logs?.length ?? 0)
+	);
+	const hasPrev = $derived(page > 1);
+	const hasNext = $derived(
+		totalPages != null ? page < totalPages : (data.logs?.length ?? 0) >= limit
+	);
+
+	function goToPage(p: number, l?: number) {
+		const params = new URLSearchParams();
+		params.set('limit', String(l ?? limit));
+		if (p > 1) params.set('page', String(p));
+		goto(`/communication-log?${params.toString()}`);
+	}
 
 	// Transform API data to UI format
 	let communications = $derived(
@@ -189,7 +212,7 @@
 		</div>
 	</div>
 
-	<div class="min-w-0 p-4 flex-1">
+	<div class="min-w-0 flex flex-1 flex-col p-4">
 		<CommunicationTable
 			communications={tableCommunications}
 			{filters}
@@ -201,6 +224,56 @@
 			showAssignButton={!data.useA2pCommLog}
 			showSearch={false}
 		/>
+		<!-- Pagination -->
+		<div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
+			<div class="flex items-center gap-4">
+				<span class="text-sm text-gray-600">Per page</span>
+				<div class="flex gap-1">
+					{#each PAGE_SIZES as size}
+						<button
+							type="button"
+							class="rounded px-2.5 py-1 text-sm font-medium transition-colors {limit === size
+								? 'bg-slate-900 text-white'
+								: 'text-gray-600 hover:bg-gray-100'}"
+							onclick={() => goToPage(1, size)}
+						>
+							{size}
+						</button>
+					{/each}
+				</div>
+			</div>
+			<div class="flex items-center gap-3">
+				{#if totalCount != null}
+					<span class="text-sm text-gray-600">
+						Showing {start}–{end} of {totalCount}
+					</span>
+				{:else}
+					<span class="text-sm text-gray-600">
+						Showing {start}–{end}
+					</span>
+				{/if}
+				<div class="flex gap-1">
+					<button
+						type="button"
+						class="rounded border border-gray-300 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-50"
+						disabled={!hasPrev}
+						onclick={() => goToPage(page - 1)}
+						aria-label="Previous page"
+					>
+						<ChevronLeft class="h-4 w-4" />
+					</button>
+					<button
+						type="button"
+						class="rounded border border-gray-300 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-50"
+						disabled={!hasNext}
+						onclick={() => goToPage(page + 1)}
+						aria-label="Next page"
+					>
+						<ChevronRight class="h-4 w-4" />
+					</button>
+				</div>
+			</div>
+		</div>
 	</div>
 </div>
 

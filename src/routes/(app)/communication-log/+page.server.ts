@@ -2,12 +2,21 @@ import { prisma } from '$lib/db';
 import type { PageServerLoad } from './$types';
 import { isA2pCommLogEnabled } from '$lib/server/a2p-client';
 
-export const load: PageServerLoad = async ({ locals, depends, fetch }) => {
+const PAGE_SIZES = [10, 20, 50, 100] as const;
+
+export const load: PageServerLoad = async ({ locals, depends, fetch, url }) => {
   depends('app:communication-log');
 
   if (!locals.user || !locals.user.company) {
-    return { logs: [], members: [], useA2pCommLog: false };
+    return { logs: [], members: [], useA2pCommLog: false, totalCount: 0, limit: 20, page: 1 };
   }
+
+  const limitParam = url.searchParams.get('limit');
+  const limit = PAGE_SIZES.includes(Number(limitParam) as (typeof PAGE_SIZES)[number])
+    ? Number(limitParam)
+    : 20;
+  const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
+  const offset = (page - 1) * limit;
 
   try {
     // Company members for agent picker (same as settings/company)
@@ -39,28 +48,36 @@ export const load: PageServerLoad = async ({ locals, depends, fetch }) => {
 
     // A2P: fetch from our API (uses A2P_COMMLOG_API_URL if set, else A2P_DATABASE_URL)
     if (isA2pCommLogEnabled()) {
-      const res = await fetch('/api/a2p/communication-log?limit=50');
+      const res = await fetch(`/api/a2p/communication-log?limit=${limit}&offset=${offset}`);
       if (!res.ok) {
         console.error('A2P communication-log API failed:', res.status);
-        return { logs: [], members: membersForPicker, useA2pCommLog: true };
+        return { logs: [], members: membersForPicker, useA2pCommLog: true, totalCount: null, limit, page };
       }
       const data = await res.json();
       return {
         logs: Array.isArray(data.logs) ? data.logs : [],
         members: membersForPicker,
         useA2pCommLog: true,
+        totalCount: data.totalCount ?? null,
+        limit,
+        page,
       };
     }
 
-    const logs = await prisma.communicationLog.findMany({
-      where: {
-        companyId: locals.user.company.id,
-      },
-      take: 50,
-      orderBy: {
-        created: 'desc',
-      },
-      include: {
+    const [totalCount, logs] = await Promise.all([
+      prisma.communicationLog.count({
+        where: { companyId: locals.user.company.id },
+      }),
+      prisma.communicationLog.findMany({
+        where: {
+          companyId: locals.user.company.id,
+        },
+        take: limit,
+        skip: offset,
+        orderBy: {
+          created: 'desc',
+        },
+        include: {
         user: {
           select: {
             id: true,
@@ -88,7 +105,8 @@ export const load: PageServerLoad = async ({ locals, depends, fetch }) => {
           },
         },
       },
-    });
+    }),
+    ]);
 
     return {
       logs: logs.map((log) => ({
@@ -112,9 +130,12 @@ export const load: PageServerLoad = async ({ locals, depends, fetch }) => {
       })),
       members: membersForPicker,
       useA2pCommLog: false,
+      totalCount,
+      limit,
+      page,
     };
   } catch (err) {
     console.error('Error loading communication logs:', err);
-    return { logs: [], members: [], useA2pCommLog: false };
+    return { logs: [], members: [], useA2pCommLog: false, totalCount: 0, limit: 20, page: 1 };
   }
 };

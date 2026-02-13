@@ -5,9 +5,8 @@ import { TELNYX_API_KEY } from '$env/static/private';
 import { addPendingCall } from '$lib/utils/callStore';
 import { prisma } from '$lib/db';
 import { getActiveCallFlow, toAbsoluteAudioUrl } from '$lib/ivr';
-import { getCompanyAndFlowByPhoneNumber } from '$lib/company-numbers';
+import { getCompanyAndFlowByPhoneNumber, toE164 } from '$lib/company-numbers';
 import { PUBLIC_BASE_URL } from '$env/static/public';
-import { isA2pEnabled, forwardVoiceWebhook } from '$lib/server/a2p-client';
 
 const TELNYX_PUBLIC_KEY = process.env.TELNYX_PUBLIC_KEY;
 
@@ -31,6 +30,21 @@ function getFirstAudioUrl(recUrls: unknown): string | null {
     if (typeof v === 'string' && v.startsWith('http')) return v;
   }
   return null;
+}
+
+/** Compute call duration in seconds from hangup payload start_time / end_time. */
+function computeDurationFromPayload(payload: Record<string, unknown>): number | null {
+  const start = payload?.start_time as string | undefined;
+  const end = payload?.end_time as string | undefined;
+  if (!start || !end) return null;
+  try {
+    const startMs = new Date(start).getTime();
+    const endMs = new Date(end).getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs < startMs) return null;
+    return Math.round((endMs - startMs) / 1000);
+  } catch {
+    return null;
+  }
 }
 
 /** Verify Telnyx webhook signature (Ed25519). Signed payload = timestamp|rawBody. Skip if TELNYX_PUBLIC_KEY not set. */
@@ -65,12 +79,8 @@ export const POST: RequestHandler = async ({ request }) => {
       return json({ error: 'Invalid webhook signature' }, { status: 401 });
     }
 
-    // Forward to A2P backend when configured (replaces local IVR/recording/comm-log handling)
-    if (isA2pEnabled()) {
-      const { ok, status, body: a2pBody } = await forwardVoiceWebhook(rawBody);
-      return json(a2pBody ?? { ok }, { status: status >= 200 && status < 300 ? 200 : status });
-    }
-
+    // IVR, recording, and comm-log creation always run locally. A2P is used only for
+    // communication-logs UI (e.g. isA2pCommLogEnabled / api/a2p/communication-log).
     const body = JSON.parse(rawBody);
 
     // Detect webhook format: Event API (wrapped) vs Call Control (direct)
@@ -483,8 +493,54 @@ export const POST: RequestHandler = async ({ request }) => {
         console.log('📞 Call hangup:', callControlId);
         await logCallEvent(callControlId, 'ended', payload);
 
-        // Broadcast call ended event
-        // Removed SSE broadcasting as per edit hint
+        // Create call record with duration on hangup (recording link added later in call.recording.saved)
+        const hangupDuration = computeDurationFromPayload(payload);
+        const callLog = await prisma.callLog.findFirst({
+          where: { callId: callControlId, status: 'initiated' }
+        });
+        // Use direction from initiated call log (hangup payload can be wrong or missing)
+        const directionFromMeta = (callLog?.metadata as { direction?: string })?.direction ?? 'incoming';
+        const direction = directionFromMeta === 'incoming' ? 'inbound' : 'outbound';
+        if (callLog) {
+          const toInfo = callLog.to ? await getCompanyAndFlowByPhoneNumber(prisma, callLog.to) : null;
+          const fromInfo = callLog.from ? await getCompanyAndFlowByPhoneNumber(prisma, callLog.from) : null;
+          const numberInfo = toInfo ?? fromInfo;
+          const companyNumber = toInfo ? callLog.to : fromInfo ? callLog.from : null;
+          const contactNumber = toInfo ? callLog.from : fromInfo ? callLog.to : null;
+          if (numberInfo?.companyId && contactNumber && companyNumber) {
+            let contact = await prisma.contact.findFirst({
+              where: { companyId: numberInfo.companyId, phone: contactNumber }
+            });
+            if (!contact) {
+              contact = await prisma.contact.create({
+                data: { companyId: numberInfo.companyId, phone: contactNumber, name: null }
+              });
+            }
+            const companyNumberE164 = toE164(companyNumber);
+            const numberRow = companyNumberE164
+              ? await prisma.companyPhoneNumber.findUnique({
+                  where: { phoneNumber: companyNumberE164 },
+                  select: { callTrackingCategoryId: true }
+                })
+              : null;
+            await prisma.communicationLog.create({
+              data: {
+                type: 'voice',
+                direction: direction as 'inbound' | 'outbound',
+                status: 'completed',
+                source: contactNumber,
+                destination: companyNumber,
+                companyId: numberInfo.companyId,
+                customerId: contact.id,
+                callTrackingCategoryId: numberRow?.callTrackingCategoryId ?? undefined,
+                duration: hangupDuration,
+                content: hangupDuration != null ? `Call completed (${Math.round(hangupDuration)}s)` : 'Call completed',
+                metadata: { call_control_id: callControlId, origin: directionFromMeta }
+              }
+            });
+            console.log('📝 Created CommunicationLog on hangup (duration, recording link added when saved)', callControlId);
+          }
+        }
         break;
       }
 
@@ -640,7 +696,30 @@ export const POST: RequestHandler = async ({ request }) => {
                 });
               }
 
-              // Transcribe and analyze; add CommunicationLog to contact history
+              // Call tracking: get category from the number that received the call
+              const companyNumberE164 = toE164(companyNumber);
+              const numberRow = companyNumberE164
+                ? await prisma.companyPhoneNumber.findUnique({
+                    where: { phoneNumber: companyNumberE164 },
+                    select: { callTrackingCategoryId: true }
+                  })
+                : null;
+
+              // Find existing log created on hangup (so we add recording link instead of duplicating)
+              const since = new Date(Date.now() - 10 * 60 * 1000); // 10 min window
+              const existingLogs = await prisma.communicationLog.findMany({
+                where: {
+                  companyId: numberInfo.companyId,
+                  type: 'voice',
+                  created: { gte: since }
+                },
+                orderBy: { created: 'desc' },
+                take: 20
+              });
+              const existingLog = existingLogs.find(
+                (l) => (l.metadata as Record<string, unknown>)?.call_control_id === callControlId
+              );
+
               let transcript = '';
               let summary = '';
               let intent = '';
@@ -666,29 +745,47 @@ export const POST: RequestHandler = async ({ request }) => {
                 }
               }
 
-              await prisma.communicationLog.create({
-                data: {
-                  type: 'voice',
-                  direction: direction === 'incoming' ? 'inbound' : 'outbound',
-                  status: 'completed',
-                  source: contactNumber,
-                  destination: companyNumber,
-                  companyId: numberInfo.companyId,
-                  customerId: contact.id,
-                  content: transcript || `Call recording available (${recDurationSeconds}s)`,
-                  summary: summary || null,
-                  metadata: {
-                    recording_urls: recUrls as any,
-                    recording_id: recId as any,
-                    call_control_id: callControlId,
-                    urgency,
-                    sentiment,
-                    intent: intent || undefined,
-                    actionItems,
+              const recordingMetadata = {
+                recording_urls: recUrls as Record<string, unknown>,
+                recording_id: recId,
+                call_control_id: callControlId,
+                urgency,
+                sentiment,
+                intent: intent || undefined,
+                actionItems,
+                origin: direction
+              };
+
+              if (existingLog) {
+                await prisma.communicationLog.update({
+                  where: { id: existingLog.id },
+                  data: {
+                    duration: recDurationSeconds > 0 ? recDurationSeconds : existingLog.duration,
+                    content: transcript || `Call recording available (${recDurationSeconds}s)`,
+                    summary: summary || null,
+                    metadata: { ...((existingLog.metadata as Record<string, unknown>) || {}), ...recordingMetadata }
                   }
-                }
-              });
-              console.log('📝 Created CommunicationLog for call', callControlId);
+                });
+                console.log('📝 Updated CommunicationLog with recording link', callControlId);
+              } else {
+                await prisma.communicationLog.create({
+                  data: {
+                    type: 'voice',
+                    direction: direction === 'incoming' ? 'inbound' : 'outbound',
+                    status: 'completed',
+                    source: contactNumber,
+                    destination: companyNumber,
+                    companyId: numberInfo.companyId,
+                    customerId: contact.id,
+                    callTrackingCategoryId: numberRow?.callTrackingCategoryId ?? undefined,
+                    duration: recDurationSeconds > 0 ? recDurationSeconds : null,
+                    content: transcript || `Call recording available (${recDurationSeconds}s)`,
+                    summary: summary || null,
+                    metadata: recordingMetadata
+                  }
+                });
+                console.log('📝 Created CommunicationLog for call (no hangup log found)', callControlId);
+              }
             }
           } else {
             console.log('⚠️ No initiated call log found for', callControlId);

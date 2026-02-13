@@ -1,109 +1,410 @@
 <script lang="ts">
-  import { Phone, RefreshCw, MessageCircle, Mail, Search, Mic, LogOut, User } from "lucide-svelte";
-  let dateRange = "This Month";
-  let search = "";
-  let activeTab = "Incoming Calls";
-  let stats = [
-    { label: "Total Interactions", value: "3,425", icon: RefreshCw },
-    { label: "Incoming Calls", value: "1,230", icon: Phone },
-    { label: "Outgoing Calls", value: "1,020", icon: Phone },
-    { label: "SMS Messages", value: "540", icon: MessageCircle },
-    { label: "Emails Sent/Receive", value: "420", icon: Mail },
-    { label: "WhatsApp Interactions", value: "210", icon: MessageCircle }
-  ];
-  let tabs = ["Incoming Calls", "Outgoing Calls", "SMS", "Email", "WhatsApp"];
+	import { Phone, RefreshCw, Search, Tag, Plus, Trash2, Clock, TrendingUp } from 'lucide-svelte';
+	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
+	import CallsOverTimeChart from '$lib/components/analytics/CallsOverTimeChart.svelte';
+	import CategoryBarChart from '$lib/components/analytics/CategoryBarChart.svelte';
+	import CallDetailDialog from '$lib/components/analytics/CallDetailDialog.svelte';
+
+	const { data } = $props<{
+		data: {
+			period: string;
+			start: string;
+			end: string;
+			categories: { id: string; name: string; sortOrder: number }[];
+			companyNumbers: {
+				id: string;
+				phoneNumber: string;
+				callTrackingCategoryId: string | null;
+				callTrackingCategory: { id: string; name: string } | null;
+			}[];
+			voiceLogs: {
+				id: string;
+				direction: string;
+				source: string | null;
+				destination: string | null;
+				created: Date;
+				summary: string | null;
+				content: string | null;
+				duration: number | null;
+				metadata: Record<string, unknown> | null;
+				callTrackingCategory: { id: string; name: string } | null;
+				customer: { id: string; name: string | null; phone: string | null } | null;
+			}[];
+			callsOverTime: { date: string; inbound: number; outbound: number }[];
+			avgDurationSeconds: number | null;
+			callsWithDuration: number;
+			peakDay: { date: string; count: number } | null;
+			stats: {
+				inboundTotal: number;
+				outboundTotal: number;
+				totalCalls: number;
+				byCategory: [string, { name: string; inbound: number; outbound: number; total: number }][];
+			};
+		};
+	}>();
+
+	let search = $state('');
+	let newCategoryName = $state('');
+	let addingCategory = $state(false);
+	let selectedCall = $state<(typeof data.voiceLogs)[number] | null>(null);
+	let callDetailOpen = $state(false);
+
+	function setPeriod(p: string) {
+		goto(`/analytics?period=${p}`, { replaceState: true });
+	}
+
+	async function addCategory() {
+		const name = newCategoryName.trim();
+		if (!name) return;
+		addingCategory = true;
+		try {
+			const res = await fetch('/api/call-tracking-categories', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name })
+			});
+			const result = await res.json();
+			if (result.success) {
+				toast.success('Category added');
+				newCategoryName = '';
+				addingCategory = false;
+				return goto('/analytics?period=' + (data.period || 'this_month'), { invalidateAll: true });
+			}
+			toast.error(result.error || 'Failed to add category');
+		} catch (e) {
+			toast.error('Failed to add category');
+		}
+		addingCategory = false;
+	}
+
+	async function deleteCategory(id: string) {
+		if (!confirm('Remove this category? Numbers will become uncategorized.')) return;
+		try {
+			const res = await fetch(`/api/call-tracking-categories/${id}`, { method: 'DELETE' });
+			const result = await res.json();
+			if (result.success) {
+				toast.success('Category removed');
+				goto('/analytics?period=' + (data.period || 'this_month'), { invalidateAll: true });
+			} else toast.error(result.error || 'Failed to delete');
+		} catch {
+			toast.error('Failed to delete category');
+		}
+	}
+
+	async function assignCategoryToNumber(cpId: string, callTrackingCategoryId: string | null) {
+		try {
+			const res = await fetch(`/api/company-numbers/${cpId}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ callTrackingCategoryId: callTrackingCategoryId || null })
+			});
+			const result = await res.json();
+			if (result.success) {
+				toast.success('Number category updated');
+				goto('/analytics?period=' + (data.period || 'this_month'), { invalidateAll: true });
+			} else toast.error(result.error || 'Failed to update');
+		} catch {
+			toast.error('Failed to update number');
+		}
+	}
+
+	function formatDate(d: Date | string) {
+		const x = typeof d === 'string' ? new Date(d) : d;
+		return x.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+	}
+
+	function formatDuration(seconds: number) {
+		if (seconds < 60) return `${Math.round(seconds)}s`;
+		const m = Math.floor(seconds / 60);
+		const s = Math.round(seconds % 60);
+		return s > 0 ? `${m}m ${s}s` : `${m}m`;
+	}
+
+	function formatPeakDate(dateStr: string) {
+		return new Date(dateStr + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+	}
 </script>
 
-<div class="bg-[#F5F7FF] min-h-screen">
+<div class="min-h-screen bg-[#F5F7FF]">
+	<div class="max-w-7xl mx-auto px-8 py-8">
+		<h1 class="text-2xl font-semibold text-gray-700 mb-6">Analytics</h1>
 
-  <div class="max-w-7xl mx-auto px-8 py-8">
-    <div class="text-2xl font-semibold text-gray-700 mb-6">Analytics</div>
-    <div class="flex gap-6 mb-6 justify-between items-center">
-      <!-- Date Range -->
-      <div class="flex items-center gap-4 bg-white px-4">
-        <label class="block text-sm text-gray-500 mb-1">Date Range:</label>
-        <button class="flex items-center gap-2 rounded px-4 py-2 text-primary font-medium shadow-sm">
-          {dateRange}
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-      </div>
-      <!-- Search -->
-      <div class=" flex flex-col w-96">
-        <label class="block text-sm text-gray-500 mb-1 invisible">Search</label>
-        <div class="relative">
-          <input
-            class="w-full bg-white border rounded pl-10 pr-10 py-2 text-primary shadow-sm focus:outline-none"
-            placeholder="Search"
-            bind:value={search}
-          />
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <Mic class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-        </div>
-      </div>
-    </div>
-    <!-- Stat Cards -->
-    <div class="grid grid-cols-3 gap-6 mb-6">
-      <div class="bg-white rounded-xl p-6 flex flex-col gap-2 shadow" >
-        <div class="flex items-center justify-between text-gray-500 text-sm font-medium">
-          Total Interactions
-          <RefreshCw class="w-5 h-5 text-gray-300" />
-        </div>
-        <div class="text-2xl font-bold text-primary">3,425</div>
-      </div>
-      <div class="bg-white rounded-xl p-6 flex flex-col gap-2 shadow" >
-        <div class="flex items-center justify-between text-gray-500 text-sm font-medium">
-          Incoming Calls
-          <Phone class="w-5 h-5 text-gray-300" />
-        </div>
-        <div class="text-2xl font-bold text-primary">1,230</div>
-      </div>
-      <div class="bg-white rounded-xl p-6 flex flex-col gap-2 shadow" >
-        <div class="flex items-center justify-between text-gray-500 text-sm font-medium">
-          Outgoing Calls
-          <Phone class="w-5 h-5 text-gray-300" />
-        </div>
-        <div class="text-2xl font-bold text-primary">1,020</div>
-      </div>
-      <div class="bg-white rounded-xl p-6 flex flex-col gap-2 shadow" >
-        <div class="flex items-center justify-between text-gray-500 text-sm font-medium">
-          SMS Messages
-          <MessageCircle class="w-5 h-5 text-gray-300" />
-        </div>
-        <div class="text-2xl font-bold text-primary">540</div>
-      </div>
-      <div class="bg-white rounded-xl p-6 flex flex-col gap-2 shadow" >
-        <div class="flex items-center justify-between text-gray-500 text-sm font-medium">
-          Emails Sent/Receive
-          <Mail class="w-5 h-5 text-gray-300" />
-        </div>
-        <div class="text-2xl font-bold text-primary">420</div>
-      </div>
-      <div class="bg-white rounded-xl p-6 flex flex-col gap-2 shadow" >
-        <div class="flex items-center justify-between text-gray-500 text-sm font-medium">
-          WhatsApp Interactions
-          <MessageCircle class="w-5 h-5 text-gray-300" />
-        </div>
-        <div class="text-2xl font-bold text-primary">210</div>
-      </div>
-    </div>
-    <!-- Tabs -->
-    <div class="flex gap-3 mb-6">
-      {#each tabs as tab}
-        <button
-          class="px-5 py-2 rounded-lg  text-gray-500 font-medium border transition
-            {activeTab === tab ? 'bg-primary text-white' : 'hover:bg-gray-100 bg-white'}"
-          on:click={() => activeTab = tab}
-        >
-          {tab}
-        </button>
-      {/each}
-    </div>
-    <!-- Chart/Data Placeholders -->
-    <div class="grid grid-cols-4 gap-6">
-      <div class="bg-white rounded-xl h-48 shadow"></div>
-      <div class="bg-white rounded-xl h-48 shadow"></div>
-      <div class="bg-white rounded-xl h-48 shadow"></div>
-      <div class="bg-white rounded-xl h-48 shadow"></div>
-    </div>
-  </div>
+		<div class="flex gap-6 mb-6 justify-between items-center flex-wrap">
+			<div class="flex items-center gap-2">
+				<label for="analytics-period" class="text-sm text-gray-500">Date range:</label>
+				<div class="relative">
+					<select
+						id="analytics-period"
+						class="rounded border border-gray-300 bg-white px-3 py-2 text-[#577AB7] font-medium focus:outline-none focus:ring-2 focus:ring-[#577AB7]/30"
+						value={data.period}
+						onchange={(e) => setPeriod((e.currentTarget as HTMLSelectElement).value)}
+					>
+						<option value="this_month">This month</option>
+						<option value="last_7">Last 7 days</option>
+						<option value="last_30">Last 30 days</option>
+					</select>
+				</div>
+			</div>
+			<div class="flex flex-col w-96">
+				<div class="relative">
+					<input
+						class="w-full bg-white border border-gray-300 rounded pl-10 pr-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#577AB7]/30"
+						placeholder="Search"
+						bind:value={search}
+					/>
+					<Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+				</div>
+			</div>
+		</div>
+
+		<!-- Call stats -->
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+			<div class="bg-white rounded-xl p-6 shadow">
+				<div class="flex items-center justify-between text-gray-500 text-sm font-medium">
+					Total calls
+					<RefreshCw class="w-5 h-5 text-gray-300" />
+				</div>
+				<div class="text-2xl font-bold text-[#577AB7]">{data.stats.totalCalls.toLocaleString()}</div>
+				<p class="text-xs text-gray-400 mt-1">Voice in selected period</p>
+			</div>
+			<div class="bg-white rounded-xl p-6 shadow">
+				<div class="flex items-center justify-between text-gray-500 text-sm font-medium">
+					Incoming calls
+					<Phone class="w-5 h-5 text-gray-300" />
+				</div>
+				<div class="text-2xl font-bold text-[#577AB7]">{data.stats.inboundTotal.toLocaleString()}</div>
+			</div>
+			<div class="bg-white rounded-xl p-6 shadow">
+				<div class="flex items-center justify-between text-gray-500 text-sm font-medium">
+					Outgoing calls
+					<Phone class="w-5 h-5 text-gray-300" />
+				</div>
+				<div class="text-2xl font-bold text-[#577AB7]">{data.stats.outboundTotal.toLocaleString()}</div>
+			</div>
+			<div class="bg-white rounded-xl p-6 shadow">
+				<div class="flex items-center justify-between text-gray-500 text-sm font-medium">
+					Avg call length
+					<Clock class="w-5 h-5 text-gray-300" />
+				</div>
+				<div class="text-2xl font-bold text-[#577AB7]">
+					{#if data.avgDurationSeconds != null}
+						{formatDuration(data.avgDurationSeconds)}
+					{:else}
+						—
+					{/if}
+				</div>
+				<p class="text-xs text-gray-400 mt-1">
+					{#if data.callsWithDuration > 0}
+						From {data.callsWithDuration} call{data.callsWithDuration === 1 ? '' : 's'} with duration
+					{:else}
+						No duration data yet
+					{/if}
+				</p>
+			</div>
+		</div>
+
+		<!-- Charts row -->
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+			<section class="bg-white rounded-xl p-6 shadow">
+				<h2 class="text-lg font-semibold text-gray-700 mb-2">Calls over time</h2>
+				{#if data.callsOverTime.length > 0}
+					<CallsOverTimeChart data={data.callsOverTime} />
+				{:else}
+					<div class="flex flex-col items-center justify-center py-12 text-gray-400">
+						<TrendingUp class="w-12 h-12 mb-2 opacity-50" />
+						<p class="text-sm">No call data in this period.</p>
+					</div>
+				{/if}
+			</section>
+			<section class="bg-white rounded-xl p-6 shadow">
+				<h2 class="text-lg font-semibold text-gray-700 mb-2">Calls by category</h2>
+				<CategoryBarChart data={data.stats.byCategory} />
+			</section>
+		</div>
+
+		{#if data.peakDay && data.peakDay.count > 0}
+			<div class="mb-6 rounded-lg bg-[#577AB7]/10 border border-[#577AB7]/20 px-4 py-2 text-sm text-[#577AB7]">
+				<strong>Busiest day:</strong> {formatPeakDate(data.peakDay.date)} with {data.peakDay.count} call{data.peakDay.count === 1 ? '' : 's'}.
+			</div>
+		{/if}
+
+		<!-- Call tracking by category -->
+		<section class="bg-white rounded-xl p-6 shadow mb-8">
+			<h2 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+				<Tag class="w-5 h-5 text-[#577AB7]" />
+				Call tracking by category
+			</h2>
+			<p class="text-sm text-gray-500 mb-4">
+				Assign categories to numbers (e.g. "Facebook", "Customer Care"). Incoming and outgoing calls to that number are counted under the category.
+			</p>
+
+			<!-- Categories list + Add -->
+			<div class="flex flex-wrap items-center gap-3 mb-6">
+				{#each data.categories as cat}
+					<div class="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5">
+						<span class="font-medium text-gray-700">{cat.name}</span>
+						<button
+							type="button"
+							class="text-gray-400 hover:text-red-500 p-0.5"
+							aria-label="Delete category"
+							onclick={() => deleteCategory(cat.id)}
+						>
+							<Trash2 class="w-3.5 h-3.5" />
+						</button>
+					</div>
+				{/each}
+				<form
+					class="flex gap-2"
+					onsubmit={(e) => {
+						e.preventDefault();
+						addCategory();
+					}}
+				>
+					<input
+						type="text"
+						class="rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#577AB7]/30"
+						placeholder="New category name"
+						bind:value={newCategoryName}
+						disabled={addingCategory}
+					/>
+					<button
+						type="submit"
+						class="rounded bg-[#577AB7] px-3 py-1.5 text-white text-sm font-medium hover:bg-[#4a6ba5] disabled:opacity-50 flex items-center gap-1"
+						disabled={addingCategory || !newCategoryName.trim()}
+					>
+						<Plus class="w-4 h-4" /> Add
+					</button>
+				</form>
+			</div>
+
+			<!-- Stats by category -->
+			<div class="overflow-x-auto mb-6">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="border-b border-gray-200 text-left text-gray-500 font-medium">
+							<th class="pb-2 pr-4">Category</th>
+							<th class="pb-2 pr-4">Inbound</th>
+							<th class="pb-2 pr-4">Outbound</th>
+							<th class="pb-2">Total</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.stats.byCategory as [, row]}
+							<tr class="border-b border-gray-100">
+								<td class="py-2 pr-4 font-medium text-gray-700">{row.name}</td>
+								<td class="py-2 pr-4 text-gray-600">{row.inbound}</td>
+								<td class="py-2 pr-4 text-gray-600">{row.outbound}</td>
+								<td class="py-2 text-gray-600">{row.total}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+
+			<!-- Numbers and their category -->
+			<h3 class="text-sm font-semibold text-gray-600 mb-2">Assign category to number</h3>
+			<div class="overflow-x-auto">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="border-b border-gray-200 text-left text-gray-500 font-medium">
+							<th class="pb-2 pr-4">Number</th>
+							<th class="pb-2">Category</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.companyNumbers as num}
+							<tr class="border-b border-gray-100">
+								<td class="py-2 pr-4 text-gray-700">{num.phoneNumber}</td>
+								<td class="py-2">
+									<select
+										class="rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#577AB7]/30"
+										value={num.callTrackingCategoryId ?? ''}
+										onchange={(e) =>
+											assignCategoryToNumber(
+												num.id,
+												(e.currentTarget as HTMLSelectElement).value || null
+											)}
+									>
+										<option value="">— None —</option>
+										{#each data.categories as cat}
+											<option value={cat.id}>{cat.name}</option>
+										{/each}
+									</select>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+				{#if data.companyNumbers.length === 0}
+					<p class="py-4 text-gray-500 text-sm">No phone numbers assigned. Assign numbers in <a href="/manage-numbers" class="text-[#577AB7] underline">Manage numbers</a>.</p>
+				{/if}
+			</div>
+		</section>
+
+		<!-- Recent voice calls -->
+		<section class="bg-white rounded-xl p-6 shadow">
+			<h2 class="text-lg font-semibold text-gray-700 mb-1">Recent calls</h2>
+			<p class="text-sm text-gray-500 mb-4">Click a row to view details and recording.</p>
+			<div class="overflow-x-auto">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="border-b border-gray-200 text-left text-gray-500 font-medium">
+							<th class="pb-2 pr-4">Date</th>
+							<th class="pb-2 pr-4">Direction</th>
+							<th class="pb-2 pr-4">Category</th>
+							<th class="pb-2 pr-4">From / To</th>
+							<th class="pb-2">Contact</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.voiceLogs as log}
+							<tr
+								role="button"
+								tabindex="0"
+								class="border-b border-gray-100 cursor-pointer hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+								onclick={() => {
+									selectedCall = log;
+									callDetailOpen = true;
+								}}
+								onkeydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										selectedCall = log;
+										callDetailOpen = true;
+									}
+								}}
+							>
+								<td class="py-2 pr-4 text-gray-600">{formatDate(log.created)}</td>
+								<td class="py-2 pr-4">
+									<span
+										class="rounded px-1.5 py-0.5 text-xs font-medium {log.direction === 'inbound'
+											? 'bg-green-100 text-green-800'
+											: 'bg-blue-100 text-blue-800'}"
+									>
+										{log.direction === 'inbound' ? 'In' : 'Out'}
+									</span>
+								</td>
+								<td class="py-2 pr-4 text-gray-600">
+									{log.callTrackingCategory?.name ?? '—'}
+								</td>
+								<td class="py-2 pr-4 text-gray-600">
+									{log.direction === 'inbound' ? log.source : log.destination} →
+									{log.direction === 'inbound' ? log.destination : log.source}
+								</td>
+								<td class="py-2 text-gray-600">
+									{log.customer?.name || log.customer?.phone || '—'}
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+				{#if data.voiceLogs.length === 0}
+					<p class="py-6 text-gray-500 text-center">No calls in this period.</p>
+				{/if}
+			</div>
+		</section>
+
+		<CallDetailDialog bind:open={callDetailOpen} call={selectedCall} />
+	</div>
 </div>

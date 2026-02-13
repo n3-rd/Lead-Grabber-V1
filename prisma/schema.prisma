@@ -130,35 +130,57 @@ model Company {
   updated     DateTime  @updatedAt
 
   // Relations
-  users              User[]
-  teamMembers        CompanyMember[]
-  contacts           Contact[]
-  communicationLogs  CommunicationLog[]
-  messages           Message[]
-  invites            Invite[]
-  locations          Location[]
-  notifications      Notification[]
-  callFlows          CallFlow[]
-  phoneNumbers      CompanyPhoneNumber[]
+  users                   User[]
+  teamMembers             CompanyMember[]
+  contacts                Contact[]
+  communicationLogs      CommunicationLog[]
+  messages                Message[]
+  invites                 Invite[]
+  locations               Location[]
+  notifications           Notification[]
+  callFlows               CallFlow[]
+  phoneNumbers            CompanyPhoneNumber[]
+  callTrackingCategories  CallTrackingCategory[]
 
   @@map("companies")
 }
 
+// Call tracking: company-defined categories (e.g. "Facebook", "Customer Care") for numbers
+model CallTrackingCategory {
+  id                   String   @id @default(cuid())
+  companyId            String
+  company              Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name                 String   // e.g. "Facebook", "Customer Care"
+  sortOrder            Int      @default(0)
+  created              DateTime @default(now())
+  updated              DateTime @updatedAt
+
+  companyPhoneNumbers  CompanyPhoneNumber[]
+  communicationLogs   CommunicationLog[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("call_tracking_categories")
+}
+
 // Numbers bought via Telnyx and assigned to a company for dialing, IVR, SMS
 model CompanyPhoneNumber {
-  id                   String    @id @default(cuid())
-  companyId            String
-  company              Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  phoneNumber          String    // E.164 e.g. +17051234567
-  telnyxPhoneNumberId  String?   // Telnyx phone_number id if needed
-  callFlowId           String?   // When set, this number uses this IVR flow; when null, no IVR (pending call)
-  callFlow             CallFlow? @relation(fields: [callFlowId], references: [id], onDelete: SetNull)
-  created              DateTime  @default(now())
-  updated              DateTime  @updatedAt
+  id                      String                 @id @default(cuid())
+  companyId               String
+  company                 Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  phoneNumber             String                 // E.164 e.g. +17051234567
+  telnyxPhoneNumberId     String?                // Telnyx phone_number id if needed
+  callFlowId              String?                // When set, this number uses this IVR flow; when null, no IVR (pending call)
+  callFlow                CallFlow?              @relation(fields: [callFlowId], references: [id], onDelete: SetNull)
+  callTrackingCategoryId  String?                // For call tracking analytics (e.g. "Facebook", "Customer Care")
+  callTrackingCategory    CallTrackingCategory?  @relation(fields: [callTrackingCategoryId], references: [id], onDelete: SetNull)
+  created                 DateTime               @default(now())
+  updated                 DateTime               @updatedAt
 
   @@unique([phoneNumber])
   @@index([companyId])
   @@index([callFlowId])
+  @@index([callTrackingCategoryId])
   @@map("company_phone_numbers")
 }
 
@@ -270,29 +292,33 @@ model Contact {
 }
 
 model CommunicationLog {
-  id              String                    @id @default(cuid())
-  type            CommunicationType
-  direction       CommunicationDirection
-  status          CommunicationStatus
-  source          String?
-  destination     String?
-  customerId      String?
-  customer        Contact?                 @relation(fields: [customerId], references: [id])
-  companyId       String
-  company         Company                  @relation(fields: [companyId], references: [id])
-  userId          String?
-  user            User?                    @relation(fields: [userId], references: [id])
-  assignedMembers CommunicationLogAssignedMember[]
-  summary         String?
-  content         String?
-  duration        Float?
-  metadata        Json?
-  created         DateTime                  @default(now())
-  updated         DateTime                  @updatedAt
+  id                     String                    @id @default(cuid())
+  type                   CommunicationType
+  direction              CommunicationDirection
+  status                 CommunicationStatus
+  source                 String?
+  destination            String?
+  customerId             String?
+  customer               Contact?                 @relation(fields: [customerId], references: [id])
+  companyId              String
+  company                Company                  @relation(fields: [companyId], references: [id])
+  userId                 String?
+  user                   User?                    @relation(fields: [userId], references: [id])
+  callTrackingCategoryId String?                  // Set from number's category when call is logged
+  callTrackingCategory   CallTrackingCategory?   @relation(fields: [callTrackingCategoryId], references: [id], onDelete: SetNull)
+  assignedMembers        CommunicationLogAssignedMember[]
+  summary                String?
+  content                String?
+  duration               Float?
+  metadata               Json?
+  created                DateTime                 @default(now())
+  updated                DateTime                 @updatedAt
 
   @@index([companyId])
   @@index([customerId])
   @@index([userId])
+  @@index([callTrackingCategoryId])
+  @@index([companyId, type, created])
   @@map("communication_logs")
 }
 

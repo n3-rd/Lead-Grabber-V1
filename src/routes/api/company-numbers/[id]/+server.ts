@@ -11,8 +11,10 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	try {
 		const body = await request.json();
 		const callFlowId = body.callFlowId as string | null | undefined;
-		const data: { callFlowId?: string | null } = {};
+		const callTrackingCategoryId = body.callTrackingCategoryId as string | null | undefined;
+		const data: { callFlowId?: string | null; callTrackingCategoryId?: string | null } = {};
 		if (callFlowId !== undefined) data.callFlowId = callFlowId || null;
+		if (callTrackingCategoryId !== undefined) data.callTrackingCategoryId = callTrackingCategoryId || null;
 		if (Object.keys(data).length === 0) {
 			return json({ error: 'No updates provided' }, { status: 400 });
 		}
@@ -25,7 +27,10 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 		}
 		const number = await prisma.companyPhoneNumber.findFirst({
 			where: { id, companyId: locals.user.company.id },
-			include: { callFlow: { select: { id: true, title: true } } }
+			include: {
+				callFlow: { select: { id: true, title: true } },
+				callTrackingCategory: { select: { id: true, name: true } }
+			}
 		});
 		return json({ success: true, number });
 	} catch (e) {

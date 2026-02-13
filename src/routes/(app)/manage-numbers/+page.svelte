@@ -13,9 +13,17 @@
 	let selectedNumbers = $state<Set<string>>(new Set());
 	let numbers = $state<any[]>([]);
 	let verifiedNumbers = $state<any[]>([]);
-	type CompanyNumber = { id: string; phoneNumber: string; callFlowId?: string | null; callFlow?: { id: string; title: string } | null };
+	type CompanyNumber = {
+		id: string;
+		phoneNumber: string;
+		callFlowId?: string | null;
+		callFlow?: { id: string; title: string } | null;
+		callTrackingCategoryId?: string | null;
+		callTrackingCategory?: { id: string; name: string } | null;
+	};
 	let companyNumbers = $state<CompanyNumber[]>([]);
 	let ivrFlows = $state<{ id: string; title: string }[]>([]);
+	let callTrackingCategories = $state<{ id: string; name: string }[]>([]);
 	let numberOrders = $state<any[]>([]);
 	let isLoading = $state(false);
 	let updatingFlowId = $state<string | null>(null);
@@ -77,18 +85,21 @@
 	async function loadNumbers() {
 		isLoading = true;
 		try {
-			const [listRes, companyRes, flowsRes] = await Promise.all([
+			const [listRes, companyRes, flowsRes, categoriesRes] = await Promise.all([
 				fetch(`/api/telnyx/numbers/list?${new URLSearchParams(searchQuery ? { search: searchQuery } : {}).toString()}`),
 				fetch('/api/company-numbers'),
-				fetch('/api/ivr/flows')
+				fetch('/api/ivr/flows'),
+				fetch('/api/call-tracking-categories')
 			]);
 			const listResult = await listRes.json();
 			const companyResult = await companyRes.json();
 			const flowsResult = await flowsRes.json();
+			const categoriesResult = await categoriesRes.json();
 			if (listResult.success) numbers = listResult.numbers;
 			else toast.error(listResult.error || 'Failed to load numbers');
 			if (companyResult.success) companyNumbers = companyResult.numbers;
 			if (flowsResult.flows) ivrFlows = flowsResult.flows.map((f: { id: string; title: string }) => ({ id: f.id, title: f.title }));
+			if (categoriesResult.success) callTrackingCategories = categoriesResult.categories;
 		} catch (error) {
 			console.error('Error loading numbers:', error);
 			toast.error('Error loading numbers');
@@ -122,6 +133,25 @@
 			toast.error('Failed to update IVR flow');
 		} finally {
 			updatingFlowId = null;
+		}
+	}
+
+	async function handleCategoryChange(cpId: string, callTrackingCategoryId: string | null) {
+		try {
+			const res = await fetch(`/api/company-numbers/${cpId}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ callTrackingCategoryId: callTrackingCategoryId || null })
+			});
+			const result = await res.json();
+			if (result.success && result.number) {
+				companyNumbers = companyNumbers.map((c) => (c.id === cpId ? result.number : c));
+				toast.success('Call tracking category updated');
+			} else {
+				toast.error(result.error || 'Failed to update category');
+			}
+		} catch (e) {
+			toast.error('Failed to update category');
 		}
 	}
 
@@ -614,6 +644,9 @@
 								IVR Flow
 							</th>
 							<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								Call tracking
+							</th>
+							<th class="pb-3 text-left font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
 								Action
 							</th>
 						</tr>
@@ -621,13 +654,13 @@
 					<tbody>
 						{#if isLoading}
 							<tr>
-								<td colspan="9" class="py-8 text-center text-gray-500">
+								<td colspan="10" class="py-8 text-center text-gray-500">
 									Loading...
 								</td>
 							</tr>
 						{:else if numbers.length === 0}
 							<tr>
-								<td colspan="9" class="py-8 text-center text-gray-500">
+								<td colspan="10" class="py-8 text-center text-gray-500">
 									No numbers found.
 								</td>
 							</tr>
@@ -686,6 +719,22 @@
 											<option value="">No IVR</option>
 											{#each ivrFlows as flow}
 												<option value={flow.id}>{flow.title}</option>
+											{/each}
+										</select>
+									{:else}
+										<span class="text-[#B6B6B6]">—</span>
+									{/if}
+								</td>
+								<td class="py-3">
+									{#if assigned}
+										<select
+											class="min-w-[120px] rounded border border-[#969696] bg-white px-2 py-1 font-['Poppins'] text-sm text-[#808080] outline-none"
+											value={assigned.callTrackingCategoryId ?? ''}
+											onchange={(e) => handleCategoryChange(assigned.id, (e.currentTarget.value || null) as string | null)}
+										>
+											<option value="">—</option>
+											{#each callTrackingCategories as cat}
+												<option value={cat.id}>{cat.name}</option>
 											{/each}
 										</select>
 									{:else}

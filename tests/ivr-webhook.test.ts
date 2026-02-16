@@ -8,6 +8,8 @@ const mockFetch = vi.fn();
 const mockPrismaCallFlowFindMany = vi.fn();
 const mockPrismaCallFlowFindUnique = vi.fn();
 const mockPrismaCompanyPhoneNumberFindUnique = vi.fn();
+const mockPrismaCompanyFindUnique = vi.fn();
+const mockPrismaCallLogCreate = vi.fn();
 const mockPbCreate = vi.fn();
 const mockAddPendingCall = vi.fn();
 
@@ -27,6 +29,12 @@ vi.mock('$lib/db', () => ({
 		},
 		companyPhoneNumber: {
 			findUnique: (...args: unknown[]) => mockPrismaCompanyPhoneNumberFindUnique(...args)
+		},
+		company: {
+			findUnique: (...args: unknown[]) => mockPrismaCompanyFindUnique(...args)
+		},
+		callLog: {
+			create: (...args: unknown[]) => mockPrismaCallLogCreate(...args)
 		}
 	}
 }));
@@ -49,6 +57,8 @@ beforeEach(() => {
 	mockFetch.mockResolvedValue({ ok: true, json: async () => ({}) });
 	mockPbCreate.mockResolvedValue({});
 	mockAddPendingCall.mockImplementation(() => {});
+	mockPrismaCallLogCreate.mockResolvedValue({});
+	mockPrismaCompanyFindUnique.mockResolvedValue({ settings: { timezone: 'America/New_York' } });
 });
 
 describe('IVR webhook simulation', () => {
@@ -67,7 +77,11 @@ describe('IVR webhook simulation', () => {
 		};
 
 		it('answers with IVR client_state when "to" number is assigned to company and active flow exists', async () => {
-			mockPrismaCompanyPhoneNumberFindUnique.mockResolvedValue({ companyId: 'company-1' });
+			// Handler uses getCompanyAndFlowByPhoneNumber → needs companyId + callFlowId to take IVR path
+			mockPrismaCompanyPhoneNumberFindUnique.mockResolvedValue({
+				companyId: 'company-1',
+				callFlowId: 'flow-1'
+			});
 			mockPrismaCallFlowFindMany.mockResolvedValue([
 				{
 					id: 'flow-1',

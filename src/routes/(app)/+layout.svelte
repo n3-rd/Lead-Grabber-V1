@@ -4,8 +4,8 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index';
-	import Button from '@//components/ui/button/button.svelte';
-	import Separator from '@//components/ui/separator/separator.svelte';
+	import { Button } from '$lib/components/ui/button/index';
+	import Separator from '$lib/components/ui/separator/separator.svelte';
 	import { Bell, LogOut } from 'lucide-svelte';
 	import { requestNotificationPermission } from '$lib/utils/browser-notifications';
 

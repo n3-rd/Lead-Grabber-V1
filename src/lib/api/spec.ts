@@ -29,6 +29,11 @@ export function specError(message: string, code = 400) {
 	return json({ success: false, error: message, code }, { status: code >= 400 ? code : 400 });
 }
 
+/** 404 with spec-shaped body for consistency. */
+export function notFound(message = 'Not found') {
+	return json({ success: false, error: message, code: 404 }, { status: 404 });
+}
+
 export function pagination(page: number, limit: number, total: number) {
 	return { page, limit, total, totalPages: Math.ceil(total / limit) || 1 };
 }

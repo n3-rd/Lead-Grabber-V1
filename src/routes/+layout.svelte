@@ -5,7 +5,7 @@
 	import { setUserContext } from '$lib/contexts/user';
 	import { onMount, type Snippet } from 'svelte';
 	import { writable } from 'svelte/store';
-	import LoadingBar from '@//components/loading-bar.svelte';
+	import LoadingBar from '$lib/components/loading-bar.svelte';
 	import { Toaster } from 'svelte-sonner';
 	import IncomingCallDialog from '$lib/components/IncomingCallDialog.svelte';
 	import { callDialog } from '$lib/stores/callDialog';

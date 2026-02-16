@@ -1,7 +1,6 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { prisma } from '$lib/db';
-import { requireAuth, unauthorized, specSuccess, specError } from '$lib/api/spec';
+import { requireAuth, unauthorized, specSuccess, notFound } from '$lib/api/spec';
 import { normalizePhoneNumber } from '$lib/utils/phone';
 
 function toSpecContact(c: {
@@ -44,9 +43,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			updated: true,
 		},
 	});
-	if (!contact) {
-		return json({ success: false, error: 'Contact not found', code: 404 }, { status: 404 });
-	}
+	if (!contact) return notFound('Contact not found');
 	return specSuccess(toSpecContact(contact));
 };
 
@@ -57,9 +54,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	const contact = await prisma.contact.findFirst({
 		where: { id: params.id, companyId: auth.companyId },
 	});
-	if (!contact) {
-		return json({ success: false, error: 'Contact not found', code: 404 }, { status: 404 });
-	}
+	if (!contact) return notFound('Contact not found');
 
 	const body = await request.json().catch(() => ({}));
 	const data: { name?: string; phone?: string; email?: string; companyName?: string; contactType?: string } = {};
@@ -83,11 +78,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 			updated: true,
 		},
 	});
-	return json({
-		success: true,
-		data: toSpecContact(updated),
-		message: 'Contact updated successfully',
-	});
+	return specSuccess(toSpecContact(updated), 'Contact updated successfully');
 };
 
 export const DELETE: RequestHandler = async ({ params, locals }) => {
@@ -97,9 +88,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	const contact = await prisma.contact.findFirst({
 		where: { id: params.id, companyId: auth.companyId },
 	});
-	if (!contact) {
-		return json({ success: false, error: 'Contact not found', code: 404 }, { status: 404 });
-	}
+	if (!contact) return notFound('Contact not found');
 	await prisma.contact.delete({ where: { id: params.id } });
-	return json({ success: true, message: 'Contact deleted successfully' });
+	return specSuccess(null, 'Contact deleted successfully');
 };

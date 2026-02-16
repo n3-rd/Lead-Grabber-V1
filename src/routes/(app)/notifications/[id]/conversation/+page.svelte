@@ -2,6 +2,7 @@
 	import { ArrowLeft, Download, Trash2, Reply, MoreVertical, Mail, User, Send, Type, Paperclip, Link, Image, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, AlignJustify, List, ListOrdered, Indent, Outdent, Undo, Redo, Smile, Lock, PenTool, ChevronDown } from "lucide-svelte";
 	import { goto } from "$app/navigation";
 	import { page } from "$app/stores";
+	import EmptyState from "$lib/components/EmptyState.svelte";
 
 	interface Notification {
 		id: string;
@@ -451,9 +452,11 @@
 			</div>
 		</div>
 	{:else}
-		<div class="p-4">
-			<p>Notification not found</p>
-			<button onclick={handleBack} class="mt-4 text-blue-500">Go back</button>
-		</div>
+		<EmptyState
+			title="Notification not found"
+			variant="compact"
+			class="min-h-0"
+			primaryAction={{ label: 'Go back', onclick: handleBack }}
+		/>
 	{/if}
 </div>

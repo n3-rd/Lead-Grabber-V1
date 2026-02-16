@@ -4,6 +4,7 @@
 	import { invalidateAll } from "$app/navigation";
 	import { page } from "$app/stores";
 	import CommunicationTable from "$lib/components/CommunicationTable.svelte";
+	import EmptyState from "$lib/components/EmptyState.svelte";
 	import { Button } from "$lib/components/ui/button";
 	import * as Dialog from "$lib/components/ui/dialog";
 	import { Input } from "$lib/components/ui/input";
@@ -574,13 +575,10 @@
 		</div>
 	{/if}
 {:else}
-	<div class="w-full p-4">
-		<p class="text-[#555555]">Profile not found</p>
-		<button
-			onclick={() => goto('/profiles')}
-			class="mt-4 text-[#577AB7] hover:text-[#3d5a8a] font-sans text-sm"
-		>
-			← Back to Profiles
-		</button>
-	</div>
+	<EmptyState
+		title="Profile not found"
+		variant="compact"
+		class="min-h-0"
+		primaryAction={{ label: '← Back to Profiles', href: '/profiles' }}
+	/>
 {/if}

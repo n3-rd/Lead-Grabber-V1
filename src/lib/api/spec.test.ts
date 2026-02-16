@@ -4,6 +4,7 @@ import {
 	unauthorized,
 	specSuccess,
 	specError,
+	notFound,
 	pagination
 } from './spec';
 import type { SpecLocals } from './spec';
@@ -62,6 +63,21 @@ describe('specError', () => {
 		expect(res.status).toBe(404);
 		const body = await res.json();
 		expect(body.code).toBe(404);
+	});
+});
+
+describe('notFound', () => {
+	it('returns 404 with spec-shaped body', async () => {
+		const res = notFound();
+		expect(res.status).toBe(404);
+		const body = await res.json();
+		expect(body).toEqual({ success: false, error: 'Not found', code: 404 });
+	});
+	it('accepts custom message', async () => {
+		const res = notFound('Contact not found');
+		expect(res.status).toBe(404);
+		const body = await res.json();
+		expect(body.error).toBe('Contact not found');
 	});
 });
 

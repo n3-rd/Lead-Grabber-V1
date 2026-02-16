@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import EmptyState from '$lib/components/EmptyState.svelte';
 
 	interface Rule {
 		id: string;
@@ -84,25 +85,11 @@
 
 		<!-- Call Flow Cards -->
 		{#if callFlows.length === 0}
-			<!-- Empty State -->
-			<div class="flex min-h-[400px] items-center justify-center">
-				<div class="text-center">
-					<div class="mb-6 rounded-lg border border-[#C3C3C3] bg-[rgba(236,239,243,0.74)] p-12 shadow-[0px_0px_4px_rgba(0,0,0,0.25)]">
-						<h2 class="mb-2 font-['Poppins'] text-2xl font-semibold leading-[28px] text-[#808080]">
-							No Call Flows Yet
-						</h2>
-						<p class="mb-6 font-['Poppins'] text-lg font-light leading-[21px] text-[#808080]">
-							Start by creating your own call flow and set up your rules.
-						</p>
-						<button
-							onclick={handleCreate}
-							class="h-[45px] rounded-[4px] bg-[#577AB7] px-4 font-['Poppins'] text-base font-semibold leading-[19px] text-white transition-colors hover:bg-[#4a6ba5]"
-						>
-							Create new Call flow
-						</button>
-					</div>
-				</div>
-			</div>
+			<EmptyState
+				title="No Call Flows Yet"
+				description="Start by creating your own call flow and set up your rules."
+				primaryAction={{ label: 'Create new Call flow', onclick: handleCreate }}
+			/>
 		{:else}
 			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{#each callFlows as flow}

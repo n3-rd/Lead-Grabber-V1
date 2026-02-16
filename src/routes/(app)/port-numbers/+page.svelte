@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Filter, Download } from 'lucide-svelte';
+	import EmptyState from '$lib/components/EmptyState.svelte';
 
 	let activeTab = $state<'portOrders' | 'portOutRequest'>('portOrders');
 
@@ -98,12 +99,7 @@
 				</div>
 			</div>
 
-			<!-- Empty State -->
-			<div class="flex h-[400px] items-center justify-center">
-				<p class="font-['Poppins'] text-xl font-medium leading-[24px] text-[#808080]">
-					No Results Found
-				</p>
-			</div>
+			<EmptyState title="No Results Found" class="h-[400px]" />
 		</div>
 	</div>
 </div>

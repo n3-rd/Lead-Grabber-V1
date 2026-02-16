@@ -36,6 +36,8 @@ model User {
   ownedLeadforms                    Leadform[]
   sentInvites                       Invite[]                             @relation("InvitedBy")
   receivedInvites                   Invite[]                             @relation("InvitedUser")
+  personalShortcuts                 Shortcut[]
+  fcmTokens                         FcmToken[]
 
   @@index([email])
   @@index([tokenKey])
@@ -141,6 +143,8 @@ model Company {
   callFlows               CallFlow[]
   phoneNumbers            CompanyPhoneNumber[]
   callTrackingCategories  CallTrackingCategory[]
+  scheduleEvents          ScheduleEvent[]
+  shortcuts               Shortcut[]
 
   @@map("companies")
 }
@@ -281,6 +285,9 @@ model Contact {
   cell          String?
   smsPermission Boolean  @default(false)
   pastNames     Json?
+  contactType   String?  @default("phone") // phone | email | sms | facebook (ClearSky spec)
+  notes         String?
+  companyName   String?  // Display name e.g. "Dredhart Inc." (ClearSky spec)
   created       DateTime  @default(now())
   updated       DateTime  @updatedAt
 
@@ -511,7 +518,7 @@ model Notification {
   messagePreview      String   // short preview for list
   content             String?  // full body
   read                Boolean  @default(false)
-  communicationLogId  String?
+  communicationLogId String?
   messageId           String?  // Message.id (inbox thread)
   threadId            String?  // Message.threadId for linking to inbox
   createdAt           DateTime @default(now())
@@ -520,4 +527,56 @@ model Notification {
   @@index([companyId, createdAt])
   @@index([read])
   @@map("notifications")
+}
+
+// ClearSky spec: schedule/calendar events
+model ScheduleEvent {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  color       String?  // blue | red | pink
+  created     DateTime @default(now())
+  updated     DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([companyId, startTime])
+  @@map("schedule_events")
+}
+
+// ClearSky spec: team (company-wide) and personal shortcuts
+model Shortcut {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String?  // null = team shortcut
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String   // e.g. /1, /2, /21
+  message   String
+  created   DateTime @default(now())
+  updated   DateTime @updatedAt
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([companyId, userId])
+  @@map("shortcuts")
+}
+
+// ClearSky spec: FCM/APNS device tokens for push
+model FcmToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String
+  platform  String?  // ios | android
+  deviceId  String?
+  created   DateTime @default(now())
+  updated   DateTime @updatedAt
+
+  @@unique([userId, deviceId])
+  @@index([userId])
+  @@map("fcm_tokens")
 }

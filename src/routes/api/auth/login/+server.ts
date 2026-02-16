@@ -1,5 +1,5 @@
 import { prisma } from '$lib/db'
-import { verifyPassword, generateToken } from '$lib/auth'
+import { verifyPassword, generateToken, createSessionCookie } from '$lib/auth'
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 
@@ -45,22 +45,29 @@ export const POST: RequestHandler = async ({ request }) => {
 
     console.log('Authenticated user:', updatedUser)
 
-    return json({
-      success: true,
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        name: updatedUser.name,
-        role: updatedUser.role,
-        company: updatedUser.company,
-        emailVisibility: updatedUser.emailVisibility,
-        verified: updatedUser.verified,
-        avatar: updatedUser.avatar,
-        created: updatedUser.created,
-        updated: updatedUser.updated,
+    return json(
+      {
+        success: true,
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          name: updatedUser.name,
+          role: updatedUser.role,
+          company: updatedUser.company,
+          emailVisibility: updatedUser.emailVisibility,
+          verified: updatedUser.verified,
+          avatar: updatedUser.avatar,
+          created: updatedUser.created,
+          updated: updatedUser.updated,
+        },
+        token,
       },
-      token,
-    })
+      {
+        headers: {
+          'Set-Cookie': createSessionCookie(token),
+        },
+      }
+    )
   } catch (error) {
     console.error('Error during login:', error)
     return json({ success: false, error: 'Invalid email or password' }, { status: 401 })

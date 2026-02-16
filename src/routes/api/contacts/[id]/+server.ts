@@ -1,0 +1,105 @@
+import { json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
+import { prisma } from '$lib/db';
+import { requireAuth, unauthorized, specSuccess, specError } from '$lib/api/spec';
+import { normalizePhoneNumber } from '$lib/utils/phone';
+
+function toSpecContact(c: {
+	id: string;
+	name: string | null;
+	phone: string | null;
+	email: string | null;
+	companyName: string | null;
+	contactType: string | null;
+	created: Date;
+	updated: Date;
+}) {
+	return {
+		id: c.id,
+		name: c.name ?? '',
+		phone: c.phone ?? '',
+		email: c.email ?? '',
+		company: c.companyName ?? '',
+		type: c.contactType ?? 'phone',
+		avatarUrl: null,
+		createdAt: c.created.toISOString(),
+		updatedAt: c.updated.toISOString(),
+	};
+}
+
+export const GET: RequestHandler = async ({ params, locals }) => {
+	const auth = requireAuth(locals);
+	if (!auth) return unauthorized();
+
+	const contact = await prisma.contact.findFirst({
+		where: { id: params.id, companyId: auth.companyId },
+		select: {
+			id: true,
+			name: true,
+			phone: true,
+			email: true,
+			companyName: true,
+			contactType: true,
+			created: true,
+			updated: true,
+		},
+	});
+	if (!contact) {
+		return json({ success: false, error: 'Contact not found', code: 404 }, { status: 404 });
+	}
+	return specSuccess(toSpecContact(contact));
+};
+
+export const PUT: RequestHandler = async ({ params, request, locals }) => {
+	const auth = requireAuth(locals);
+	if (!auth) return unauthorized();
+
+	const contact = await prisma.contact.findFirst({
+		where: { id: params.id, companyId: auth.companyId },
+	});
+	if (!contact) {
+		return json({ success: false, error: 'Contact not found', code: 404 }, { status: 404 });
+	}
+
+	const body = await request.json().catch(() => ({}));
+	const data: { name?: string; phone?: string; email?: string; companyName?: string; contactType?: string } = {};
+	if (typeof body.name === 'string') data.name = body.name.trim();
+	if (typeof body.phone === 'string') data.phone = normalizePhoneNumber(body.phone);
+	if (typeof body.email === 'string') data.email = body.email.trim();
+	if (typeof body.company === 'string') data.companyName = body.company.trim();
+	if (['phone', 'email', 'sms', 'facebook'].includes(body.type)) data.contactType = body.type;
+
+	const updated = await prisma.contact.update({
+		where: { id: params.id },
+		data,
+		select: {
+			id: true,
+			name: true,
+			phone: true,
+			email: true,
+			companyName: true,
+			contactType: true,
+			created: true,
+			updated: true,
+		},
+	});
+	return json({
+		success: true,
+		data: toSpecContact(updated),
+		message: 'Contact updated successfully',
+	});
+};
+
+export const DELETE: RequestHandler = async ({ params, locals }) => {
+	const auth = requireAuth(locals);
+	if (!auth) return unauthorized();
+
+	const contact = await prisma.contact.findFirst({
+		where: { id: params.id, companyId: auth.companyId },
+	});
+	if (!contact) {
+		return json({ success: false, error: 'Contact not found', code: 404 }, { status: 404 });
+	}
+	await prisma.contact.delete({ where: { id: params.id } });
+	return json({ success: true, message: 'Contact deleted successfully' });
+};

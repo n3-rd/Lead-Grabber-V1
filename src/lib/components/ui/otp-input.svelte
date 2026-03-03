@@ -1,6 +1,6 @@
 <script lang="ts">
-	const LENGTH = 6;
-	let { value = $bindable(''), disabled = false, class: className = '' } = $props();
+	const LENGTH = 5;
+	let { value = $bindable(''), disabled = false, class: className = '', onsubmit } = $props();
 
 	let refs: HTMLInputElement[] = [];
 	let local = $state(value.slice(0, LENGTH).padEnd(LENGTH, ''));
@@ -29,6 +29,11 @@
 		if (e.key === 'Backspace' && !local[i] && i > 0) {
 			refs[i - 1]?.focus();
 		}
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			const code = local.replace(/\s/g, '').slice(0, LENGTH);
+			if (code.length === LENGTH && onsubmit) onsubmit();
+		}
 	}
 
 	function handlePaste(e: ClipboardEvent) {
@@ -53,7 +58,7 @@
 			value={local[i] ?? ''}
 			oninput={(e) => handleInput(i, e)}
 			onkeydown={(e) => handleKeydown(i, e)}
-			onpaste={i === 0 ? handlePaste : undefined}
+			onpaste={handlePaste}
 			class="w-11 h-12 text-center text-lg font-semibold rounded-lg bg-gray-100 border border-transparent focus:border-primary/60 focus:bg-white focus:ring-0 focus:outline-none disabled:opacity-50"
 		/>
 	{/each}

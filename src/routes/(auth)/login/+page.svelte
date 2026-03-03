@@ -42,8 +42,8 @@
 	}
 
 	async function verifyOtp() {
-		if (otpCode.length !== 6) {
-			toast.error('Enter the 6-digit code');
+		if (otpCode.length !== 5) {
+			toast.error('Enter the 5-digit code');
 			return;
 		}
 		loading = true;
@@ -104,12 +104,12 @@
 				{#if otpSent}
 					<div class="space-y-6">
 						<p class="text-sm text-gray-600">
-							We sent a 6-digit code to <strong>{otpEmail}</strong>
+							We sent a 5-digit code to <strong>{otpEmail}</strong>
 						</p>
-						<OtpInput bind:value={otpCode} disabled={loading} />
+						<OtpInput bind:value={otpCode} disabled={loading} onsubmit={verifyOtp} />
 						<Button
 							type="button"
-							disabled={loading || otpCode.length !== 6}
+							disabled={loading || otpCode.length !== 5}
 							class="w-full py-3 px-4 bg-primary hover:bg-primary/80 text-white font-medium rounded-lg flex items-center justify-center gap-2"
 							onclick={verifyOtp}
 						>

@@ -14,8 +14,8 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
 			return json({ success: false, error: 'Valid email is required' }, { status: 400 });
 		}
-		if (code.length !== 6) {
-			return json({ success: false, error: 'Enter the 6-digit code' }, { status: 400 });
+		if (code.length !== 5) {
+			return json({ success: false, error: 'Enter the 5-digit code' }, { status: 400 });
 		}
 
 		if (intent === 'login') {

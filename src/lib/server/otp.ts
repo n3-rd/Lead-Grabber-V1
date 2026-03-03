@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '$lib/db';
 import { sendOtpEmail } from './brevo';
 
-const OTP_LENGTH = 6;
+const OTP_LENGTH = 5;
 const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 min
 
 function generateCode(): string {
@@ -59,7 +59,7 @@ export async function verifyOtp(params: {
 
 	const row = await prisma.otp.findFirst({
 		where: { collectionRef, recordRef },
-		orderBy: { createdAt: 'desc' }
+		orderBy: { created: 'desc' }
 	});
 
 	if (!row) return { valid: false };

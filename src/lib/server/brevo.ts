@@ -74,3 +74,27 @@ export async function sendInviteEmail({
         htmlContent
     });
 }
+
+const OTP_EXPIRY_MINUTES = 10;
+
+export async function sendOtpEmail(to: string, code: string, purpose: 'login' | 'signup' = 'login') {
+    const subject = purpose === 'signup'
+        ? 'Your Lead Grabber verification code'
+        : 'Your Lead Grabber login code';
+
+    const htmlContent = `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+            <h2 style="color: #333;">Verification code</h2>
+            <p>Use this code to ${purpose === 'signup' ? 'complete your sign up' : 'log in'} to Lead Grabber:</p>
+            <p style="font-size: 28px; font-weight: bold; letter-spacing: 6px; margin: 24px 0;">${code}</p>
+            <p style="color: #777;">This code expires in ${OTP_EXPIRY_MINUTES} minutes.</p>
+            <p style="color: #777; font-size: 12px;">If you didn't request this, you can ignore this email.</p>
+        </div>
+    `;
+
+    return sendEmail({
+        to: [{ email: to }],
+        subject,
+        htmlContent
+    });
+}

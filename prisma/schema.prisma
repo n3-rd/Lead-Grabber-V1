@@ -106,13 +106,14 @@ model Mfa {
 }
 
 model Otp {
-  id           String   @id @default(cuid())
-  collectionRef String
-  recordRef    String
-  password     String   // Hashed OTP
-  sentTo       String?
-  created      DateTime  @default(now())
-  updated      DateTime  @updatedAt
+  id             String   @id @default(cuid())
+  collectionRef  String
+  recordRef      String
+  password       String   // Hashed OTP
+  sentTo         String?
+  signupPayload  Json?    // For signup: { name, passwordHash }
+  created        DateTime @default(now())
+  updated        DateTime @updatedAt
 
   @@index([collectionRef, recordRef])
   @@map("_otps")

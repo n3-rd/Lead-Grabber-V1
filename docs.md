@@ -24,6 +24,7 @@ Every API endpoint in the project. Auth: “Session” = requires `app_session` 
 | `/api/fcm` | store-token POST |
 | `/api/invites` | GET; [id] DELETE, resend POST |
 | `/api/ivr` | flows GET, POST; flows/[id] GET, PATCH, DELETE; flows/[id]/rules GET, POST; flows/[flowId]/rules/[ruleId] GET, PATCH, DELETE |
+| `/api/me` | GET |
 | `/api/messages` | GET, POST, PATCH; draft POST |
 | `/api/notifications` | GET, PATCH; [id] GET, read PUT, reply POST; unread-count GET |
 | `/api/profiles` | GET, POST; [id] GET, PUT, DELETE |
@@ -31,6 +32,7 @@ Every API endpoint in the project. Auth: “Session” = requires `app_session` 
 | `/api/representatives` | GET; [id] GET, communication-logs GET |
 | `/api/schedule` | events GET, POST; events/[id] PUT, DELETE |
 | `/api/shortcuts` | personal GET, POST; personal/[id] DELETE; team GET |
+| `/api/sip` | credentials GET |
 | `/api/sms` | send POST, history GET, history/[contactId] GET |
 | `/api/telnyx` | POST (send SMS); test GET; dial POST; call-webhook GET, POST, PUT; webhook GET, POST, PUT, OPTIONS; webhook-backup GET, POST, PUT, OPTIONS; test-call GET, POST; test-call-end GET, POST; test-webhook GET, POST; answer-call POST; hangup POST; setup-company GET, POST; numbers/search GET; numbers/list GET; numbers/buy POST; numbers/update POST; numbers/orders GET; numbers/[phone_number_id] DELETE; porting/check POST; porting/orders GET, POST; porting/loa-configurations GET; verified-numbers GET, POST; verified-numbers/verify POST; ivr/gather POST; ivr/speak POST; ivr/bridge POST; ivr/flows GET, POST |
 | `/api/upload` | ivr POST, logo POST |
@@ -319,7 +321,26 @@ _Note: Invite creation has no REST endpoint in this list; it may be done via a p
 
 ---
 
-## 25. Telnyx — main
+## 25. SIP / WebRTC credentials
+
+Returns the authenticated user's SIP/WebRTC connection config and a short-lived Telnyx WebRTC token. The mobile app should call this after login instead of storing any Telnyx keys or SIP credentials locally.
+
+| Method | Path | Auth | Request | Response |
+|--------|------|------|---------|----------|
+| GET | `/api/sip/credentials` | Session | — | `{ success, data: { connectionId, callerIdName, callerIdNumber, webrtcToken } }` |
+
+**Response fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `connectionId` | string | Telnyx voice-app / connection UUID |
+| `callerIdName` | string | Company name (display name for outbound calls) |
+| `callerIdNumber` | string | E.164 company phone number for caller ID |
+| `webrtcToken` | string \| null | Short-lived JWT for Telnyx WebRTC SDK; `null` if credential creation is not supported for the connection type |
+
+---
+
+## 26. Telnyx — main
 
 | Method | Path | Auth | Request | Response |
 |--------|------|------|---------|----------|
@@ -350,7 +371,7 @@ _Note: Invite creation has no REST endpoint in this list; it may be done via a p
 
 ---
 
-## 26. Telnyx — numbers
+## 27. Telnyx — numbers
 
 | Method | Path | Auth | Request | Response |
 |--------|------|------|---------|----------|
@@ -363,7 +384,7 @@ _Note: Invite creation has no REST endpoint in this list; it may be done via a p
 
 ---
 
-## 27. Telnyx — porting
+## 28. Telnyx — porting
 
 | Method | Path | Auth | Request | Response |
 |--------|------|------|---------|----------|
@@ -374,7 +395,7 @@ _Note: Invite creation has no REST endpoint in this list; it may be done via a p
 
 ---
 
-## 28. Telnyx — verified numbers
+## 29. Telnyx — verified numbers
 
 | Method | Path | Auth | Request | Response |
 |--------|------|------|---------|----------|
@@ -384,7 +405,7 @@ _Note: Invite creation has no REST endpoint in this list; it may be done via a p
 
 ---
 
-## 29. Telnyx — IVR (Call Control proxy)
+## 30. Telnyx — IVR (Call Control proxy)
 
 | Method | Path | Auth | Request | Response |
 |--------|------|------|---------|----------|
@@ -396,7 +417,7 @@ _Note: Invite creation has no REST endpoint in this list; it may be done via a p
 
 ---
 
-## 30. Upload
+## 31. Upload
 
 | Method | Path | Auth | Request | Response |
 |--------|------|------|---------|----------|
@@ -405,7 +426,7 @@ _Note: Invite creation has no REST endpoint in this list; it may be done via a p
 
 ---
 
-## 31. Webhooks (inbound)
+## 32. Webhooks (inbound)
 
 | Method | Path | Auth | Request | Response |
 |--------|------|------|---------|----------|
@@ -415,7 +436,7 @@ _Note: Invite creation has no REST endpoint in this list; it may be done via a p
 
 ---
 
-## 32. Embed
+## 33. Embed
 
 | Method | Path | Auth | Request | Response |
 |--------|------|------|---------|----------|
@@ -424,12 +445,46 @@ _Note: Invite creation has no REST endpoint in this list; it may be done via a p
 
 ---
 
-## 33. Logout
+## 34. Logout
 
 | Method | Path | Auth | Request | Response |
 |--------|------|------|---------|----------|
 | GET | `/logout` | No | Query: redirect? | Clears app_session cookie; redirect 303 to redirect \|\| '/login' |
 | POST | `/logout` | No | Query: redirect? | Same |
+
+---
+
+## 35. Current user
+
+| Method | Path | Auth | Request | Response |
+|--------|------|------|---------|----------|
+| GET | `/api/me` | Session | — | `{ success, data: { id, name, email, phone, company, role } }` |
+
+Example request:
+
+```http
+GET /api/me
+Cookie: app_session=<session-cookie>
+```
+
+Example response:
+
+```json
+{
+	"success": true,
+	"data": {
+		"id": "clx...",
+		"name": "Jane Agent",
+		"email": "jane@acme.com",
+		"phone": null,
+		"company": {
+			"id": "cmp_123",
+			"name": "Acme"
+		},
+		"role": "admin"
+	}
+}
+```
 
 ---
 

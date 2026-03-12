@@ -145,7 +145,7 @@ Codes are **5 digits**, expire in **10 minutes**, and are sent by email (Brevo).
 
 | Method | Path                   | Auth    | Request | Response                                         |
 | ------ | ---------------------- | ------- | ------- | ------------------------------------------------ |
-| GET    | `/api/company-members` | Session | —       | `{ items }` (members with user id, role, status) |
+| GET    | `/api/company-members` | Session | —       | `{ success, data: [{ id, user, expand, role, status }] }` |
 
 ---
 
@@ -165,9 +165,9 @@ Codes are **5 digits**, expire in **10 minutes**, and are sent by email (Brevo).
 | Method | Path                 | Auth    | Request                                                                  | Response                                             |
 | ------ | -------------------- | ------- | ------------------------------------------------------------------------ | ---------------------------------------------------- |
 | GET    | `/api/contacts`      | Session | Query: page, limit, search                                               | `{ success, data, pagination }` (spec contact shape) |
-| POST   | `/api/contacts`      | Session | Body: name, phone, email?, company?, type? (phone\|email\|sms\|facebook) | `{ success, data }`; name and phone required         |
+| POST   | `/api/contacts`      | Session | Body: name, phone, email?, company?, type?, avatarUrl? | `{ success, data }`; name and phone required         |
 | GET    | `/api/contacts/[id]` | Session | —                                                                        | `{ success, data }`                                  |
-| PUT    | `/api/contacts/[id]` | Session | Body: name?, phone?, email?, company?, type?                             | `{ success, data, message }`                         |
+| PUT    | `/api/contacts/[id]` | Session | Body: name?, phone?, email?, company?, type?, avatarUrl?                             | `{ success, data, message }`                         |
 | DELETE | `/api/contacts/[id]` | Session | —                                                                        | `{ success, message }`                               |
 
 ---
@@ -251,7 +251,7 @@ _Note: Invite creation has no REST endpoint in this list; it may be done via a p
 
 | Method | Path                  | Auth      | Request                                                                                                              | Response                                                                            |
 | ------ | --------------------- | --------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| GET    | `/api/messages`       | Session   | Query: page, perPage, threadId?                                                                                      | If threadId: single thread; else `{ items, page, perPage, totalItems, totalPages }` |
+| GET    | `/api/messages`       | Session   | Query: page, perPage, threadId?                                                                                      | If threadId: single thread; else `{ success, data, pagination }` |
 | POST   | `/api/messages`       | No (CORS) | Body: company_id, thread_id?, customer_name?, customer_phone?, customer_email?, message?, source? (leadbox/leadform) | Creates/updates message thread, AI analysis, contact, comm log; JSON with CORS      |
 | PATCH  | `/api/messages`       | Session   | Body: id, ...updateData (status?, assignedToId?, etc.)                                                               | `{ success, message }` or 404                                                       |
 | POST   | `/api/messages/draft` | Session   | Body: id (messageId), channel? (email\|sms\|chatbot)                                                                 | AI draft reply; `{ draft }` or 404/502                                              |
@@ -262,7 +262,7 @@ _Note: Invite creation has no REST endpoint in this list; it may be done via a p
 
 | Method | Path                              | Auth    | Request                                                          | Response                                           |
 | ------ | --------------------------------- | ------- | ---------------------------------------------------------------- | -------------------------------------------------- |
-| GET    | `/api/notifications`              | Session | Query: page, perPage, type?, read? (true\|false)                 | `{ items, page, perPage, totalItems, totalPages }` |
+| GET    | `/api/notifications`              | Session | Query: page, perPage, type?, read? (true\|false)                 | `{ success, data, pagination }` |
 | PATCH  | `/api/notifications`              | Session | Body: `{ id, read }`                                             | Updated notification                               |
 | GET    | `/api/notifications/[id]`         | Session | —                                                                | `{ success, data }` (single notification)          |
 | PUT    | `/api/notifications/[id]/read`    | Session | —                                                                | `{ success, message }` (marks read)                |

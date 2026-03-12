@@ -93,8 +93,12 @@
 		{:else}
 			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{#each callFlows as flow}
-					<div class="flex flex-col rounded-xl bg-[#f1f4f8] p-6 shadow-[0_2px_4px_rgba(0,0,0,0.05)]">
-						<h2 class="mb-5 font-['Poppins'] text-[1.75rem] font-semibold leading-normal text-[#666]">
+					<div
+						class="flex flex-col rounded-xl bg-[#f1f4f8] p-6 shadow-[0_2px_4px_rgba(0,0,0,0.05)]"
+					>
+						<h2
+							class="mb-5 font-['Poppins'] text-[1.75rem] font-semibold leading-normal text-[#666]"
+						>
 							{flow.title}
 						</h2>
 
@@ -105,11 +109,15 @@
 								</span>
 								<span class="font-['Poppins'] text-[1.2rem] italic text-[#777]">
 									{flow.rules[0].ruleTitle}
-									<span class="not-italic">({scheduleSummary(flow.rules[0].schedule as Rule['schedule'])})</span>
+									<span class="not-italic"
+										>({scheduleSummary(flow.rules[0].schedule as Rule['schedule'])})</span
+									>
 								</span>
 							</div>
 						{:else}
-							<p class="mb-4 font-['Poppins'] text-[1rem] text-[#808080]">No rules yet. Add a schedule rule.</p>
+							<p class="mb-4 font-['Poppins'] text-[1rem] text-[#808080]">
+								No rules yet. Add a schedule rule.
+							</p>
 						{/if}
 
 						<div class="mt-auto flex flex-wrap gap-3">

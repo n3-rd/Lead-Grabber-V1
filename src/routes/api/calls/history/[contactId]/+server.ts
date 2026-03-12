@@ -16,7 +16,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 
 	const contact = await prisma.contact.findFirst({
 		where: { id: params.contactId, companyId: auth.companyId },
-		select: { id: true, name: true, phone: true },
+		select: { id: true, name: true, phone: true }
 	});
 	if (!contact) {
 		return json({ success: false, error: 'Contact not found', code: 404 }, { status: 404 });
@@ -30,7 +30,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 	const where = {
 		companyId: auth.companyId,
 		type: 'voice' as const,
-		OR: [{ customerId: contact.id }, { source: phone }, { destination: phone }],
+		OR: [{ customerId: contact.id }, { source: phone }, { destination: phone }]
 	};
 	const [total, logs] = await Promise.all([
 		prisma.communicationLog.count({ where }),
@@ -38,11 +38,12 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 			where,
 			skip,
 			take: limit,
-			orderBy: { created: 'desc' },
-		}),
+			orderBy: { created: 'desc' }
+		})
 	]);
 
-	const meta = (l: { metadata?: unknown }) => (l.metadata as { startedAt?: string; endedAt?: string }) ?? {};
+	const meta = (l: { metadata?: unknown }) =>
+		(l.metadata as { startedAt?: string; endedAt?: string }) ?? {};
 	const data = logs.map((l) => {
 		const m = meta(l);
 		return {
@@ -55,13 +56,13 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 			durationFormatted: formatDuration(l.duration),
 			status: l.status,
 			startedAt: m.startedAt ?? l.created.toISOString(),
-			endedAt: m.endedAt ?? l.created.toISOString(),
+			endedAt: m.endedAt ?? l.created.toISOString()
 		};
 	});
 
 	return json({
 		success: true,
 		data,
-		pagination: pagination(page, limit, total),
+		pagination: pagination(page, limit, total)
 	});
 };

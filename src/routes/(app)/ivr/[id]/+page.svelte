@@ -50,7 +50,9 @@
 				{#if flow.rules?.length}
 					<ul class="space-y-3">
 						{#each flow.rules as rule}
-							<li class="flex items-center justify-between rounded border border-[#E0E0E0] bg-[#f9fafb] p-4">
+							<li
+								class="flex items-center justify-between rounded border border-[#E0E0E0] bg-[#f9fafb] p-4"
+							>
 								<div>
 									<span class="font-['Poppins'] font-semibold text-[#666]">{rule.ruleTitle}</span>
 									<span class="ml-2 font-['Poppins'] text-sm text-[#808080]">

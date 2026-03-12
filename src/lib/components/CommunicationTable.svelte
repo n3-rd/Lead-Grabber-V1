@@ -91,8 +91,7 @@
 		}
 		if (selectedAgentName) {
 			filtered = filtered.filter(
-				(comm) =>
-					comm.assignedMemberNames?.includes(selectedAgentName) ?? false
+				(comm) => comm.assignedMemberNames?.includes(selectedAgentName) ?? false
 			);
 		}
 		return filtered;
@@ -153,13 +152,14 @@
 	}
 </script>
 
-<div class="bg-white border border-gray-300 rounded-lg overflow-hidden">
+<div class="overflow-hidden rounded-lg border border-gray-300 bg-white">
 	{#if showFilters}
-		<div class="flex flex-wrap items-center gap-3 p-4 border-b border-gray-200">
+		<div class="flex flex-wrap items-center gap-3 border-b border-gray-200 p-4">
 			{#each filters as filter}
 				<button
 					type="button"
-					class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {activeFilter === filter
+					class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {activeFilter ===
+					filter
 						? 'bg-slate-900 text-white'
 						: 'text-gray-600 hover:bg-gray-100'}"
 					onclick={() => (activeFilter = filter)}
@@ -175,28 +175,44 @@
 			<thead>
 				<tr class="bg-gray-100">
 					<th class="w-8 px-3 py-3 text-left"></th>
-					<th class="w-24 whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+					<th
+						class="w-24 whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+					>
 						Date
 					</th>
-					<th class="w-20 whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+					<th
+						class="w-20 whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+					>
 						Type
 					</th>
-					<th class="min-w-[120px] max-w-[160px] whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+					<th
+						class="min-w-[120px] max-w-[160px] whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+					>
 						Source
 					</th>
-					<th class="min-w-[120px] max-w-[180px] whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+					<th
+						class="min-w-[120px] max-w-[180px] whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+					>
 						Endpoint
 					</th>
-					<th class="min-w-[100px] max-w-[140px] whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+					<th
+						class="min-w-[100px] max-w-[140px] whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+					>
 						Purpose
 					</th>
-					<th class="min-w-[180px] whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+					<th
+						class="min-w-[180px] whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+					>
 						Summary
 					</th>
-					<th class="w-28 whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+					<th
+						class="w-28 whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+					>
 						Comm ID
 					</th>
-					<th class="w-14 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-600">
+					<th
+						class="w-14 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-600"
+					>
 						Actions
 					</th>
 				</tr>
@@ -212,10 +228,8 @@
 					{#each filteredCommunications as comm}
 						{@const commType = getTypeDisplay(comm)}
 						{@const IconComponent = getTypeIcon(commType)}
-						<tr
-							class="border-b border-gray-200 bg-white transition-colors hover:bg-gray-50/80"
-						>
-							<td class="px-3 py-2.5 align-top pt-4">
+						<tr class="border-b border-gray-200 bg-white transition-colors hover:bg-gray-50/80">
+							<td class="px-3 py-2.5 pt-4 align-top">
 								<div
 									class="h-4 w-4 shrink-0 rounded-full {getStatusColor(comm.status)}"
 									title={comm.status}
@@ -231,7 +245,10 @@
 									<span class="font-medium">{comm.direction}</span>
 								</div>
 							</td>
-							<td class="max-w-[160px] truncate px-3 py-2.5 text-sm text-gray-700" title={comm.source}>
+							<td
+								class="max-w-[160px] truncate px-3 py-2.5 text-sm text-gray-700"
+								title={comm.source}
+							>
 								{comm.source || '—'}
 							</td>
 							<td class="max-w-[180px] px-3 py-2.5 text-sm text-gray-700">
@@ -247,7 +264,7 @@
 										</button>
 									</div>
 								{:else}
-									<span class="truncate block" title={comm.endpoint}>{comm.endpoint || '—'}</span>
+									<span class="block truncate" title={comm.endpoint}>{comm.endpoint || '—'}</span>
 								{/if}
 							</td>
 							<td class="max-w-[140px] truncate px-3 py-2.5 text-sm text-gray-700">
@@ -279,7 +296,10 @@
 									<span class="text-gray-400">—</span>
 								{/if}
 							</td>
-							<td class="max-w-[120px] truncate px-3 py-2.5 font-mono text-xs text-gray-500" title={comm.commId ?? ''}>
+							<td
+								class="max-w-[120px] truncate px-3 py-2.5 font-mono text-xs text-gray-500"
+								title={comm.commId ?? ''}
+							>
 								{comm.commId ? comm.commId.slice(0, 8) + '…' : '—'}
 							</td>
 							<td class="px-3 py-2.5 text-right align-top">

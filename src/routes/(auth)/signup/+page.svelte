@@ -15,9 +15,12 @@
 		e.preventDefault();
 		const form = e.target as HTMLFormElement;
 		const name = (form.querySelector('[name="name"]') as HTMLInputElement)?.value?.trim();
-		const email = (form.querySelector('[name="email"]') as HTMLInputElement)?.value?.trim().toLowerCase();
+		const email = (form.querySelector('[name="email"]') as HTMLInputElement)?.value
+			?.trim()
+			.toLowerCase();
 		const password = (form.querySelector('[name="password"]') as HTMLInputElement)?.value ?? '';
-		const passwordConfirm = (form.querySelector('[name="passwordConfirm"]') as HTMLInputElement)?.value ?? '';
+		const passwordConfirm =
+			(form.querySelector('[name="passwordConfirm"]') as HTMLInputElement)?.value ?? '';
 
 		if (!name || !email) {
 			toast.error('Name and email are required');
@@ -86,14 +89,14 @@
 	}
 </script>
 
-<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-	<div class="w-full lg:w-[460px] flex flex-col justify-center">
+<div class="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+	<div class="flex w-full flex-col justify-center lg:w-[460px]">
 		<div class="mx-auto">
 			<img src="/img/logo.png" alt="ClearSky Software" class="h-[88px] w-[189px]" />
 		</div>
 
-		<div class="w-full lg:w-[460px] bg-white rounded-lg p-8">
-			<div class="flex justify-between items-center mb-8">
+		<div class="w-full rounded-lg bg-white p-8 lg:w-[460px]">
+			<div class="mb-8 flex items-center justify-between">
 				<h2 class="text-2xl font-semibold text-gray-900">Sign Up</h2>
 			</div>
 
@@ -106,7 +109,7 @@
 					<Button
 						type="button"
 						disabled={loading || otpCode.length !== 5}
-						class="w-full py-3 px-4 bg-primary hover:bg-primary/80 text-white font-medium rounded-lg flex items-center justify-center gap-2"
+						class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-white hover:bg-primary/80"
 						onclick={verifyOtp}
 					>
 						{loading ? 'Verifying...' : 'Verify and create account'}
@@ -114,7 +117,10 @@
 					<button
 						type="button"
 						class="w-full text-sm text-gray-500 hover:text-gray-700"
-						onclick={() => { step = 'form'; otpCode = ''; }}
+						onclick={() => {
+							step = 'form';
+							otpCode = '';
+						}}
 					>
 						Use a different email
 					</button>
@@ -127,7 +133,7 @@
 							type="text"
 							placeholder="Full Name"
 							required
-							class="w-full px-4 py-3 rounded-lg bg-gray-100 border-transparent focus:border-primary/60 focus:bg-white focus:ring-0"
+							class="w-full rounded-lg border-transparent bg-gray-100 px-4 py-3 focus:border-primary/60 focus:bg-white focus:ring-0"
 						/>
 					</div>
 					<div>
@@ -136,7 +142,7 @@
 							type="email"
 							placeholder="Email"
 							required
-							class="w-full px-4 py-3 rounded-lg bg-gray-100 border-transparent focus:border-primary/60 focus:bg-white focus:ring-0"
+							class="w-full rounded-lg border-transparent bg-gray-100 px-4 py-3 focus:border-primary/60 focus:bg-white focus:ring-0"
 						/>
 					</div>
 					<div>
@@ -148,7 +154,7 @@
 							minlength="8"
 							pattern={passwordPatternAttr}
 							title="At least 8 characters, one letter and one number"
-							class="w-full px-4 py-3 rounded-lg bg-gray-100 border-transparent focus:border-primary/60 focus:bg-white focus:ring-0"
+							class="w-full rounded-lg border-transparent bg-gray-100 px-4 py-3 focus:border-primary/60 focus:bg-white focus:ring-0"
 						/>
 					</div>
 					<div>
@@ -157,7 +163,7 @@
 							type="password"
 							placeholder="Confirm Password"
 							required
-							class="w-full px-4 py-3 rounded-lg bg-gray-100 border-transparent focus:border-primary/60 focus:bg-white focus:ring-0"
+							class="w-full rounded-lg border-transparent bg-gray-100 px-4 py-3 focus:border-primary/60 focus:bg-white focus:ring-0"
 						/>
 					</div>
 
@@ -167,10 +173,8 @@
 				</form>
 			{/if}
 
-			<div class="text-center text-sm mt-6">
-				<a href="/login" class="text-primary hover:underline">
-					Already have an account? Log in
-				</a>
+			<div class="mt-6 text-center text-sm">
+				<a href="/login" class="text-primary hover:underline"> Already have an account? Log in </a>
 			</div>
 		</div>
 	</div>

@@ -17,7 +17,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 		pendingAssignments,
 		todaysEvents,
 		unreadNotifications,
-		totalContacts,
+		totalContacts
 	] = await Promise.all([
 		prisma.communicationLog.count({ where: { companyId: auth.companyId, type: 'voice' } }),
 		prisma.communicationLog.count({ where: { companyId: auth.companyId, type: 'sms' } }),
@@ -25,17 +25,17 @@ export const GET: RequestHandler = async ({ locals }) => {
 		prisma.communicationLog.count({
 			where: {
 				companyId: auth.companyId,
-				assignedMembers: { none: {} },
-			},
+				assignedMembers: { none: {} }
+			}
 		}),
 		prisma.scheduleEvent.count({
 			where: {
 				companyId: auth.companyId,
-				startTime: { gte: startOfToday, lt: new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000) },
-			},
+				startTime: { gte: startOfToday, lt: new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000) }
+			}
 		}),
 		prisma.notification.count({ where: { companyId: auth.companyId, read: false } }),
-		prisma.contact.count({ where: { companyId: auth.companyId } }),
+		prisma.contact.count({ where: { companyId: auth.companyId } })
 	]);
 
 	return json({
@@ -47,7 +47,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 			pendingAssignments,
 			todaysEvents,
 			unreadNotifications,
-			totalContacts,
-		},
+			totalContacts
+		}
 	});
 };

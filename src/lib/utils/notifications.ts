@@ -1,27 +1,27 @@
-import { prisma } from '$lib/db'
+import { prisma } from '$lib/db';
 
 export type NotificationType =
-  | 'email'
-  | 'sms'
-  | 'voice'
-  | 'web'
-  | 'facebook'
-  | 'chatbot'
-  | 'leadform'
-  | 'leadbox'
-export type NotificationDirection = 'inbound' | 'outbound'
+	| 'email'
+	| 'sms'
+	| 'voice'
+	| 'web'
+	| 'facebook'
+	| 'chatbot'
+	| 'leadform'
+	| 'leadbox';
+export type NotificationDirection = 'inbound' | 'outbound';
 
 export interface CreateNotificationInput {
-  company_id: string
-  type: NotificationType
-  direction: NotificationDirection
-  source_name?: string
-  source_identifier?: string // phone, email, threadId
-  message_preview: string
-  content?: string
-  communication_log_id?: string
-  message_id?: string
-  thread_id?: string
+	company_id: string;
+	type: NotificationType;
+	direction: NotificationDirection;
+	source_name?: string;
+	source_identifier?: string; // phone, email, threadId
+	message_preview: string;
+	content?: string;
+	communication_log_id?: string;
+	message_id?: string;
+	thread_id?: string;
 }
 
 /**
@@ -29,29 +29,35 @@ export interface CreateNotificationInput {
  * Requires: run `pnpm prisma migrate deploy` so the `notifications` table exists.
  */
 export async function createNotification(input: CreateNotificationInput) {
-  try {
-    if (!prisma?.notification) return null
-    const notification = await prisma.notification.create({
-      data: {
-        companyId: input.company_id,
-        type: input.type,
-        direction: input.direction,
-        sourceName: input.source_name ?? null,
-        sourceIdentifier: input.source_identifier ?? null,
-        messagePreview: input.message_preview,
-        content: input.content ?? null,
-        communicationLogId: input.communication_log_id ?? null,
-        messageId: input.message_id ?? null,
-        threadId: input.thread_id ?? null,
-      },
-    })
-    if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
-      console.log('Notification created:', notification.id, input.type, input.source_name ?? input.source_identifier ?? '')
-    }
-    return notification
-  } catch (err: unknown) {
-    const code = err && typeof err === 'object' && 'code' in err ? (err as { code: string }).code : ''
-    if (code !== 'P2021') console.error('Failed to create notification:', err)
-    return null
-  }
+	try {
+		if (!prisma?.notification) return null;
+		const notification = await prisma.notification.create({
+			data: {
+				companyId: input.company_id,
+				type: input.type,
+				direction: input.direction,
+				sourceName: input.source_name ?? null,
+				sourceIdentifier: input.source_identifier ?? null,
+				messagePreview: input.message_preview,
+				content: input.content ?? null,
+				communicationLogId: input.communication_log_id ?? null,
+				messageId: input.message_id ?? null,
+				threadId: input.thread_id ?? null
+			}
+		});
+		if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+			console.log(
+				'Notification created:',
+				notification.id,
+				input.type,
+				input.source_name ?? input.source_identifier ?? ''
+			);
+		}
+		return notification;
+	} catch (err: unknown) {
+		const code =
+			err && typeof err === 'object' && 'code' in err ? (err as { code: string }).code : '';
+		if (code !== 'P2021') console.error('Failed to create notification:', err);
+		return null;
+	}
 }

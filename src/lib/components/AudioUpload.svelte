@@ -84,7 +84,9 @@
 
 <div class="space-y-2 {className}">
 	{#if label}
-		<label class="block font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">{label}</label>
+		<label class="block font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]"
+			>{label}</label
+		>
 	{/if}
 	<div class="rounded-[2px] border border-[#969696] bg-white p-4">
 		<div
@@ -101,7 +103,9 @@
 		>
 			{#if hasAudio}
 				<div class="space-y-3">
-					<div class="flex flex-wrap items-center justify-center gap-2 font-['Poppins'] text-[#577AB7]">
+					<div
+						class="flex flex-wrap items-center justify-center gap-2 font-['Poppins'] text-[#577AB7]"
+					>
 						<Check class="h-5 w-5 shrink-0" />
 						<span class="font-medium">{file ? file.name : 'Current recording'}</span>
 						{#if file}
@@ -131,7 +135,10 @@
 						</label>
 						<button
 							type="button"
-							onclick={(e) => { e.stopPropagation(); clear(); }}
+							onclick={(e) => {
+								e.stopPropagation();
+								clear();
+							}}
 							class="inline-flex h-[32px] items-center gap-1 rounded border border-red-400 bg-white px-3 font-['Poppins'] text-sm text-red-600 hover:bg-red-50"
 						>
 							<X class="h-4 w-4" />

@@ -12,9 +12,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const contactId = body.contactId ?? null;
 	const contactName = body.contactName ?? null;
 	const contactNumber = typeof body.contactNumber === 'string' ? body.contactNumber.trim() : '';
-	const direction = body.direction === 'inbound' || body.direction === 'outbound' ? body.direction : 'outbound';
+	const direction =
+		body.direction === 'inbound' || body.direction === 'outbound' ? body.direction : 'outbound';
 	const duration = typeof body.duration === 'number' ? body.duration : 0;
-	const status = ['completed', 'missed', 'rejected', 'failed'].includes(body.status) ? body.status : 'completed';
+	const status = ['completed', 'missed', 'rejected', 'failed'].includes(body.status)
+		? body.status
+		: 'completed';
 	const callerIdName = body.callerIdName ?? null;
 	const callerIdNumber = body.callerIdNumber ?? null;
 	const telnyxCallId = body.telnyxCallId ?? null;
@@ -25,13 +28,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ success: false, error: 'contactNumber is required', code: 400 }, { status: 400 });
 	}
 
-	const logStatus = status === 'completed' ? 'completed' : status === 'missed' ? 'missed' : 'failed';
+	const logStatus =
+		status === 'completed' ? 'completed' : status === 'missed' ? 'missed' : 'failed';
 	await logCommunication({
 		type: 'voice',
 		direction,
 		status: logStatus,
-		source: direction === 'outbound' ? callerIdNumber ?? undefined : contactNumber,
-		destination: direction === 'outbound' ? contactNumber : callerIdNumber ?? undefined,
+		source: direction === 'outbound' ? (callerIdNumber ?? undefined) : contactNumber,
+		destination: direction === 'outbound' ? contactNumber : (callerIdNumber ?? undefined),
 		customer_id: contactId ?? undefined,
 		company_id: auth.companyId,
 		user_id: auth.id,
@@ -42,14 +46,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			callerIdName,
 			telnyxCallId,
 			startedAt,
-			endedAt,
-		},
+			endedAt
+		}
 	});
 
 	const created = await prisma.communicationLog.findFirst({
 		where: { companyId: auth.companyId, type: 'voice' },
 		orderBy: { created: 'desc' },
-		select: { id: true, destination: true, direction: true, duration: true, created: true },
+		select: { id: true, destination: true, direction: true, duration: true, created: true }
 	});
 
 	return json(
@@ -62,9 +66,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				duration,
 				status,
 				startedAt,
-				endedAt,
+				endedAt
 			},
-			message: 'Call logged successfully',
+			message: 'Call logged successfully'
 		},
 		{ status: 201 }
 	);

@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-	normalizePhoneNumber,
-	formatPhoneNumber,
-	formatPhoneForDialing
-} from './phone';
+import { normalizePhoneNumber, formatPhoneNumber, formatPhoneForDialing } from './phone';
 
 describe('normalizePhoneNumber', () => {
 	it('returns empty string for empty input', () => {

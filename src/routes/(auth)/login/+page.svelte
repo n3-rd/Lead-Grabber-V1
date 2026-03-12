@@ -80,24 +80,24 @@
 	}
 </script>
 
-<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-	<div class="max-w-[1000px] w-full flex gap-6 bg-dialog">
-		<div class="flex-1 hidden lg:block">
+<div class="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+	<div class="flex w-full max-w-[1000px] gap-6 bg-dialog">
+		<div class="hidden flex-1 lg:block">
 			<img
 				src="/img/login.png"
 				alt="Person working on laptop"
-				class="w-full h-full object-cover rounded-lg"
+				class="h-full w-full rounded-lg object-cover"
 				loading="lazy"
 			/>
 		</div>
 
-		<div class="w-full lg:w-[460px] flex flex-col justify-center">
+		<div class="flex w-full flex-col justify-center lg:w-[460px]">
 			<div class="mx-auto">
 				<img src="/img/logo.png" alt="ClearSky Software" class="h-[88px] w-[189px]" />
 			</div>
 
-			<div class="w-full lg:w-[460px] bg-white rounded-lg p-8">
-				<div class="flex justify-between items-center mb-8">
+			<div class="w-full rounded-lg bg-white p-8 lg:w-[460px]">
+				<div class="mb-8 flex items-center justify-between">
 					<h2 class="text-2xl font-semibold text-gray-900">Login</h2>
 				</div>
 
@@ -110,7 +110,7 @@
 						<Button
 							type="button"
 							disabled={loading || otpCode.length !== 5}
-							class="w-full py-3 px-4 bg-primary hover:bg-primary/80 text-white font-medium rounded-lg flex items-center justify-center gap-2"
+							class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-white hover:bg-primary/80"
 							onclick={verifyOtp}
 						>
 							{#if loading}
@@ -123,7 +123,10 @@
 						<button
 							type="button"
 							class="w-full text-sm text-gray-500 hover:text-gray-700"
-							onclick={() => { otpSent = false; otpCode = ''; }}
+							onclick={() => {
+								otpSent = false;
+								otpCode = '';
+							}}
 						>
 							Use a different email
 						</button>
@@ -136,13 +139,13 @@
 								type="email"
 								placeholder="Email"
 								required
-								class="w-full px-4 py-3 rounded-lg bg-gray-100 border-transparent focus:border-primary/60 focus:bg-white focus:ring-0"
+								class="w-full rounded-lg border-transparent bg-gray-100 px-4 py-3 focus:border-primary/60 focus:bg-white focus:ring-0"
 							/>
 						</div>
 						<Button
 							type="button"
 							disabled={loading}
-							class="w-full py-3 px-4 bg-primary hover:bg-primary/80 text-white font-medium rounded-lg flex items-center justify-center gap-2"
+							class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-white hover:bg-primary/80"
 							onclick={sendOtp}
 						>
 							{#if loading}
@@ -180,7 +183,7 @@
 								type="email"
 								placeholder="Email"
 								required
-								class="w-full px-4 py-3 rounded-lg bg-gray-100 border-transparent focus:border-primary/60 focus:bg-white focus:ring-0"
+								class="w-full rounded-lg border-transparent bg-gray-100 px-4 py-3 focus:border-primary/60 focus:bg-white focus:ring-0"
 							/>
 						</div>
 						<div>
@@ -190,13 +193,13 @@
 								autocomplete="current-password"
 								placeholder="Password"
 								required
-								class="w-full px-4 py-3 rounded-lg bg-gray-100 border-transparent focus:border-primary/60 focus:bg-white focus:ring-0"
+								class="w-full rounded-lg border-transparent bg-gray-100 px-4 py-3 focus:border-primary/60 focus:bg-white focus:ring-0"
 							/>
 						</div>
 						<Button
 							type="submit"
 							disabled={loading}
-							class="w-full py-3 px-4 bg-primary hover:bg-primary/80 text-white font-medium rounded-lg flex items-center justify-center gap-2"
+							class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-white hover:bg-primary/80"
 						>
 							{#if loading}
 								<Spinner />
@@ -221,18 +224,18 @@
 							<div class="w-full border-t border-gray-300"></div>
 						</div>
 						<div class="relative flex justify-center text-sm">
-							<span class="px-2 bg-white text-gray-500">Or login with</span>
+							<span class="bg-white px-2 text-gray-500">Or login with</span>
 						</div>
 					</div>
 					<button
 						type="button"
-						class="w-full mt-4 py-3 px-4 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 flex items-center justify-center gap-2"
+						class="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
 					>
 						Log in with Google
 					</button>
 				{/if}
 
-				<p class="text-center text-sm text-gray-600 mt-6">
+				<p class="mt-6 text-center text-sm text-gray-600">
 					Don't have an account?
 					<a href="/signup" class="text-primary hover:underline">Sign up</a>
 				</p>

@@ -203,7 +203,9 @@
 						<div class="grid grid-cols-2 gap-6">
 							<!-- Schedule -->
 							<div class="rounded-lg bg-white p-6">
-								<h3 class="mb-4 font-['Poppins'] text-[18px] font-semibold text-[#737373]">Schedule</h3>
+								<h3 class="mb-4 font-['Poppins'] text-[18px] font-semibold text-[#737373]">
+									Schedule
+								</h3>
 								<div class="rounded-[3px] bg-[#E0E8F5] p-4">
 									<div class="grid grid-cols-[auto_1fr] gap-x-4 text-[14px]">
 										<div class="space-y-[10px] text-[#808080]">

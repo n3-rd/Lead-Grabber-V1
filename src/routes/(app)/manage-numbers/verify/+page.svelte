@@ -26,7 +26,7 @@
 			</h1>
 			<button
 				onclick={handleBack}
-				class="flex items-center gap-2 font-['Poppins'] text-base font-medium leading-[19px] text-[#757575] hover:text-[#577AB7] transition-colors"
+				class="flex items-center gap-2 font-['Poppins'] text-base font-medium leading-[19px] text-[#757575] transition-colors hover:text-[#577AB7]"
 			>
 				<ArrowLeft class="h-4 w-4" />
 				Back to Porting Request
@@ -42,7 +42,8 @@
 				Verification
 			</h2>
 			<p class="font-['Poppins'] text-lg font-light leading-[24px] text-[#808080]">
-				Confirm the ownership of your phone numbers from other providers, authenticating them towards Telnyx
+				Confirm the ownership of your phone numbers from other providers, authenticating them
+				towards Telnyx
 			</p>
 		</div>
 
@@ -51,22 +52,31 @@
 			<!-- Step 1: Enter Phone Number -->
 			<div class="mb-8 space-y-4">
 				<div class="flex items-start gap-3">
-					<div class="mt-1 flex h-[10px] w-[10px] items-center justify-center rounded-full bg-[#D9D9D9]">
-						<span class="font-['Poppins'] text-xs font-semibold leading-[14px] text-[#757575]">1</span>
+					<div
+						class="mt-1 flex h-[10px] w-[10px] items-center justify-center rounded-full bg-[#D9D9D9]"
+					>
+						<span class="font-['Poppins'] text-xs font-semibold leading-[14px] text-[#757575]"
+							>1</span
+						>
 					</div>
 					<div class="flex-1">
 						<p class="mb-4 font-['Poppins'] text-[15px] font-normal leading-[18px] text-[#757575]">
-							Enter a valid phone number you want to verify and you have access to so you can receive your code via SMS or phone call
+							Enter a valid phone number you want to verify and you have access to so you can
+							receive your code via SMS or phone call
 						</p>
 
 						<!-- Non-Telnyx Number -->
 						<div class="mb-4 space-y-2">
-							<label class="block font-['Poppins'] text-[15px] font-normal leading-[18px] text-[#808080]">
+							<label
+								class="block font-['Poppins'] text-[15px] font-normal leading-[18px] text-[#808080]"
+							>
 								Non-Telnyx Number
 							</label>
 							<div class="flex gap-0">
 								<!-- Country Code Selector -->
-								<div class="relative flex items-center rounded-l-[2px] border border-r-0 border-[#808080] bg-[#FCFDFF] px-2">
+								<div
+									class="relative flex items-center rounded-l-[2px] border border-r-0 border-[#808080] bg-[#FCFDFF] px-2"
+								>
 									<Globe class="h-3 w-3 text-[#757575]" />
 									<select
 										bind:value={countryCode}
@@ -86,14 +96,18 @@
 									class="h-[27px] flex-1 rounded-r-[2px] border border-[#808080] bg-[#FCFDFF] px-3 font-['Poppins'] text-[15px] font-normal leading-[18px] text-[rgba(117,117,117,0.33)] outline-none placeholder:text-[rgba(117,117,117,0.33)]"
 								/>
 							</div>
-							<span class="ml-auto block text-right font-['Poppins'] text-[15px] italic font-normal leading-[18px] text-[#4F4F4F]">
+							<span
+								class="ml-auto block text-right font-['Poppins'] text-[15px] font-normal italic leading-[18px] text-[#4F4F4F]"
+							>
 								Required
 							</span>
 						</div>
 
 						<!-- Extension -->
 						<div class="mb-4 space-y-2">
-							<label class="block font-['Poppins'] text-base font-normal leading-[19px] text-[#808080]">
+							<label
+								class="block font-['Poppins'] text-base font-normal leading-[19px] text-[#808080]"
+							>
 								Extension
 							</label>
 							<input
@@ -106,7 +120,8 @@
 
 						<!-- Consent Message -->
 						<p class="font-['Poppins'] text-[15px] font-normal leading-[22px] text-[#757575]">
-							You consent to receive a one time verification code from Telnyx. Standard message and data rates may apply. Reply STOP to opt out. For help please contact
+							You consent to receive a one time verification code from Telnyx. Standard message and
+							data rates may apply. Reply STOP to opt out. For help please contact
 							<a href="mailto:support@telnyx.com" class="text-[#577AB7] hover:underline">
 								support@telnyx.com
 							</a>
@@ -119,8 +134,12 @@
 			<!-- Step 2: Select Verification Method -->
 			<div class="space-y-4">
 				<div class="flex items-start gap-3">
-					<div class="mt-1 flex h-[10px] w-[10px] items-center justify-center rounded-full bg-[#D9D9D9]">
-						<span class="font-['Poppins'] text-xs font-semibold leading-[14px] text-[#757575]">2</span>
+					<div
+						class="mt-1 flex h-[10px] w-[10px] items-center justify-center rounded-full bg-[#D9D9D9]"
+					>
+						<span class="font-['Poppins'] text-xs font-semibold leading-[14px] text-[#757575]"
+							>2</span
+						>
 					</div>
 					<div class="flex-1">
 						<p class="mb-4 font-['Poppins'] text-lg font-normal leading-[21px] text-[#757575]">
@@ -130,22 +149,28 @@
 						<!-- Verification Method Buttons -->
 						<div class="flex gap-4">
 							<button
-								onclick={() => verificationMethod = 'sms'}
-								class="flex h-[101px] w-[193px] flex-col items-center justify-center gap-2 rounded-[2px] border border-[#808080] bg-[#FCFDFF] transition-colors {verificationMethod === 'sms'
+								onclick={() => (verificationMethod = 'sms')}
+								class="flex h-[101px] w-[193px] flex-col items-center justify-center gap-2 rounded-[2px] border border-[#808080] bg-[#FCFDFF] transition-colors {verificationMethod ===
+								'sms'
 									? 'border-[#577AB7] bg-blue-50'
 									: 'hover:bg-gray-50'}"
 							>
 								<MessageSquare class="h-6 w-6 text-[#757575]" />
-								<span class="font-['Poppins'] text-xl font-normal leading-[24px] text-[#757575]">SMS</span>
+								<span class="font-['Poppins'] text-xl font-normal leading-[24px] text-[#757575]"
+									>SMS</span
+								>
 							</button>
 							<button
-								onclick={() => verificationMethod = 'call'}
-								class="flex h-[101px] w-[193px] flex-col items-center justify-center gap-2 rounded-[2px] border border-[#808080] bg-[#FCFDFF] transition-colors {verificationMethod === 'call'
+								onclick={() => (verificationMethod = 'call')}
+								class="flex h-[101px] w-[193px] flex-col items-center justify-center gap-2 rounded-[2px] border border-[#808080] bg-[#FCFDFF] transition-colors {verificationMethod ===
+								'call'
 									? 'border-[#577AB7] bg-blue-50'
 									: 'hover:bg-gray-50'}"
 							>
 								<Phone class="h-6 w-6 text-[#757575]" />
-								<span class="font-['Poppins'] text-xl font-normal leading-[24px] text-[#757575]">Call</span>
+								<span class="font-['Poppins'] text-xl font-normal leading-[24px] text-[#757575]"
+									>Call</span
+								>
 							</button>
 						</div>
 					</div>
@@ -163,7 +188,7 @@
 				<button
 					onclick={handleVerify}
 					disabled={!phoneNumber || !verificationMethod}
-					class="h-[29px] rounded-[3px] border-[0.5px] border-[#577AB7] bg-[#577AB7] px-4 font-['Poppins'] text-lg font-medium leading-[21px] text-white transition-colors hover:bg-[#4a6ba5] disabled:opacity-50 disabled:cursor-not-allowed"
+					class="h-[29px] rounded-[3px] border-[0.5px] border-[#577AB7] bg-[#577AB7] px-4 font-['Poppins'] text-lg font-medium leading-[21px] text-white transition-colors hover:bg-[#4a6ba5] disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					Verify
 				</button>

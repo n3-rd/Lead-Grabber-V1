@@ -74,6 +74,6 @@ export async function verifyOtp(params: {
 	await prisma.otp.deleteMany({ where: { id: row.id } });
 	return {
 		valid: true,
-		signupPayload: row.signupPayload as { name: string; passwordHash: string } | null ?? undefined
+		signupPayload: (row.signupPayload as { name: string; passwordHash: string } | null) ?? undefined
 	};
 }

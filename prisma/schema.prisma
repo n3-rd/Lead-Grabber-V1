@@ -289,6 +289,7 @@ model Contact {
   contactType   String?  @default("phone") // phone | email | sms | facebook (ClearSky spec)
   notes         String?
   companyName   String?  // Display name e.g. "Dredhart Inc." (ClearSky spec)
+  avatarUrl     String?  // URL to the uploaded avatar
   created       DateTime  @default(now())
   updated       DateTime  @updatedAt
 

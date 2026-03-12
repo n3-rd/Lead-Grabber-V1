@@ -29,9 +29,7 @@ function parseTime(s: string): number | null {
 
 type ScheduleRecord = Record<string, { start?: string; end?: string } | null>;
 
-function normalizeSchedule(
-	raw: unknown
-): ScheduleRecord | null {
+function normalizeSchedule(raw: unknown): ScheduleRecord | null {
 	if (raw == null) return null;
 	if (typeof raw === 'string') {
 		try {
@@ -56,8 +54,12 @@ function isActiveBySchedule(
 	const daySchedule = schedule[day];
 	if (daySchedule == null || typeof daySchedule !== 'object') return false;
 	// Accept both API shape (start/end) and form shape (start1/end1)
-	const start = (daySchedule as { start?: string; end?: string; start1?: string; end1?: string }).start ?? (daySchedule as { start1?: string; end1?: string }).start1;
-	const end = (daySchedule as { start?: string; end?: string; start1?: string; end1?: string }).end ?? (daySchedule as { start1?: string; end1?: string }).end1;
+	const start =
+		(daySchedule as { start?: string; end?: string; start1?: string; end1?: string }).start ??
+		(daySchedule as { start1?: string; end1?: string }).start1;
+	const end =
+		(daySchedule as { start?: string; end?: string; start1?: string; end1?: string }).end ??
+		(daySchedule as { start1?: string; end1?: string }).end1;
 	if (!start || !end) return false;
 	const startMin = parseTime(start);
 	const endMin = parseTime(end);
@@ -76,7 +78,10 @@ function isValidTimezone(tz: string): boolean {
 }
 
 /** Get day (e.g. "Tue") and minutes-since-midnight in the given IANA timezone. */
-function getDayAndMinutesInZone(now: Date, timezone: string): { day: string; minutesSinceMidnight: number } {
+function getDayAndMinutesInZone(
+	now: Date,
+	timezone: string
+): { day: string; minutesSinceMidnight: number } {
 	const dayFormatter = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' });
 	const day = dayFormatter.format(now);
 	const parts = new Intl.DateTimeFormat('en-US', {
@@ -95,7 +100,19 @@ export async function getActiveCallFlow(
 	companyId: string,
 	now: Date = new Date(),
 	opts?: { timezone?: string; flowId?: string }
-): Promise<{ flow: { id: string; title: string; greetingAudioUrl: string | null }; rule: { id: string; ruleTitle: string; promptsAudioUrl: string | null; keyPrompts: unknown; failoverCount: number; failoverDelayMinutes: number; failoverAudioUrl: string | null; hangupAudioUrl: string | null } } | null> {
+): Promise<{
+	flow: { id: string; title: string; greetingAudioUrl: string | null };
+	rule: {
+		id: string;
+		ruleTitle: string;
+		promptsAudioUrl: string | null;
+		keyPrompts: unknown;
+		failoverCount: number;
+		failoverDelayMinutes: number;
+		failoverAudioUrl: string | null;
+		hangupAudioUrl: string | null;
+	};
+} | null> {
 	const where: { companyId: string; id?: string } = { companyId };
 	if (opts?.flowId) where.id = opts.flowId;
 	const flows = await prisma.callFlow.findMany({
@@ -106,7 +123,10 @@ export async function getActiveCallFlow(
 	const { day, minutesSinceMidnight } =
 		opts?.timezone && isValidTimezone(opts.timezone)
 			? getDayAndMinutesInZone(now, opts.timezone)
-			: { day: DAY_MAP[now.getDay()], minutesSinceMidnight: now.getHours() * 60 + now.getMinutes() };
+			: {
+					day: DAY_MAP[now.getDay()],
+					minutesSinceMidnight: now.getHours() * 60 + now.getMinutes()
+				};
 	for (const flow of flows) {
 		for (const rule of flow.rules) {
 			if (!isActiveBySchedule(rule.schedule, day, minutesSinceMidnight)) continue;
@@ -132,7 +152,10 @@ export async function getActiveCallFlow(
 	return null;
 }
 
-export function toAbsoluteAudioUrl(path: string | null | undefined, baseUrl: string): string | null {
+export function toAbsoluteAudioUrl(
+	path: string | null | undefined,
+	baseUrl: string
+): string | null {
 	if (!path) return null;
 	if (path.startsWith('http')) return path;
 	const base = baseUrl.replace(/\/$/, '');

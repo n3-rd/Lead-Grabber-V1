@@ -9,7 +9,13 @@
 		onchange?: (value: string) => void;
 	}
 
-	let { value = $bindable(''), country, disabled = false, placeholder = 'Select area code...', onchange }: Props = $props();
+	let {
+		value = $bindable(''),
+		country,
+		disabled = false,
+		placeholder = 'Select area code...',
+		onchange
+	}: Props = $props();
 
 	let areaCodes = $state<Array<{ code: string; location: string }>>([]);
 	let loading = $state(false);
@@ -24,7 +30,7 @@
 					(ac) =>
 						ac.code.includes(searchTerm) ||
 						ac.location.toLowerCase().includes(searchTerm.toLowerCase())
-			  )
+				)
 			: areaCodes
 	);
 
@@ -116,11 +122,13 @@
 			onclick={handleInputClick}
 			placeholder={loading ? 'Loading...' : placeholder}
 			{disabled}
-			class="h-[47px] w-full rounded-[2px] border border-[#969696] bg-white px-3 pr-10 font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080] outline-none placeholder:text-[rgba(128,128,128,0.47)] disabled:opacity-50 cursor-pointer"
+			class="h-[47px] w-full cursor-pointer rounded-[2px] border border-[#969696] bg-white px-3 pr-10 font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080] outline-none placeholder:text-[rgba(128,128,128,0.47)] disabled:opacity-50"
 			class:cursor-not-allowed={disabled || loading}
 		/>
 		<ChevronDown
-			class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#808080] transition-transform duration-200 {isOpen ? 'rotate-180' : ''}"
+			class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#808080] transition-transform duration-200 {isOpen
+				? 'rotate-180'
+				: ''}"
 		/>
 	</div>
 

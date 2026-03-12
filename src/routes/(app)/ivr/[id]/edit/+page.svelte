@@ -21,7 +21,9 @@
 	let error = $state('');
 	let fieldErrors = $state<Record<string, string>>({});
 
-	let schedule = $state<Record<string, { start1: string; end1: string; start2: string; end2: string }>>({
+	let schedule = $state<
+		Record<string, { start1: string; end1: string; start2: string; end2: string }>
+	>({
 		Mon: { start1: '09:00', end1: '17:00', start2: '', end2: '' },
 		Tue: { start1: '09:00', end1: '17:00', start2: '', end2: '' },
 		Wed: { start1: '09:00', end1: '17:00', start2: '', end2: '' },
@@ -31,7 +33,9 @@
 		Sun: { start1: '', end1: '', start2: '', end2: '' }
 	});
 
-	let keyPrompts = $state<{ key: string; name: string; extension: string; transferAudioUrl?: string; editing?: boolean }[]>([
+	let keyPrompts = $state<
+		{ key: string; name: string; extension: string; transferAudioUrl?: string; editing?: boolean }[]
+	>([
 		{ key: '1', name: 'Sales', extension: '0001' },
 		{ key: '2', name: 'Support', extension: '0002' },
 		{ key: '3', name: 'Repeat Option', extension: '0003' }
@@ -72,7 +76,8 @@
 			const startM = timeToMinutes(s.start1);
 			const endRaw = s.end1?.trim() ? s.end1 : s.start1;
 			const endM = timeToMinutes(endRaw);
-			if (startM != null && endM != null && endM <= startM) return `${d}: Close must be after Open.`;
+			if (startM != null && endM != null && endM <= startM)
+				return `${d}: Close must be after Open.`;
 		}
 		return null;
 	}
@@ -125,8 +130,11 @@
 		if (!flowId) {
 			err.flow = 'Missing flow. Go back and try again.';
 		} else {
-			const hasCompletePrompt = keyPrompts.some((p) => p.key.trim() && p.name.trim() && p.extension.trim());
-			if (!hasCompletePrompt) err.keyPrompts = 'At least one key prompt must have Key, Name, and Extension filled.';
+			const hasCompletePrompt = keyPrompts.some(
+				(p) => p.key.trim() && p.name.trim() && p.extension.trim()
+			);
+			if (!hasCompletePrompt)
+				err.keyPrompts = 'At least one key prompt must have Key, Name, and Extension filled.';
 		}
 		if (Object.keys(err).length > 0) {
 			fieldErrors = err;
@@ -147,7 +155,7 @@
 					const transferFile = promptTransferFiles[i] ?? null;
 					const transferAudioUrl = transferFile
 						? await uploadFile(transferFile, `transfer-${p.key}`)
-						: p.transferAudioUrl ?? undefined;
+						: (p.transferAudioUrl ?? undefined);
 					return {
 						key: p.key.trim(),
 						name: p.name.trim(),
@@ -155,7 +163,15 @@
 						...(transferAudioUrl && { transferAudioUrl })
 					};
 				})
-			).then((arr) => arr.filter(Boolean) as { key: string; name: string; extension: string; transferAudioUrl?: string }[]);
+			).then(
+				(arr) =>
+					arr.filter(Boolean) as {
+						key: string;
+						name: string;
+						extension: string;
+						transferAudioUrl?: string;
+					}[]
+			);
 			const res = await fetch(`/api/ivr/flows/${flowId}/rules`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -192,7 +208,7 @@
 			</h1>
 			<button
 				onclick={handleBack}
-				class="flex items-center gap-2 font-['Poppins'] text-base font-medium leading-[19px] text-[#757575] hover:text-[#577AB7] transition-colors"
+				class="flex items-center gap-2 font-['Poppins'] text-base font-medium leading-[19px] text-[#757575] transition-colors hover:text-[#577AB7]"
 			>
 				<ArrowLeft class="h-4 w-4" />
 				Back
@@ -212,13 +228,17 @@
 					<label class="block font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">
 						Call Flow Rule Title:
 					</label>
-					<SectionHelp text="A name for this rule (e.g. Business Hours, After Hours) so you can tell it apart from other rules." />
+					<SectionHelp
+						text="A name for this rule (e.g. Business Hours, After Hours) so you can tell it apart from other rules."
+					/>
 				</div>
 				<input
 					type="text"
 					bind:value={callFlowRuleTitle}
 					placeholder="Enter Call Rule Title"
-					class="h-[46px] w-full rounded-[2px] border bg-white px-3 font-['Poppins'] text-lg font-medium leading-[24px] text-[rgba(128,128,128,0.54)] outline-none placeholder:text-[rgba(128,128,128,0.54)] {fieldErrors.callFlowRuleTitle ? 'border-red-500' : 'border-[#969696]'}"
+					class="h-[46px] w-full rounded-[2px] border bg-white px-3 font-['Poppins'] text-lg font-medium leading-[24px] text-[rgba(128,128,128,0.54)] outline-none placeholder:text-[rgba(128,128,128,0.54)] {fieldErrors.callFlowRuleTitle
+						? 'border-red-500'
+						: 'border-[#969696]'}"
 				/>
 				{#if fieldErrors.callFlowRuleTitle}
 					<p class="font-['Poppins'] text-sm text-red-600">{fieldErrors.callFlowRuleTitle}</p>
@@ -231,10 +251,13 @@
 					<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">
 						Set Schedule Rule
 					</h2>
-					<SectionHelp text="When this rule is active: set Open and Close for each day. Leave empty for closed." />
+					<SectionHelp
+						text="When this rule is active: set Open and Close for each day. Leave empty for closed."
+					/>
 				</div>
 				<p class="font-['Poppins'] text-sm text-[#808080]">
-					When this rule is active: set Open and Close for each day. Leave empty for closed. Close must be after Open.
+					When this rule is active: set Open and Close for each day. Leave empty for closed. Close
+					must be after Open.
 				</p>
 				{#if fieldErrors.schedule}
 					<p class="font-['Poppins'] text-sm text-red-600">{fieldErrors.schedule}</p>
@@ -266,13 +289,17 @@
 					<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">
 						Upload your audio file for prompts
 					</h2>
-					<SectionHelp text="Main menu message callers hear (e.g. “Press 1 for Sales, 2 for Support”). One file for the whole menu." />
+					<SectionHelp
+						text="Main menu message callers hear (e.g. “Press 1 for Sales, 2 for Support”). One file for the whole menu."
+					/>
 				</div>
 				<AudioUpload bind:file={promptsFile} />
 			</div>
 			<div class="space-y-2">
 				<div class="flex items-center gap-2">
-					<label class="block font-['Poppins'] text-lg font-semibold text-[#808080]">Back / repeat menu digit</label>
+					<label class="block font-['Poppins'] text-lg font-semibold text-[#808080]"
+						>Back / repeat menu digit</label
+					>
 					<SectionHelp text="Key (e.g. * or #) that replays the menu. Leave unset to disable." />
 				</div>
 				<button
@@ -289,7 +316,9 @@
 					disabledKeys={keyPrompts.map((p) => p.key).filter((k) => k && ['*', '#'].includes(k))}
 					onSelect={(k) => (backDigit = k)}
 				/>
-				<p class="font-['Poppins'] text-sm text-[#808080]">When the caller presses this key, the menu prompts are replayed. Leave unset to disable.</p>
+				<p class="font-['Poppins'] text-sm text-[#808080]">
+					When the caller presses this key, the menu prompts are replayed. Leave unset to disable.
+				</p>
 			</div>
 			<!-- Configure your prompts base on audio file -->
 			<div class="space-y-4">
@@ -297,7 +326,9 @@
 					<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">
 						Configure your prompts base on audio file
 					</h2>
-					<SectionHelp text="Map keys (0–9) to options: name, extension to dial, and optional per-key audio (e.g. “Transferring to Sales”)." />
+					<SectionHelp
+						text="Map keys (0–9) to options: name, extension to dial, and optional per-key audio (e.g. “Transferring to Sales”)."
+					/>
 				</div>
 				{#if fieldErrors.keyPrompts}
 					<p class="font-['Poppins'] text-sm text-red-600">{fieldErrors.keyPrompts}</p>
@@ -307,19 +338,26 @@
 						<div class="rounded border border-[#969696] bg-white p-4">
 							<div class="mb-4 grid grid-cols-3 gap-4">
 								<div class="space-y-2">
-									<label class="block font-['Poppins'] text-lg font-normal leading-[29px] text-[#808080]">
+									<label
+										class="block font-['Poppins'] text-lg font-normal leading-[29px] text-[#808080]"
+									>
 										Select one key (0-9)
 									</label>
 									<button
 										type="button"
-										onclick={() => { dialerEditingIndex = index; dialerOpen = true; }}
+										onclick={() => {
+											dialerEditingIndex = index;
+											dialerOpen = true;
+										}}
 										class="flex h-[45px] w-full items-center rounded-[2px] border border-[#969696] bg-white px-3 font-['Poppins'] text-base text-[#808080] outline-none transition-colors hover:border-[#577AB7] hover:bg-[#ECF3FF]"
 									>
 										{prompt.key || 'Select key'}
 									</button>
 								</div>
 								<div class="space-y-2">
-									<label class="block font-['Poppins'] text-lg font-semibold leading-[29px] text-[#808080]">
+									<label
+										class="block font-['Poppins'] text-lg font-semibold leading-[29px] text-[#808080]"
+									>
 										Give a Name
 									</label>
 									<input
@@ -330,7 +368,9 @@
 									/>
 								</div>
 								<div class="space-y-2">
-									<label class="block font-['Poppins'] text-lg font-normal leading-[29px] text-[#808080]">
+									<label
+										class="block font-['Poppins'] text-lg font-normal leading-[29px] text-[#808080]"
+									>
 										Auto generate ext. number
 									</label>
 									<input
@@ -341,14 +381,16 @@
 								</div>
 							</div>
 							<div class="mb-2 font-['Poppins'] text-sm text-[#808080]">
-								Pre-recorded message for this key (optional, e.g. “Your call is being transferred to [name]…”)
+								Pre-recorded message for this key (optional, e.g. “Your call is being transferred to
+								[name]…”)
 							</div>
 							<div class="mb-4">
 								<label class="inline-block cursor-pointer">
 									<input
 										type="file"
 										accept="audio/*"
-										onchange={(e) => handlePromptTransferFile(e, index)} class="hidden"
+										onchange={(e) => handlePromptTransferFile(e, index)}
+										class="hidden"
 									/>
 									<span
 										class="inline-block h-[32px] rounded border border-[#577AB7] bg-white px-3 font-['Poppins'] text-sm text-[#577AB7]"
@@ -356,7 +398,9 @@
 										tabindex="0"
 										onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLElement).click()}
 									>
-										{promptTransferFiles[index] ? promptTransferFiles[index]?.name ?? 'Change' : 'Upload audio'}
+										{promptTransferFiles[index]
+											? (promptTransferFiles[index]?.name ?? 'Change')
+											: 'Upload audio'}
 									</span>
 								</label>
 							</div>
@@ -373,12 +417,16 @@
 						bind:open={dialerOpen}
 						title="Select one key (0-9)"
 						disabledKeys={[
-							...keyPrompts.filter((_, i) => i !== dialerEditingIndex).map((p) => p.key).filter(Boolean),
+							...keyPrompts
+								.filter((_, i) => i !== dialerEditingIndex)
+								.map((p) => p.key)
+								.filter(Boolean),
 							...(backDigit.trim() ? [backDigit.trim()] : [])
 						]}
 						onSelect={(k) => {
 							const next = [...keyPrompts];
-							if (next[dialerEditingIndex]) next[dialerEditingIndex] = { ...next[dialerEditingIndex], key: k };
+							if (next[dialerEditingIndex])
+								next[dialerEditingIndex] = { ...next[dialerEditingIndex], key: k };
 							keyPrompts = next;
 						}}
 					/>
@@ -397,7 +445,9 @@
 					<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">
 						No Response Fail Over
 					</h2>
-					<SectionHelp text="If the call isn’t answered after the set number of rings and delay, this audio is played (e.g. “Please leave a message”)." />
+					<SectionHelp
+						text="If the call isn’t answered after the set number of rings and delay, this audio is played (e.g. “Please leave a message”)."
+					/>
 				</div>
 				<div class="space-y-4">
 					<p class="font-['Poppins'] text-lg font-normal leading-[21px] text-[#808080]">
@@ -406,7 +456,9 @@
 					<AudioUpload bind:file={failoverFile} />
 					<div class="grid grid-cols-2 gap-4">
 						<div class="space-y-2">
-							<label class="block font-['Poppins'] text-xl font-normal leading-[24px] text-[#808080]">
+							<label
+								class="block font-['Poppins'] text-xl font-normal leading-[24px] text-[#808080]"
+							>
 								How many times Failover
 							</label>
 							<input
@@ -418,7 +470,9 @@
 							/>
 						</div>
 						<div class="space-y-2">
-							<label class="block font-['Poppins'] text-xl font-normal leading-[24px] text-[#808080]">
+							<label
+								class="block font-['Poppins'] text-xl font-normal leading-[24px] text-[#808080]"
+							>
 								Time before failovers (min)
 							</label>
 							<input
@@ -438,7 +492,9 @@
 					<h2 class="font-['Poppins'] text-xl font-semibold leading-[26px] text-[#808080]">
 						Hang Up Audio
 					</h2>
-					<SectionHelp text="Short message played right before the call ends (e.g. “Thank you for calling”)." />
+					<SectionHelp
+						text="Short message played right before the call ends (e.g. “Thank you for calling”)."
+					/>
 				</div>
 				<div>
 					<p class="mb-2 font-['Poppins'] text-lg font-normal leading-[21px] text-[#808080]">

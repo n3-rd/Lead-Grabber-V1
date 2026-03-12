@@ -17,7 +17,7 @@ function toSpecEvent(e: {
 		description: e.description ?? '',
 		startTime: e.startTime.toISOString(),
 		endTime: e.endTime.toISOString(),
-		color: e.color ?? 'blue',
+		color: e.color ?? 'blue'
 	};
 }
 
@@ -28,7 +28,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const startDate = url.searchParams.get('startDate');
 	const endDate = url.searchParams.get('endDate');
 	const where: { companyId: string; startTime?: { gte?: Date; lte?: Date } } = {
-		companyId: auth.companyId,
+		companyId: auth.companyId
 	};
 	if (startDate) {
 		where.startTime = { ...where.startTime, gte: new Date(startDate) };
@@ -39,7 +39,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
 	const events = await prisma.scheduleEvent.findMany({
 		where,
-		orderBy: { startTime: 'asc' },
+		orderBy: { startTime: 'asc' }
 	});
 	return json({ success: true, data: events.map(toSpecEvent) });
 };
@@ -56,7 +56,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const color = ['blue', 'red', 'pink'].includes(body.color) ? body.color : 'blue';
 
 	if (!title || !startTime || !endTime) {
-		return json({ success: false, error: 'title, startTime, and endTime are required', code: 400 }, { status: 400 });
+		return json(
+			{ success: false, error: 'title, startTime, and endTime are required', code: 400 },
+			{ status: 400 }
+		);
 	}
 
 	const event = await prisma.scheduleEvent.create({
@@ -66,8 +69,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			description: description ?? undefined,
 			startTime,
 			endTime,
-			color,
-		},
+			color
+		}
 	});
 	return json(
 		{ success: true, data: toSpecEvent(event), message: 'Event created successfully' },

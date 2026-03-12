@@ -1,12 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-	requireAuth,
-	unauthorized,
-	specSuccess,
-	specError,
-	notFound,
-	pagination
-} from './spec';
+import { requireAuth, unauthorized, specSuccess, specError, notFound, pagination } from './spec';
 import type { SpecLocals } from './spec';
 
 describe('requireAuth', () => {

@@ -163,7 +163,7 @@
 				resetForm();
 				showAddLocationDialog = true;
 			}}
-			class="bg-[#4B77BE] hover:bg-[#4B77BE]/90 text-white font-['Poppins']"
+			class="bg-[#4B77BE] font-['Poppins'] text-white hover:bg-[#4B77BE]/90"
 		>
 			<Plus class="mr-2 h-4 w-4" />
 			Add Location
@@ -172,11 +172,19 @@
 
 	<div class="mb-2 rounded-[8px] bg-[#F0F4FA] px-6 py-4">
 		<div class="grid grid-cols-5 gap-4">
-			<div class="font-['Poppins'] text-center text-[16px] font-semibold text-[#737373]">Date Added</div>
-			<div class="font-['Poppins'] text-center text-[16px] font-semibold text-[#737373]">Location Name</div>
-			<div class="font-['Poppins'] text-center text-[16px] font-semibold text-[#737373]">Address</div>
-			<div class="font-['Poppins'] text-center text-[16px] font-semibold text-[#737373]">City</div>
-			<div class="font-['Poppins'] text-center text-[16px] font-semibold text-[#737373]">Delete</div>
+			<div class="text-center font-['Poppins'] text-[16px] font-semibold text-[#737373]">
+				Date Added
+			</div>
+			<div class="text-center font-['Poppins'] text-[16px] font-semibold text-[#737373]">
+				Location Name
+			</div>
+			<div class="text-center font-['Poppins'] text-[16px] font-semibold text-[#737373]">
+				Address
+			</div>
+			<div class="text-center font-['Poppins'] text-[16px] font-semibold text-[#737373]">City</div>
+			<div class="text-center font-['Poppins'] text-[16px] font-semibold text-[#737373]">
+				Delete
+			</div>
 		</div>
 	</div>
 
@@ -184,18 +192,18 @@
 		{#each locations as location, index}
 			<div class="mb-2 flex h-[73px] items-center rounded-[8px] bg-white px-6">
 				<div class="grid w-full grid-cols-5 gap-4">
-					<div class="font-['Poppins'] text-center text-[16px] font-normal text-[#808080]">
+					<div class="text-center font-['Poppins'] text-[16px] font-normal text-[#808080]">
 						{formatDate(location.created)}
 					</div>
-					<div class="font-['Poppins'] text-center text-[16px] font-medium text-[#7798D2]">
+					<div class="text-center font-['Poppins'] text-[16px] font-medium text-[#7798D2]">
 						<button type="button" class="hover:underline" onclick={() => editLocation(location)}>
 							{location.name}
 						</button>
 					</div>
-					<div class="font-['Poppins'] text-center text-[16px] font-normal text-[#808080]">
+					<div class="text-center font-['Poppins'] text-[16px] font-normal text-[#808080]">
 						{location.address}
 					</div>
-					<div class="font-['Poppins'] text-center text-[16px] font-normal text-[#808080]">
+					<div class="text-center font-['Poppins'] text-[16px] font-normal text-[#808080]">
 						{location.city}
 					</div>
 					<div class="flex items-center justify-center">
@@ -219,14 +227,14 @@
 </div>
 
 <Dialog.Root bind:open={showAddLocationDialog}>
-	<Dialog.Content class="max-w-5xl max-h-[80vh] p-0 flex flex-col overflow-hidden">
-		<Dialog.Header class="px-6 pt-6 pb-4 flex-shrink-0">
+	<Dialog.Content class="flex max-h-[80vh] max-w-5xl flex-col overflow-hidden p-0">
+		<Dialog.Header class="flex-shrink-0 px-6 pb-4 pt-6">
 			<Dialog.Title class="font-['Poppins'] text-2xl font-bold text-[#808080]">
 				{editingLocation ? 'Edit Location' : 'Add Location'}
 			</Dialog.Title>
 		</Dialog.Header>
 
-		<div class="px-6 flex-1 overflow-y-auto min-h-0">
+		<div class="min-h-0 flex-1 overflow-y-auto px-6">
 			<div class="space-y-6 pb-4">
 				<div class="grid gap-4">
 					<div class="flex items-center justify-between gap-8">
@@ -257,7 +265,9 @@
 
 					<div class="flex items-center justify-between gap-8">
 						<div class="grid w-full gap-2">
-							<Label for="city" class="font-['Poppins'] text-lg font-medium text-[#808080]">City</Label>
+							<Label for="city" class="font-['Poppins'] text-lg font-medium text-[#808080]"
+								>City</Label
+							>
 							<Input
 								id="city"
 								bind:value={currentLocation.city}
@@ -280,7 +290,9 @@
 					</div>
 
 					<div class="grid gap-4">
-						<Label class="font-['Poppins'] text-lg font-medium text-[#808080]">Hours of Operation</Label>
+						<Label class="font-['Poppins'] text-lg font-medium text-[#808080]"
+							>Hours of Operation</Label
+						>
 						<div class="flex gap-6">
 							<div class="flex w-1/2 flex-col gap-2 space-y-4 pt-1">
 								{#each HOURS_DAYS as day}
@@ -315,7 +327,9 @@
 			</div>
 		</div>
 
-		<Dialog.Footer class="px-6 pb-6 pt-4 flex-shrink-0 flex justify-between gap-4 border-t border-gray-200">
+		<Dialog.Footer
+			class="flex flex-shrink-0 justify-between gap-4 border-t border-gray-200 px-6 pb-6 pt-4"
+		>
 			<div>
 				<Button
 					variant="outline"
@@ -337,7 +351,10 @@
 						Delete
 					</Button>
 				{/if}
-				<Button class="bg-[#4B77BE] font-medium text-white hover:bg-[#4B77BE]/80" onclick={handleSave}>
+				<Button
+					class="bg-[#4B77BE] font-medium text-white hover:bg-[#4B77BE]/80"
+					onclick={handleSave}
+				>
 					{editingLocation ? 'Update' : 'Save'}
 				</Button>
 				{#if !editingLocation}

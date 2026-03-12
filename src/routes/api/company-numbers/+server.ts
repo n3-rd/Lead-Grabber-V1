@@ -43,9 +43,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		});
 		return json({ success: true, number: created });
 	} catch (e: unknown) {
-		const msg = e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'P2002'
-			? 'This number is already assigned to a company'
-			: 'Failed to assign number';
+		const msg =
+			e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'P2002'
+				? 'This number is already assigned to a company'
+				: 'Failed to assign number';
 		console.error('Company numbers assign:', e);
 		return json({ success: false, error: msg }, { status: 500 });
 	}

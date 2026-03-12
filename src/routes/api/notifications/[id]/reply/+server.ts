@@ -9,7 +9,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	if (!auth) return unauthorized();
 
 	const n = await prisma.notification.findFirst({
-		where: { id: params.id, companyId: auth.companyId },
+		where: { id: params.id, companyId: auth.companyId }
 	});
 	if (!n) {
 		return json({ success: false, error: 'Notification not found', code: 404 }, { status: 404 });
@@ -20,12 +20,15 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	const replyMethod = body.replyMethod; // sms | email | call
 
 	if (!message || !['sms', 'email', 'call'].includes(replyMethod)) {
-		return json({ success: false, error: 'message and replyMethod (sms|email|call) are required', code: 400 }, { status: 400 });
+		return json(
+			{ success: false, error: 'message and replyMethod (sms|email|call) are required', code: 400 },
+			{ status: 400 }
+		);
 	}
 
 	await prisma.notification.update({
 		where: { id: params.id },
-		data: { read: true },
+		data: { read: true }
 	});
 
 	// Actual send would call /api/telnyx for SMS, email provider for email, etc.

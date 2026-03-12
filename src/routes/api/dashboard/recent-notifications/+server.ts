@@ -16,7 +16,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const items = await prisma.notification.findMany({
 		where: { companyId: auth.companyId },
 		orderBy: { createdAt: 'desc' },
-		take: limit,
+		take: limit
 	});
 
 	const data = items.map((n) => ({
@@ -25,7 +25,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		message: n.content ?? n.messagePreview,
 		type: toSpecType(n.type),
 		isRead: n.read,
-		timestamp: n.createdAt.toISOString(),
+		timestamp: n.createdAt.toISOString()
 	}));
 	return json({ success: true, data });
 };

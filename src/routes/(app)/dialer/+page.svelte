@@ -99,20 +99,20 @@
 	const contacts = $derived(data.contacts);
 
 	let dialInput = $state('');
-	
+
 	let contextMenuOpen = $state(false);
 	let contextMenuX = $state(0);
 	let contextMenuY = $state(0);
 	let dialInputElement: HTMLInputElement | null = $state(null);
-	
+
 	function appendDialInput(d: string) {
 		dialInput += d;
 	}
-	
+
 	function deleteDialInput() {
 		dialInput = dialInput.slice(0, -1);
 	}
-	
+
 	function call() {
 		phoneNumber = dialInput;
 		initiateCall();
@@ -165,11 +165,9 @@
 <div class="min-h-screen bg-[#ECEEF3] p-0">
 	<div class="p-4">
 		<!-- Dialer Title Header -->
-	<div class="mb-4 rounded-sm bg-white px-4 py-3">
-		<h1 class="font-sans font-semibold text-lg leading-[1.29] text-[#747474]">
-			Dialer
-		</h1>
-	</div>
+		<div class="mb-4 rounded-sm bg-white px-4 py-3">
+			<h1 class="font-sans text-lg font-semibold leading-[1.29] text-[#747474]">Dialer</h1>
+		</div>
 
 		<!-- Top Row: Search + Tabs -->
 		<div class="mb-4 flex w-full items-center justify-between gap-4">
@@ -187,33 +185,36 @@
 
 			<!-- Navigation Tabs -->
 			<div class="flex h-12 w-1/2 items-center gap-6 rounded bg-white px-6">
-			<button
-				class="flex items-center gap-1.5 font-sans text-sm leading-[1.29] tracking-normal transition-colors {activeTab === 'Phone'
-					? 'font-medium text-[#565656]'
-					: 'font-medium text-[#565656]'}"
-				onclick={() => activeTab = 'Phone'}
-			>
-				<Phone class="h-4 w-4 text-[#565656]" />
-				Phone
-			</button>
-			<button
-				class="flex items-center gap-1.5 font-sans text-sm leading-[1.29] tracking-normal transition-colors {activeTab === 'Calls'
-					? 'font-medium text-[#565656]'
-					: 'font-medium text-[#565656]'}"
-				onclick={() => activeTab = 'Calls'}
-			>
-				<Clock class="h-4 w-4 text-[#999999]" />
-				Calls
-			</button>
-			<button
-				class="flex items-center gap-1.5 font-sans text-sm leading-[1.29] tracking-normal transition-colors {activeTab === 'Voicemail'
-					? 'font-medium text-[#565656]'
-					: 'font-medium text-[#565656]'}"
-				onclick={() => activeTab = 'Voicemail'}
-			>
-				<Voicemail class="h-4 w-4 text-[#999999]" />
-				Voicemail
-			</button>
+				<button
+					class="flex items-center gap-1.5 font-sans text-sm leading-[1.29] tracking-normal transition-colors {activeTab ===
+					'Phone'
+						? 'font-medium text-[#565656]'
+						: 'font-medium text-[#565656]'}"
+					onclick={() => (activeTab = 'Phone')}
+				>
+					<Phone class="h-4 w-4 text-[#565656]" />
+					Phone
+				</button>
+				<button
+					class="flex items-center gap-1.5 font-sans text-sm leading-[1.29] tracking-normal transition-colors {activeTab ===
+					'Calls'
+						? 'font-medium text-[#565656]'
+						: 'font-medium text-[#565656]'}"
+					onclick={() => (activeTab = 'Calls')}
+				>
+					<Clock class="h-4 w-4 text-[#999999]" />
+					Calls
+				</button>
+				<button
+					class="flex items-center gap-1.5 font-sans text-sm leading-[1.29] tracking-normal transition-colors {activeTab ===
+					'Voicemail'
+						? 'font-medium text-[#565656]'
+						: 'font-medium text-[#565656]'}"
+					onclick={() => (activeTab = 'Voicemail')}
+				>
+					<Voicemail class="h-4 w-4 text-[#999999]" />
+					Voicemail
+				</button>
 			</div>
 		</div>
 
@@ -276,15 +277,15 @@
 					<!-- Number Pad Grid -->
 					<div class="grid grid-cols-3 gap-x-4 gap-y-6">
 						{#each [[1, 2, 3], [4, 5, 6], [7, 8, 9], ['*', 0, '#']] as row}
-						{#each row as digit}
-							<button
-								class="flex h-12 w-full items-center justify-center font-sans text-xl font-medium leading-[1.29] tracking-normal text-[#565656] transition hover:bg-gray-50"
-								onclick={() => appendDialInput(digit.toString())}
-								type="button"
-							>
-								{digit}
-							</button>
-						{/each}
+							{#each row as digit}
+								<button
+									class="flex h-12 w-full items-center justify-center font-sans text-xl font-medium leading-[1.29] tracking-normal text-[#565656] transition hover:bg-gray-50"
+									onclick={() => appendDialInput(digit.toString())}
+									type="button"
+								>
+									{digit}
+								</button>
+							{/each}
 						{/each}
 					</div>
 

@@ -8,7 +8,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 	if (!auth) return unauthorized();
 
 	const count = await prisma.notification.count({
-		where: { companyId: auth.companyId, read: false },
+		where: { companyId: auth.companyId, read: false }
 	});
 	return json({ success: true, data: { count } });
 };

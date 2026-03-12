@@ -1,33 +1,33 @@
-import { prisma } from '$lib/db'
-import { error, redirect } from '@sveltejs/kit'
-import type { PageServerLoad } from './$types'
+import { prisma } from '$lib/db';
+import { error, redirect } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	if (!locals.user) {
-		throw redirect(303, '/login')
+		throw redirect(303, '/login');
 	}
 
-	const companyId = locals.user.companyId ?? locals.user.company?.id
+	const companyId = locals.user.companyId ?? locals.user.company?.id;
 	if (!companyId) {
-		throw error(403, 'Access denied')
+		throw error(403, 'Access denied');
 	}
 
 	try {
-		const userId = params.id
+		const userId = params.id;
 
 		// Get user details
 		const user = await prisma.user.findUnique({
 			where: { id: userId },
-			include: { company: true },
-		})
+			include: { company: true }
+		});
 
 		if (!user) {
-			throw error(404, 'User not found')
+			throw error(404, 'User not found');
 		}
 
 		// Verify user is in the same company
 		if (user.companyId !== companyId) {
-			throw error(403, 'Access denied')
+			throw error(403, 'Access denied');
 		}
 
 		// Get company member info
@@ -35,32 +35,32 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			where: {
 				userId,
 				companyId,
-				status: 'active',
-			},
-		})
+				status: 'active'
+			}
+		});
 
 		// Get messages assigned to this user
 		const assignedMessages = await prisma.message.findMany({
 			where: {
 				assignedToId: userId,
-				companyId,
+				companyId
 			},
 			orderBy: { updated: 'desc' },
-			take: 50,
-		})
+			take: 50
+		});
 
 		// Get communication logs assigned to this user
 		const assignedLogs = await prisma.communicationLog.findMany({
 			where: {
 				companyId,
 				assignedMembers: {
-					some: { userId },
-				},
+					some: { userId }
+				}
 			},
 			orderBy: { created: 'desc' },
 			take: 200,
-			include: { assignedMembers: true },
-		})
+			include: { assignedMembers: true }
+		});
 
 		return {
 			user: {
@@ -68,23 +68,31 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				name: user.name || user.email || 'Unknown',
 				email: user.email || '',
 				avatar: user.avatar || null,
-				created: user.created.toISOString(),
+				created: user.created.toISOString()
 			},
 			member: member
 				? {
 						id: member.id,
 						role: member.role,
-						joined_at: member.joinedAt?.toISOString() ?? '',
+						joined_at: member.joinedAt?.toISOString() ?? ''
 					}
 				: null,
 			assignedMessages,
-			assignedLogs,
-		}
+			assignedLogs
+		};
 	} catch (err: unknown) {
-		if (err && typeof err === 'object' && 'status' in err && (err.status === 403 || err.status === 404)) {
-			throw error((err as { status: number }).status, (err as { message?: string }).message || 'User not found')
+		if (
+			err &&
+			typeof err === 'object' &&
+			'status' in err &&
+			(err.status === 403 || err.status === 404)
+		) {
+			throw error(
+				(err as { status: number }).status,
+				(err as { message?: string }).message || 'User not found'
+			);
 		}
-		console.error('Error loading user profile:', err)
-		throw error(500, 'Failed to load user profile')
+		console.error('Error loading user profile:', err);
+		throw error(500, 'Failed to load user profile');
 	}
-}
+};

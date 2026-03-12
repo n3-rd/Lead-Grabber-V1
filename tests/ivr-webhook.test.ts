@@ -133,7 +133,8 @@ describe('IVR webhook simulation', () => {
 
 			expect(res.status).toBe(200);
 			const answerCalls = mockFetch.mock.calls.filter(
-				(c: { 0: string }) => c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-123/actions/answer'
+				(c: { 0: string }) =>
+					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-123/actions/answer'
 			);
 			expect(answerCalls.length).toBeGreaterThanOrEqual(1);
 			const answerBody = JSON.parse(answerCalls[0][1]?.body ?? '{}');
@@ -235,7 +236,8 @@ describe('IVR webhook simulation', () => {
 			});
 
 			const transferCalls = mockFetch.mock.calls.filter(
-				(c: { 0: string }) => c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-456/actions/transfer'
+				(c: { 0: string }) =>
+					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-456/actions/transfer'
 			);
 			expect(transferCalls.length).toBe(1);
 			const body = JSON.parse(transferCalls[0][1]?.body ?? '{}');

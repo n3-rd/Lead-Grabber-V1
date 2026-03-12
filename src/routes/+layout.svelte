@@ -36,7 +36,7 @@
 		isPolling = true;
 		try {
 			const response = await fetch('/api/calls/pending', { credentials: 'same-origin' });
-			
+
 			if (!response.ok) {
 				// 502/503 = gateway/upstream issue — back off like 429
 				if (response.status === 429 || response.status === 502 || response.status === 503) {
@@ -48,7 +48,7 @@
 				}
 				throw new Error(`HTTP ${response.status}`);
 			}
-			
+
 			const data = await response.json();
 
 			// Reset error counter on success
@@ -136,7 +136,7 @@
 	/>
 </svelte:head>
 <Toaster richColors />
-<div class="root-layout min-h-screen overflow-x-hidden flex flex-col">
+<div class="root-layout flex min-h-screen flex-col overflow-x-hidden">
 	{#if children}
 		{@render children()}
 	{/if}

@@ -4,7 +4,11 @@
  */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { TELNYX_API_KEY, TELNYX_PHONE_NUMBER, TELNYX_MESSAGING_PROFILE_ID } from '$env/static/private';
+import {
+	TELNYX_API_KEY,
+	TELNYX_PHONE_NUMBER,
+	TELNYX_MESSAGING_PROFILE_ID
+} from '$env/static/private';
 import { PUBLIC_BASE_URL } from '$env/static/public';
 import { normalizePhoneNumber } from '$lib/utils/phone';
 import { logCommunication } from '$lib/utils/communication-log';
@@ -19,10 +23,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const body = await request.json().catch(() => ({}));
 	const recipients = Array.isArray(body.recipients) ? body.recipients : [];
 	const message = typeof body.message === 'string' ? body.message : '';
-	let fromNumber: string | null = typeof body.fromNumber === 'string' ? body.fromNumber.trim() : null;
+	let fromNumber: string | null =
+		typeof body.fromNumber === 'string' ? body.fromNumber.trim() : null;
 
 	if (!recipients.length || !message) {
-		return json({ success: false, error: 'recipients and message are required', code: 400 }, { status: 400 });
+		return json(
+			{ success: false, error: 'recipients and message are required', code: 400 },
+			{ status: 400 }
+		);
 	}
 
 	if (!fromNumber && auth.companyId) {
@@ -39,7 +47,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					Authorization: `Bearer ${TELNYX_API_KEY}`,
+					Authorization: `Bearer ${TELNYX_API_KEY}`
 				},
 				body: JSON.stringify({
 					from: fromNumber,
@@ -49,8 +57,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					webhook_url: `${PUBLIC_BASE_URL}/api/telnyx/webhook`,
 					webhook_failover_url: `${PUBLIC_BASE_URL}/api/telnyx/webhook-backup`,
 					use_profile_webhooks: false,
-					type: 'SMS',
-				}),
+					type: 'SMS'
+				})
 			});
 			const result = await response.json();
 			if (response.ok && result.data?.id) {
@@ -63,7 +71,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					company_id: auth.companyId,
 					summary: message.slice(0, 50) + (message.length > 50 ? '...' : ''),
 					content: message,
-					metadata: { telnyx_id: result.data.id },
+					metadata: { telnyx_id: result.data.id }
 				});
 				results.push({ recipient: formatted, messageId: result.data.id, status: 'sent' });
 			} else {
@@ -74,7 +82,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			results.push({
 				recipient: formatted,
 				status: 'failed',
-				error: e instanceof Error ? e.message : String(e),
+				error: e instanceof Error ? e.message : String(e)
 			});
 		}
 	}
@@ -87,6 +95,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			failed === 0
 				? `SMS sent to ${results.length} recipient(s)`
 				: `Failed to send SMS to ${failed} recipient(s)`,
-		...(failed > 0 && { error: `Failed to send SMS to ${failed} recipient(s)` }),
+		...(failed > 0 && { error: `Failed to send SMS to ${failed} recipient(s)` })
 	});
 };

@@ -57,8 +57,8 @@
 			// Parse numbers from textarea (comma or newline separated)
 			const phoneNumbers = numbers
 				.split(/[,\n]/)
-				.map(n => n.trim())
-				.filter(n => n.length > 0);
+				.map((n) => n.trim())
+				.filter((n) => n.length > 0);
 
 			const response = await fetch('/api/telnyx/porting/check', {
 				method: 'POST',
@@ -85,17 +85,19 @@
 
 	async function handleCreateOrder() {
 		// Validate required fields
-		if (!orderFormData.end_user_name || !orderFormData.authorized_person_name || 
-		    !orderFormData.account_number || !orderFormData.billing_telephone_number) {
+		if (
+			!orderFormData.end_user_name ||
+			!orderFormData.authorized_person_name ||
+			!orderFormData.account_number ||
+			!orderFormData.billing_telephone_number
+		) {
 			toast.error('Please fill in all required fields');
 			return;
 		}
 
 		isLoading = true;
 		try {
-			const phoneNumbers = portabilityResults
-				.filter(r => r.portable)
-				.map(r => r.number);
+			const phoneNumbers = portabilityResults.filter((r) => r.portable).map((r) => r.number);
 
 			if (phoneNumbers.length === 0) {
 				toast.error('No portable numbers to port');
@@ -149,7 +151,7 @@
 			</h1>
 			<button
 				onclick={handleBack}
-				class="flex items-center gap-2 font-['Poppins'] text-base font-medium leading-[19px] text-[#757575] hover:text-[#577AB7] transition-colors"
+				class="flex items-center gap-2 font-['Poppins'] text-base font-medium leading-[19px] text-[#757575] transition-colors hover:text-[#577AB7]"
 			>
 				<ArrowLeft class="h-4 w-4" />
 				Back to Porting Request
@@ -170,7 +172,9 @@
 
 					<!-- Form Section -->
 					<div class="mb-6 space-y-4">
-						<label class="block font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+						<label
+							class="block font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]"
+						>
 							Paste Numbers
 						</label>
 						<textarea
@@ -184,7 +188,7 @@
 							<Info class="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" />
 							<p class="font-['Poppins'] text-sm leading-relaxed text-gray-700">
 								Numbers must be separated by either commas or line breaks, and in
-								<a href="#" class="text-blue-600 hover:underline inline-flex items-center gap-1">
+								<a href="#" class="inline-flex items-center gap-1 text-blue-600 hover:underline">
 									E.164 format
 									<ExternalLink class="h-3 w-3" />
 								</a>
@@ -219,7 +223,9 @@
 					<div class="mb-6 rounded-b border border-[#BEBEBE] bg-white">
 						<!-- Table Headers -->
 						<div class="border-b border-[#949494] px-4 py-3">
-							<div class="grid grid-cols-4 gap-4 font-['Poppins'] text-[15px] font-medium leading-[18px] text-[#757575]">
+							<div
+								class="grid grid-cols-4 gap-4 font-['Poppins'] text-[15px] font-medium leading-[18px] text-[#757575]"
+							>
 								<div>Number</div>
 								<div>Status</div>
 								<div>Carrier</div>
@@ -234,28 +240,32 @@
 									No portability results. Click "Next" to check portability.
 								</div>
 							{:else}
-							{#each portabilityResults as result}
-								<div class="grid grid-cols-4 gap-4 px-4 py-3">
-									<div class="font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080]">
-										{result.number}
+								{#each portabilityResults as result}
+									<div class="grid grid-cols-4 gap-4 px-4 py-3">
+										<div class="font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080]">
+											{result.number}
+										</div>
+										<div class="flex items-center gap-2">
+											<div class="h-[5px] w-[5px] rounded-full bg-[#04CB15]"></div>
+											<span
+												class="font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080]"
+											>
+												{result.status}
+											</span>
+										</div>
+										<div class="font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080]">
+											{result.carrier}
+										</div>
+										<div
+											class="font-['Poppins'] text-[15px] font-normal leading-[18px] text-[#808080]"
+										>
+											{result.numberType}
+										</div>
 									</div>
-									<div class="flex items-center gap-2">
-										<div class="h-[5px] w-[5px] rounded-full bg-[#04CB15]"></div>
-										<span class="font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080]">
-											{result.status}
-										</span>
-									</div>
-									<div class="font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080]">
-										{result.carrier}
-									</div>
-									<div class="font-['Poppins'] text-[15px] font-normal leading-[18px] text-[#808080]">
-										{result.numberType}
-								</div>
-							</div>
-						{/each}
-						{/if}
+								{/each}
+							{/if}
+						</div>
 					</div>
-				</div>
 
 					<!-- Action Buttons -->
 					<div class="flex gap-3">
@@ -283,7 +293,9 @@
 						<div class="space-y-8">
 							<!-- End user account details -->
 							<div class="space-y-4">
-								<h3 class="font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								<h3
+									class="font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]"
+								>
 									End user account details
 								</h3>
 								<p class="font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080]">
@@ -291,7 +303,9 @@
 								</p>
 								<div class="grid grid-cols-2 gap-4">
 									<div class="space-y-2">
-										<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+										<label
+											class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+										>
 											End user name (business name)
 											<span class="ml-1 italic text-[#4F4F4F]">Required</span>
 										</label>
@@ -302,7 +316,9 @@
 										/>
 									</div>
 									<div class="space-y-2">
-										<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+										<label
+											class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+										>
 											Authorized person name (billing contact)
 											<span class="ml-1 italic text-[#4F4F4F]">Required</span>
 										</label>
@@ -313,7 +329,9 @@
 										/>
 									</div>
 									<div class="space-y-2">
-										<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+										<label
+											class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+										>
 											Account number
 											<span class="ml-1 italic text-[#4F4F4F]">Required</span>
 										</label>
@@ -324,7 +342,9 @@
 										/>
 									</div>
 									<div class="space-y-2">
-										<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+										<label
+											class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+										>
 											Billing telephone number (BTN)
 											<span class="ml-1 italic text-[#4F4F4F]">Required</span>
 										</label>
@@ -335,7 +355,9 @@
 										/>
 									</div>
 									<div class="space-y-2">
-										<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+										<label
+											class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+										>
 											Customer reference
 											<span class="ml-1 italic text-[#4F4F4F]">Required</span>
 										</label>
@@ -346,7 +368,9 @@
 										/>
 									</div>
 									<div class="space-y-2">
-										<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+										<label
+											class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+										>
 											PIN/passcode
 											<span class="ml-1 italic text-[#4F4F4F]">Required</span>
 										</label>
@@ -357,7 +381,9 @@
 										/>
 									</div>
 									<div class="space-y-2">
-										<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+										<label
+											class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+										>
 											Customer group reference
 											<span class="ml-1 italic text-[#4F4F4F]">Required</span>
 										</label>
@@ -372,30 +398,46 @@
 
 							<!-- Pre-configure numbers -->
 							<div class="space-y-4">
-								<h3 class="font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								<h3
+									class="font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]"
+								>
 									Pre-configure numbers
 								</h3>
 								<div class="space-y-2">
-									<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+									<label
+										class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+									>
 										Default messaging profile
 									</label>
 									<div class="relative">
-										<select class="h-[34px] w-full appearance-none rounded-[2px] border border-[#808080] bg-[#FCFDFF] px-3 pr-10 font-['Poppins'] text-[15px] font-normal leading-[18px] text-[rgba(128,128,128,0.33)] outline-none">
+										<select
+											class="h-[34px] w-full appearance-none rounded-[2px] border border-[#808080] bg-[#FCFDFF] px-3 pr-10 font-['Poppins'] text-[15px] font-normal leading-[18px] text-[rgba(128,128,128,0.33)] outline-none"
+										>
 											<option>No profile selected</option>
 										</select>
-										<ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+										<ChevronDown
+											class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+										/>
 									</div>
-									<p class="text-xs text-[#808080]">you can add and manage messaging profile here.</p>
+									<p class="text-xs text-[#808080]">
+										you can add and manage messaging profile here.
+									</p>
 								</div>
 								<div class="space-y-2">
-									<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+									<label
+										class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+									>
 										Default connection
 									</label>
 									<div class="relative">
-										<select class="h-[34px] w-full appearance-none rounded-[2px] border border-[#808080] bg-[#FCFDFF] px-3 pr-10 font-['Poppins'] text-[15px] font-normal leading-[18px] text-[rgba(128,128,128,0.33)] outline-none">
+										<select
+											class="h-[34px] w-full appearance-none rounded-[2px] border border-[#808080] bg-[#FCFDFF] px-3 pr-10 font-['Poppins'] text-[15px] font-normal leading-[18px] text-[rgba(128,128,128,0.33)] outline-none"
+										>
 											<option>No connection selected</option>
 										</select>
-										<ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+										<ChevronDown
+											class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+										/>
 									</div>
 									<p class="text-xs text-[#808080]">you can add and manage connection here.</p>
 								</div>
@@ -403,15 +445,20 @@
 
 							<!-- Service Address -->
 							<div class="space-y-4">
-								<h3 class="font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								<h3
+									class="font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]"
+								>
 									Service Address
 								</h3>
 								<p class="font-['Poppins'] text-sm font-normal leading-[17px] text-[#808080]">
-									The physical location of the phone number on record with current carrier. In the most cases it is not the same as the billing address.
+									The physical location of the phone number on record with current carrier. In the
+									most cases it is not the same as the billing address.
 								</p>
 								<div class="grid grid-cols-2 gap-4">
 									<div class="space-y-2">
-										<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+										<label
+											class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+										>
 											Search for an address
 										</label>
 										<input
@@ -421,7 +468,9 @@
 										/>
 									</div>
 									<div class="space-y-2">
-										<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+										<label
+											class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+										>
 											City
 										</label>
 										<input
@@ -431,7 +480,9 @@
 										/>
 									</div>
 									<div class="space-y-2">
-										<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+										<label
+											class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+										>
 											State/Province/Region
 										</label>
 										<input
@@ -441,7 +492,9 @@
 										/>
 									</div>
 									<div class="space-y-2">
-										<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+										<label
+											class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+										>
 											ZIP/Postal Code
 										</label>
 										<input
@@ -451,7 +504,9 @@
 										/>
 									</div>
 									<div class="space-y-2">
-										<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+										<label
+											class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+										>
 											Country
 										</label>
 										<input
@@ -465,29 +520,51 @@
 
 							<!-- Activation Details -->
 							<div class="space-y-4">
-								<h3 class="font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								<h3
+									class="font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]"
+								>
 									Activation Details
 								</h3>
 								<div class="space-y-4">
 									<div>
-										<p class="mb-2 font-['Poppins'] text-[15px] font-normal leading-[18px] text-[#808080]">
+										<p
+											class="mb-2 font-['Poppins'] text-[15px] font-normal leading-[18px] text-[#808080]"
+										>
 											When do you want this to activate? (Requested FOC Date)
 										</p>
 										<div class="flex items-center gap-4">
 											<label class="flex items-center gap-2">
-												<input type="radio" name="portType" value="full" class="h-[14px] w-[14px]" />
-												<span class="font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">Full Port</span>
+												<input
+													type="radio"
+													name="portType"
+													value="full"
+													class="h-[14px] w-[14px]"
+												/>
+												<span
+													class="font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+													>Full Port</span
+												>
 											</label>
 											<label class="flex items-center gap-2">
-												<input type="radio" name="portType" value="partial" class="h-[14px] w-[14px]" />
-												<span class="font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">Partial Port</span>
+												<input
+													type="radio"
+													name="portType"
+													value="partial"
+													class="h-[14px] w-[14px]"
+												/>
+												<span
+													class="font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+													>Partial Port</span
+												>
 											</label>
 										</div>
 										<p class="mt-2 text-sm text-[#808080]">Please select full or partial port</p>
 									</div>
 									<div class="grid grid-cols-2 gap-4">
 										<div class="space-y-2">
-											<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+											<label
+												class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+											>
 												Earliest available date
 											</label>
 											<input
@@ -497,7 +574,9 @@
 											/>
 										</div>
 										<div class="space-y-2">
-											<label class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+											<label
+												class="block font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+											>
 												Specified date
 											</label>
 											<input
@@ -509,21 +588,37 @@
 									</div>
 									<div class="space-y-2">
 										<label class="flex items-center gap-2">
-											<input type="checkbox" class="h-[14px] w-[14px] rounded border border-[#757575]" />
-											<span class="font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575] opacity-33">
+											<input
+												type="checkbox"
+												class="h-[14px] w-[14px] rounded border border-[#757575]"
+											/>
+											<span
+												class="opacity-33 font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+											>
 												I will activate the numbers myself (On Demand)
 											</span>
 										</label>
 										<label class="flex items-center gap-2">
-											<input type="checkbox" class="h-[14px] w-[14px] rounded border border-[#757575]" />
-											<span class="font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]">
+											<input
+												type="checkbox"
+												class="h-[14px] w-[14px] rounded border border-[#757575]"
+											/>
+											<span
+												class="font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+											>
 												On the confirmed activation date:
 											</span>
 										</label>
 										<label class="flex items-center gap-2">
-											<input type="checkbox" class="h-[14px] w-[14px] rounded border border-[#757575]" />
-											<span class="font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575] opacity-33">
-												Telnyx will activate the number automatically at the specified time (Schedule)
+											<input
+												type="checkbox"
+												class="h-[14px] w-[14px] rounded border border-[#757575]"
+											/>
+											<span
+												class="opacity-33 font-['Poppins'] text-sm font-medium leading-[17px] text-[#757575]"
+											>
+												Telnyx will activate the number automatically at the specified time
+												(Schedule)
 											</span>
 										</label>
 									</div>
@@ -532,7 +627,9 @@
 
 							<!-- FastPort -->
 							<div class="space-y-4">
-								<h3 class="font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+								<h3
+									class="font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]"
+								>
 									FastPort
 								</h3>
 								<p class="font-['Poppins'] text-sm font-normal leading-[17px] text-[#757575]">

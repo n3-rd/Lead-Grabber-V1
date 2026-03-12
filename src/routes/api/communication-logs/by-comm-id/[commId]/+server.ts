@@ -11,23 +11,27 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	const byId = await prisma.communicationLog.findMany({
 		where: { id: params.commId, companyId: auth.companyId },
 		orderBy: { created: 'asc' },
-		select: { id: true, type: true, created: true },
+		select: { id: true, type: true, created: true }
 	});
 	if (byId.length > 0) {
-		const data = byId.map((l) => ({ id: l.id, type: l.type === 'voice' ? 'call' : l.type, timestamp: l.created.toISOString() }));
+		const data = byId.map((l) => ({
+			id: l.id,
+			type: l.type === 'voice' ? 'call' : l.type,
+			timestamp: l.created.toISOString()
+		}));
 		return json({ success: true, data });
 	}
 	const all = await prisma.communicationLog.findMany({
 		where: { companyId: auth.companyId },
 		orderBy: { created: 'asc' },
-		select: { id: true, type: true, created: true, metadata: true },
+		select: { id: true, type: true, created: true, metadata: true }
 	});
 	const logs = all.filter((l) => (l.metadata as { commId?: string })?.commId === params.commId);
 
 	const data = logs.map((l) => ({
 		id: l.id,
 		type: l.type === 'voice' ? 'call' : l.type,
-		timestamp: l.created.toISOString(),
+		timestamp: l.created.toISOString()
 	}));
 	return json({ success: true, data });
 };

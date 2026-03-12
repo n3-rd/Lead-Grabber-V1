@@ -3,25 +3,30 @@
 ## Done
 
 1. **Schema**
+
    - `MessageUrgency` enum: `green` (1–2), `blue` (3), `red` (4–5). Removed duplicate/yellow.
    - `Message` already has: `urgency`, `urgencyScore`, `sentiment`, `intent`, `draftResponse`, `aiSummary`.
 
 2. **Groq AI service** (`src/lib/ai/groq.ts`)
+
    - `classifyMessage(content)` → urgency 1–5, sentiment (sales/support), intent (inquiry, booking, complaint, follow-up, etc.).
    - `summarizeMessage(content, threadContext?)` → short human-readable summary.
    - `draftResponse(latestMessage, threadContext, channel)` → draft reply (email/sms/chatbot); human-in-the-loop only.
    - `analyzeIncomingMessage(content, threadMessages?)` → runs classification + summarization for ingest.
 
 3. **Backend**
+
    - **POST /api/messages** (leadbox/leadform): after create/update, runs `analyzeIncomingMessage` and persists urgency, urgencyScore, sentiment, intent, aiSummary.
    - **POST /api/messages/draft** (auth): body `{ id, channel? }` → generates draft, saves to `message.draftResponse`, returns `{ draft }`.
    - **PATCH /api/messages**: accepts `draft_response` to persist agent-edited draft.
 
 4. **Frontend**
+
    - Inbox: urgency badge supports `blue` (Medium) in addition to green/red.
    - `src/lib/types/message.ts`: added `urgencyScore`, `sentiment`, `intent`, `aiSummary`, `draftResponse`; urgency type includes `blue`.
 
 5. **Env**
+
    - `GROQ_API_KEY` in `.env.example` and `src/lib/types/env.d.ts`.
 
 6. **Migration**

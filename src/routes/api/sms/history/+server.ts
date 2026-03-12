@@ -19,8 +19,8 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			skip,
 			take: limit,
 			orderBy: { created: 'desc' },
-			include: { customer: { select: { name: true } } },
-		}),
+			include: { customer: { select: { name: true } } }
+		})
 	]);
 
 	const data = logs.map((l) => ({
@@ -31,12 +31,12 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		contactName: l.customer?.name ?? null,
 		message: l.content ?? l.summary ?? '',
 		status: l.status === 'success' || l.status === 'completed' ? 'delivered' : l.status,
-		timestamp: l.created.toISOString(),
+		timestamp: l.created.toISOString()
 	}));
 
 	return json({
 		success: true,
 		data,
-		pagination: pagination(page, limit, total),
+		pagination: pagination(page, limit, total)
 	});
 };

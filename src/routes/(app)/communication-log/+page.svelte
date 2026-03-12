@@ -10,7 +10,17 @@
 
 	const PAGE_SIZES = [10, 20, 50, 100] as const;
 
-	const filters = ['All', 'Email', 'SMS', 'Voice', 'Web', 'Facebook', 'Chatbot', 'Leadform', 'Leadbox'];
+	const filters = [
+		'All',
+		'Email',
+		'SMS',
+		'Voice',
+		'Web',
+		'Facebook',
+		'Chatbot',
+		'Leadform',
+		'Leadbox'
+	];
 	let searchQuery = $state('');
 	let selectedAgentName = $state<string | null>(null);
 
@@ -71,9 +81,11 @@
 
 			// Get assigned member names from expanded assigned_members
 			// assigned_members is a relation to users, so when expanded we get user objects
-			const assignedMembers = Array.isArray(log.expand?.assigned_members) 
-				? log.expand.assigned_members 
-				: (log.expand?.assigned_members ? [log.expand.assigned_members] : []);
+			const assignedMembers = Array.isArray(log.expand?.assigned_members)
+				? log.expand.assigned_members
+				: log.expand?.assigned_members
+					? [log.expand.assigned_members]
+					: [];
 			const assignedMemberNames = assignedMembers
 				.map((user: any) => user?.name || user?.email || '')
 				.filter(Boolean);
@@ -92,13 +104,18 @@
 						? 'in'
 						: 'out';
 			// Purpose: category_gpt or legacy intent/sentiment; prefix "Urgent " when urgency_gpt >= 4
-			const cap = (s: string) => (s ?? '').charAt(0).toUpperCase() + (s ?? '').slice(1).toLowerCase();
+			const cap = (s: string) =>
+				(s ?? '').charAt(0).toUpperCase() + (s ?? '').slice(1).toLowerCase();
 			const urgentPrefix = urgencyGpt !== null && urgencyGpt >= 4 ? 'Urgent ' : '';
 			let purpose: string;
 			if (meta.category_gpt) {
 				purpose = urgentPrefix + cap(meta.category_gpt);
 			} else if (meta.intent || meta.sentiment) {
-				const word = meta.intent ? cap(meta.intent) : meta.sentiment ? cap(meta.sentiment) : 'General';
+				const word = meta.intent
+					? cap(meta.intent)
+					: meta.sentiment
+						? cap(meta.sentiment)
+						: 'General';
 				purpose = urgentPrefix + word;
 			} else {
 				purpose = log.summary ? urgentPrefix + 'See Summary' : urgentPrefix + 'General';
@@ -130,7 +147,7 @@
 			time: c.time,
 			type: c.typeIcon as any,
 			typeIcon: c.typeIcon,
-			direction: c.type as "In" | "Out",
+			direction: c.type as 'In' | 'Out',
 			source: c.source,
 			endpoint: c.endpoint,
 			purpose: c.purpose,
@@ -161,18 +178,24 @@
 	}
 </script>
 
-<div class="w-full min-w-0 flex flex-col">
+<div class="flex w-full min-w-0 flex-col">
 	<!-- Header: greeting, search, agent picker (same row) -->
-	<div class="flex flex-wrap items-center justify-between gap-4 bg-white px-6 py-4 border-b border-gray-200">
+	<div
+		class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 py-4"
+	>
 		<div class="flex items-center gap-4">
 			<img src="/img/profile.png" alt="" class="h-12 w-12 rounded-full object-cover" />
 			<div>
-				<h2 class="text-lg font-semibold text-gray-900">Good Morning, {data.user?.name ?? 'User'}!</h2>
+				<h2 class="text-lg font-semibold text-gray-900">
+					Good Morning, {data.user?.name ?? 'User'}!
+				</h2>
 				<p class="text-sm text-gray-500">Simplify how you manage calls and messages.</p>
 			</div>
 		</div>
-		<div class="flex items-center gap-4 flex-1 justify-end">
-			<div class="flex h-10 w-full max-w-sm min-w-[200px] items-center gap-2 rounded-lg border border-gray-300 bg-white px-3">
+		<div class="flex flex-1 items-center justify-end gap-4">
+			<div
+				class="flex h-10 w-full min-w-[200px] max-w-sm items-center gap-2 rounded-lg border border-gray-300 bg-white px-3"
+			>
 				<Search class="h-4 w-4 shrink-0 text-gray-500" />
 				<input
 					type="text"
@@ -190,11 +213,14 @@
 						<span>Agents</span>
 						<ChevronDown class="h-4 w-4 shrink-0 text-gray-500" />
 					</DropdownMenu.Trigger>
-					<DropdownMenu.Content class="min-w-[180px] max-h-[min(60vh,400px)] overflow-y-auto" align="end" side="bottom" sideOffset={6} collisionPadding={12}>
-						<DropdownMenu.Item
-							class="cursor-pointer"
-							onSelect={() => (selectedAgentName = null)}
-						>
+					<DropdownMenu.Content
+						class="max-h-[min(60vh,400px)] min-w-[180px] overflow-y-auto"
+						align="end"
+						side="bottom"
+						sideOffset={6}
+						collisionPadding={12}
+					>
+						<DropdownMenu.Item class="cursor-pointer" onSelect={() => (selectedAgentName = null)}>
 							All agents
 						</DropdownMenu.Item>
 						<DropdownMenu.Separator />
@@ -212,12 +238,12 @@
 		</div>
 	</div>
 
-	<div class="min-w-0 flex flex-1 flex-col p-4">
+	<div class="flex min-w-0 flex-1 flex-col p-4">
 		<CommunicationTable
 			communications={tableCommunications}
 			{filters}
 			bind:searchQuery
-			selectedAgentName={selectedAgentName}
+			{selectedAgentName}
 			onSummaryClick={handleSummaryClick}
 			onActionClick={handleActionClick}
 			onAssignClick={handleAssignClick}
@@ -225,7 +251,9 @@
 			showSearch={false}
 		/>
 		<!-- Pagination -->
-		<div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
+		<div
+			class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4"
+		>
 			<div class="flex items-center gap-4">
 				<span class="text-sm text-gray-600">Per page</span>
 				<div class="flex gap-1">
@@ -282,23 +310,33 @@
 	{@const hasRecordingId = selectedComm.raw?.type === 'voice' && meta.recording_id}
 	{@const recordingUrl = hasRecordingId
 		? `/api/recording/${selectedComm.commId || selectedComm.raw?.id}`
-		: (typeof meta.recording_urls === 'object' && meta.recording_urls !== null
-			? (meta.recording_urls.mp3 ?? meta.recording_urls.m4a ?? Object.values(meta.recording_urls).find((v) => typeof v === 'string' && v.startsWith('http')))
-			: meta.voicemail_url ?? null)}
+		: typeof meta.recording_urls === 'object' && meta.recording_urls !== null
+			? (meta.recording_urls.mp3 ??
+				meta.recording_urls.m4a ??
+				Object.values(meta.recording_urls).find(
+					(v) => typeof v === 'string' && v.startsWith('http')
+				))
+			: (meta.voicemail_url ?? null)}
 	<CommunicationSummaryDialog
 		bind:open={summaryDialogOpen}
 		commId={selectedComm.commId || selectedComm.raw?.id || ''}
 		date={selectedComm.date}
 		time={selectedComm.time}
-		category={meta.category_gpt ? (meta.category_gpt as string).charAt(0).toUpperCase() + (meta.category_gpt as string).slice(1) : (meta.sentiment ?? 'sales').charAt(0).toUpperCase() + (meta.sentiment ?? 'sales').slice(1)}
-		subCategory={meta.subcat_gpt ? (meta.subcat_gpt as string).charAt(0).toUpperCase() + (meta.subcat_gpt as string).slice(1) : ((meta.intent as string) ?? 'Inquiry').charAt(0).toUpperCase() + ((meta.intent as string) ?? 'Inquiry').slice(1)}
+		category={meta.category_gpt
+			? (meta.category_gpt as string).charAt(0).toUpperCase() +
+				(meta.category_gpt as string).slice(1)
+			: (meta.sentiment ?? 'sales').charAt(0).toUpperCase() + (meta.sentiment ?? 'sales').slice(1)}
+		subCategory={meta.subcat_gpt
+			? (meta.subcat_gpt as string).charAt(0).toUpperCase() + (meta.subcat_gpt as string).slice(1)
+			: ((meta.intent as string) ?? 'Inquiry').charAt(0).toUpperCase() +
+				((meta.intent as string) ?? 'Inquiry').slice(1)}
 		sourceLabel={selectedComm.raw?.type === 'voice' ? 'Phone' : 'Email Address'}
 		email={selectedComm.source ?? ''}
 		subject={selectedComm.raw?.metadata?.subject || selectedComm.raw?.subject || 'No subject'}
 		body={selectedComm.raw?.content || selectedComm.summary || ''}
 		summary={selectedComm.summary}
 		tasks={meta.actionItems ?? meta.tasks ?? []}
-		recordingUrl={recordingUrl}
+		{recordingUrl}
 	/>
 {/if}
 
@@ -308,7 +346,7 @@
 	bind:open={assignDialogOpen}
 	endpointName={selectedEndpoint || ''}
 	agents={data.members?.map((m: { name: string }) => m.name) || []}
-	preSelectedAgents={preSelectedAgents}
+	{preSelectedAgents}
 	onAssign={async (selectedAgentNames) => {
 		if (!data.members) return;
 

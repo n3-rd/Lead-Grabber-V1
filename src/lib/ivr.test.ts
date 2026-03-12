@@ -42,7 +42,11 @@ describe('getActiveCallFlow', () => {
 
 	it('returns null when no flows exist', async () => {
 		vi.mocked(mockPrisma.callFlow.findMany).mockResolvedValue([]);
-		const result = await getActiveCallFlow(mockPrisma, 'company-1', new Date('2026-01-30T14:00:00Z'));
+		const result = await getActiveCallFlow(
+			mockPrisma,
+			'company-1',
+			new Date('2026-01-30T14:00:00Z')
+		);
 		expect(result).toBe(null);
 		expect(mockPrisma.callFlow.findMany).toHaveBeenCalledWith({
 			where: { companyId: 'company-1' },
@@ -70,7 +74,15 @@ describe('getActiveCallFlow', () => {
 						id: 'rule-1',
 						callFlowId: 'flow-1',
 						ruleTitle: 'Mon only',
-						schedule: { Mon: { start: '09:00', end: '17:00' }, Tue: null, Wed: null, Thu: null, Fri: null, Sat: null, Sun: null },
+						schedule: {
+							Mon: { start: '09:00', end: '17:00' },
+							Tue: null,
+							Wed: null,
+							Thu: null,
+							Fri: null,
+							Sat: null,
+							Sun: null
+						},
 						promptsAudioUrl: '/p.mp3',
 						keyPrompts: [],
 						failoverCount: 2,
@@ -84,7 +96,11 @@ describe('getActiveCallFlow', () => {
 				]
 			}
 		]);
-		const result = await getActiveCallFlow(mockPrisma, 'company-1', new Date('2026-01-30T14:00:00Z'));
+		const result = await getActiveCallFlow(
+			mockPrisma,
+			'company-1',
+			new Date('2026-01-30T14:00:00Z')
+		);
 		expect(result).toBe(null);
 	});
 
@@ -129,7 +145,11 @@ describe('getActiveCallFlow', () => {
 				]
 			}
 		]);
-		const result = await getActiveCallFlow(mockPrisma, 'company-1', new Date('2026-01-30T14:00:00Z'));
+		const result = await getActiveCallFlow(
+			mockPrisma,
+			'company-1',
+			new Date('2026-01-30T14:00:00Z')
+		);
 		expect(result).not.toBe(null);
 		expect(result!.flow.id).toBe('flow-1');
 		expect(result!.flow.title).toBe('Main');
@@ -217,7 +237,11 @@ describe('getActiveCallFlow', () => {
 				]
 			}
 		]);
-		const result = await getActiveCallFlow(mockPrisma, 'company-1', new Date('2026-01-30T12:00:00Z'));
+		const result = await getActiveCallFlow(
+			mockPrisma,
+			'company-1',
+			new Date('2026-01-30T12:00:00Z')
+		);
 		expect(result).not.toBe(null);
 		// First flow in array (flow-2, most recently updated) is checked first; its rule matches
 		expect(result!.flow.id).toBe('flow-2');

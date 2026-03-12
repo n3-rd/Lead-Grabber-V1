@@ -19,17 +19,22 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const existing = await prisma.fcmToken.findFirst({
 		where: {
 			userId: auth.id,
-			...(deviceId ? { deviceId } : { deviceId: null }),
-		},
+			...(deviceId ? { deviceId } : { deviceId: null })
+		}
 	});
 	if (existing) {
 		await prisma.fcmToken.update({
 			where: { id: existing.id },
-			data: { token, platform: platform ?? undefined, updated: new Date() },
+			data: { token, platform: platform ?? undefined, updated: new Date() }
 		});
 	} else {
 		await prisma.fcmToken.create({
-			data: { userId: auth.id, token, platform: platform ?? undefined, deviceId: deviceId ?? undefined },
+			data: {
+				userId: auth.id,
+				token,
+				platform: platform ?? undefined,
+				deviceId: deviceId ?? undefined
+			}
 		});
 	}
 

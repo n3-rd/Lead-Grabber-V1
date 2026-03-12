@@ -21,11 +21,14 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		where: { id: params.id, companyId: auth.companyId },
 		include: {
 			customer: { select: { name: true, phone: true, email: true, companyName: true } },
-			assignedMembers: { include: { user: { select: { name: true } } } },
-		},
+			assignedMembers: { include: { user: { select: { name: true } } } }
+		}
 	});
 	if (!log) {
-		return json({ success: false, error: 'Communication log not found', code: 404 }, { status: 404 });
+		return json(
+			{ success: false, error: 'Communication log not found', code: 404 },
+			{ status: 404 }
+		);
 	}
 
 	const m = meta(log);
@@ -51,7 +54,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		ivrDetails: m.ivrDetails ?? null,
 		timestamp: log.created.toISOString(),
 		createdAt: log.created.toISOString(),
-		updatedAt: log.updated.toISOString(),
+		updatedAt: log.updated.toISOString()
 	};
 	return json({ success: true, data });
 };

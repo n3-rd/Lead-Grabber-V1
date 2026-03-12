@@ -17,7 +17,10 @@
 	<div class="chart-bars" role="img" aria-label="Calls over time">
 		{#each data as row}
 			{@const total = row.inbound + row.outbound}
-			<div class="bar-group" title="{formatLabel(row.date)}: {row.inbound} inbound, {row.outbound} outbound">
+			<div
+				class="bar-group"
+				title="{formatLabel(row.date)}: {row.inbound} inbound, {row.outbound} outbound"
+			>
 				<div
 					class="bar-stack"
 					style="height: {total > 0 ? Math.max(4, (total / maxTotal) * 100) : 0}%"

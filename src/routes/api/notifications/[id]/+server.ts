@@ -13,7 +13,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	if (!auth) return unauthorized();
 
 	const n = await prisma.notification.findFirst({
-		where: { id: params.id, companyId: auth.companyId },
+		where: { id: params.id, companyId: auth.companyId }
 	});
 	if (!n) {
 		return json({ success: false, error: 'Notification not found', code: 404 }, { status: 404 });
@@ -26,7 +26,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		message: n.content ?? n.messagePreview,
 		type: toSpecType(n.type),
 		isRead: n.read,
-		timestamp: n.createdAt.toISOString(),
+		timestamp: n.createdAt.toISOString()
 	};
 	return json({ success: true, data });
 };

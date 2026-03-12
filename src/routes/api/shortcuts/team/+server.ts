@@ -9,7 +9,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 
 	const shortcuts = await prisma.shortcut.findMany({
 		where: { companyId: auth.companyId, userId: null },
-		orderBy: { code: 'asc' },
+		orderBy: { code: 'asc' }
 	});
 	const data = shortcuts.map((s) => ({ id: s.id, code: s.code, message: s.message }));
 	return json({ success: true, data });

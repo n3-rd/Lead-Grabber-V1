@@ -46,7 +46,7 @@
 	}
 </script>
 
-<div class="flex gap-2 justify-center {className}" role="group" aria-label="Verification code">
+<div class="flex justify-center gap-2 {className}" role="group" aria-label="Verification code">
 	{#each Array(LENGTH) as _, i}
 		<input
 			bind:this={refs[i]}
@@ -54,12 +54,12 @@
 			inputmode="numeric"
 			autocomplete={i === 0 ? 'one-time-code' : undefined}
 			maxlength="1"
-			disabled={disabled}
+			{disabled}
 			value={local[i] ?? ''}
 			oninput={(e) => handleInput(i, e)}
 			onkeydown={(e) => handleKeydown(i, e)}
 			onpaste={handlePaste}
-			class="w-11 h-12 text-center text-lg font-semibold rounded-lg bg-gray-100 border border-transparent focus:border-primary/60 focus:bg-white focus:ring-0 focus:outline-none disabled:opacity-50"
+			class="h-12 w-11 rounded-lg border border-transparent bg-gray-100 text-center text-lg font-semibold focus:border-primary/60 focus:bg-white focus:outline-none focus:ring-0 disabled:opacity-50"
 		/>
 	{/each}
 </div>

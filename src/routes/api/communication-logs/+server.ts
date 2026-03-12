@@ -13,28 +13,40 @@ function toSpecType(t: string): CommType {
 }
 
 function meta(l: { metadata?: unknown }) {
-	return (l.metadata as { commId?: string; assignmentStatus?: AssignmentStatus; department?: string; assignedAgent?: string; ivrDetails?: string }) ?? {};
+	return (
+		(l.metadata as {
+			commId?: string;
+			assignmentStatus?: AssignmentStatus;
+			department?: string;
+			assignedAgent?: string;
+			ivrDetails?: string;
+		}) ?? {}
+	);
 }
 
-function toSpecLog(
-	l: {
-		id: string;
-		type: string;
-		direction: string;
-		source: string | null;
-		destination: string | null;
-		summary: string | null;
-		content: string | null;
-		duration: number | null;
-		metadata: unknown;
-		created: Date;
-		customer?: { name: string | null; phone: string | null; email: string | null; companyName: string | null } | null;
-		assignedMembers?: { user: { name: string | null } }[];
-	},
-) {
+function toSpecLog(l: {
+	id: string;
+	type: string;
+	direction: string;
+	source: string | null;
+	destination: string | null;
+	summary: string | null;
+	content: string | null;
+	duration: number | null;
+	metadata: unknown;
+	created: Date;
+	customer?: {
+		name: string | null;
+		phone: string | null;
+		email: string | null;
+		companyName: string | null;
+	} | null;
+	assignedMembers?: { user: { name: string | null } }[];
+}) {
 	const m = meta(l);
 	const firstAssigned = l.assignedMembers?.[0]?.user?.name ?? null;
-	const status: AssignmentStatus = m.assignmentStatus ?? (firstAssigned ? 'assigned_to_agent' : 'unassigned');
+	const status: AssignmentStatus =
+		m.assignmentStatus ?? (firstAssigned ? 'assigned_to_agent' : 'unassigned');
 	return {
 		id: l.id,
 		commId: m.commId ?? `COMM-${l.created.getFullYear()}-${l.id.slice(-6).toUpperCase()}`,
@@ -53,7 +65,7 @@ function toSpecLog(
 		message: l.type === 'sms' ? l.content : null,
 		subject: l.type === 'email' ? l.summary : null,
 		ivrDetails: m.ivrDetails ?? null,
-		timestamp: l.created.toISOString(),
+		timestamp: l.created.toISOString()
 	};
 }
 
@@ -70,7 +82,9 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const search = (url.searchParams.get('search') ?? '').trim();
 	const skip = (page - 1) * limit;
 
-	const where: { companyId: string; type?: unknown; direction?: string } = { companyId: auth.companyId };
+	const where: { companyId: string; type?: unknown; direction?: string } = {
+		companyId: auth.companyId
+	};
 	if (type === 'call') where.type = 'voice';
 	else if (type === 'sms') where.type = 'sms';
 	else if (type === 'email') where.type = 'email';
@@ -89,8 +103,8 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 							{ content: { contains: search, mode: 'insensitive' } },
 							{ source: { contains: search, mode: 'insensitive' } },
 							{ destination: { contains: search, mode: 'insensitive' } },
-							{ customer: { name: { contains: search, mode: 'insensitive' } } },
-						],
+							{ customer: { name: { contains: search, mode: 'insensitive' } } }
+						]
 					}
 				: where,
 			skip,
@@ -98,9 +112,9 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			orderBy,
 			include: {
 				customer: { select: { name: true, phone: true, email: true, companyName: true } },
-				assignedMembers: { include: { user: { select: { name: true } } } },
-			},
-		}),
+				assignedMembers: { include: { user: { select: { name: true } } } }
+			}
+		})
 	]);
 
 	const data = logs.map((l) => toSpecLog(l));

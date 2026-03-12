@@ -14,7 +14,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 	if (!auth) return unauthorized();
 
 	const member = await prisma.companyMember.findFirst({
-		where: { userId: params.id, companyId: auth.companyId, status: 'active' },
+		where: { userId: params.id, companyId: auth.companyId, status: 'active' }
 	});
 	if (!member) {
 		return json({ success: false, error: 'Representative not found', code: 404 }, { status: 404 });
@@ -26,7 +26,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 
 	const where = {
 		companyId: auth.companyId,
-		assignedMembers: { some: { userId: params.id } },
+		assignedMembers: { some: { userId: params.id } }
 	};
 	const [total, logs] = await Promise.all([
 		prisma.communicationLog.count({ where }),
@@ -37,9 +37,9 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 			orderBy: { created: 'desc' },
 			include: {
 				customer: { select: { name: true, phone: true, email: true, companyName: true } },
-				assignedMembers: { include: { user: { select: { name: true } } } },
-			},
-		}),
+				assignedMembers: { include: { user: { select: { name: true } } } }
+			}
+		})
 	]);
 
 	const meta = (l: { metadata?: unknown }) => (l.metadata as Record<string, string>) ?? {};
@@ -64,13 +64,13 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 			message: l.type === 'sms' ? l.content : null,
 			subject: l.type === 'email' ? l.summary : null,
 			ivrDetails: m.ivrDetails ?? null,
-			timestamp: l.created.toISOString(),
+			timestamp: l.created.toISOString()
 		};
 	});
 
 	return json({
 		success: true,
 		data,
-		pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
+		pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 }
 	});
 };

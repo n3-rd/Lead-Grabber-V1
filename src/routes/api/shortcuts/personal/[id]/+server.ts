@@ -8,7 +8,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	if (!auth) return unauthorized();
 
 	const shortcut = await prisma.shortcut.findFirst({
-		where: { id: params.id, companyId: auth.companyId, userId: auth.id },
+		where: { id: params.id, companyId: auth.companyId, userId: auth.id }
 	});
 	if (!shortcut) {
 		return json({ success: false, error: 'Shortcut not found', code: 404 }, { status: 404 });

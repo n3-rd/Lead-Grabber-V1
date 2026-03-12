@@ -1,24 +1,24 @@
 import { leadformStyles } from './styles';
 
 export interface LeadformConfig {
-  id: string;
-  formData: any;
-  companyId: string;
-  baseUrl: string;
+	id: string;
+	formData: any;
+	companyId: string;
+	baseUrl: string;
 }
 
 function escapeForJs(str: string): string {
-  return JSON.stringify(str);
+	return JSON.stringify(str);
 }
 
 export function buildLeadformScript(config: LeadformConfig): string {
-  const { id, formData, companyId, baseUrl } = config;
+	const { id, formData, companyId, baseUrl } = config;
 
-  const formDataJson = JSON.stringify(formData);
-  const buttonColor = formData.settings?.buttonColor || '#3B5BDB';
-  const stylesJson = JSON.stringify(leadformStyles.replace(/var\(--button-color\)/g, buttonColor));
+	const formDataJson = JSON.stringify(formData);
+	const buttonColor = formData.settings?.buttonColor || '#3B5BDB';
+	const stylesJson = JSON.stringify(leadformStyles.replace(/var\(--button-color\)/g, buttonColor));
 
-  return `(function() {
+	return `(function() {
   const formData = ${formDataJson};
   const companyId = ${escapeForJs(companyId)};
   const baseUrl = ${escapeForJs(baseUrl)};

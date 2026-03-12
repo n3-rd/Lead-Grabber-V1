@@ -12,11 +12,11 @@ export const POST: RequestHandler = async ({ request }) => {
 	const res = await fetch(`${origin}/api/telnyx/webhook`, {
 		method: 'POST',
 		body,
-		headers,
+		headers
 	});
 	const data = await res.text();
 	return new Response(data, {
 		status: res.status,
-		headers: { 'Content-Type': 'application/json' },
+		headers: { 'Content-Type': 'application/json' }
 	});
 };

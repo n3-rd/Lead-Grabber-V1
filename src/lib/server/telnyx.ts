@@ -4,65 +4,65 @@ import { prisma } from '$lib/db';
 const TELNYX_API_BASE = 'https://api.telnyx.com/v2';
 
 const TELNYX_HEADERS = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${TELNYX_API_KEY}`
+	'Content-Type': 'application/json',
+	Authorization: `Bearer ${TELNYX_API_KEY}`
 };
 
 /** Id in URL: UUID as-is, E.164 encode the + */
 function phoneIdToPath(id: string): string {
-    return id.startsWith('+') ? encodeURIComponent(id) : id;
+	return id.startsWith('+') ? encodeURIComponent(id) : id;
 }
 
 /** PATCH base phone number resource to set connection_id (voice app). UUID as-is; E.164 must be encoded. */
 async function assignNumberVoice(phoneId: string): Promise<boolean> {
-    const path = phoneId.startsWith('+') ? encodeURIComponent(phoneId) : phoneId;
-    const url = `${TELNYX_API_BASE}/phone_numbers/${path}`;
-    const res = await fetch(url, {
-        method: 'PATCH',
-        headers: TELNYX_HEADERS,
-        body: JSON.stringify({ connection_id: String(TELNYX_CONNECTION_ID) })
-    });
-    if (!res.ok) {
-        const errorBody = await res.json();
-        console.error('Individual PATCH failed:', res.status, phoneId, errorBody);
-    }
-    return res.ok;
+	const path = phoneId.startsWith('+') ? encodeURIComponent(phoneId) : phoneId;
+	const url = `${TELNYX_API_BASE}/phone_numbers/${path}`;
+	const res = await fetch(url, {
+		method: 'PATCH',
+		headers: TELNYX_HEADERS,
+		body: JSON.stringify({ connection_id: String(TELNYX_CONNECTION_ID) })
+	});
+	if (!res.ok) {
+		const errorBody = await res.json();
+		console.error('Individual PATCH failed:', res.status, phoneId, errorBody);
+	}
+	return res.ok;
 }
 
 /** Assign a Telnyx number to our voice connection (for use after buy). Voice only; messaging not used. */
 export async function assignNumberToApp(telnyxPhoneNumberId: string): Promise<void> {
-    await assignNumberVoice(telnyxPhoneNumberId);
+	await assignNumberVoice(telnyxPhoneNumberId);
 }
 
 interface TelnyxError {
-    errors?: Array<{
-        code?: string;
-        title?: string;
-        detail?: string;
-        source?: {
-            pointer?: string;
-        };
-    }>;
+	errors?: Array<{
+		code?: string;
+		title?: string;
+		detail?: string;
+		source?: {
+			pointer?: string;
+		};
+	}>;
 }
 
 interface BillingGroup {
-    id: string;
-    name: string;
-    created_at: string;
-    updated_at: string;
-    record_type: string;
+	id: string;
+	name: string;
+	created_at: string;
+	updated_at: string;
+	record_type: string;
 }
 
 interface PhoneNumberOrder {
-    id: string;
-    status: string;
-    phone_numbers?: Array<{
-        id: string;
-        phone_number: string;
-        status: string;
-    }>;
-    created_at: string;
-    updated_at: string;
+	id: string;
+	status: string;
+	phone_numbers?: Array<{
+		id: string;
+		phone_number: string;
+		status: string;
+	}>;
+	created_at: string;
+	updated_at: string;
 }
 
 interface TelnyxPhoneNumber {
@@ -74,60 +74,56 @@ interface TelnyxPhoneNumber {
 }
 
 interface BulkNumberOrder {
-    id: string;
-    status: string;
-    ordering_groups: Array<{
-        country_iso: string;
-        phone_number_type: string;
-        count_requested: number;
-        count_fulfilled?: number;
-    }>;
-    created_at: string;
-    updated_at: string;
+	id: string;
+	status: string;
+	ordering_groups: Array<{
+		country_iso: string;
+		phone_number_type: string;
+		count_requested: number;
+		count_fulfilled?: number;
+	}>;
+	created_at: string;
+	updated_at: string;
 }
 
 /**
  * Generate unique billing group name using company name and ID
  */
 export function generateBillingGroupName(companyName: string, companyId: string): string {
-    // Sanitize company name (remove special chars, limit length)
-    const sanitizedName = companyName
-        .replace(/[^a-zA-Z0-9\s-]/g, '')
-        .trim()
-        .substring(0, 50);
+	// Sanitize company name (remove special chars, limit length)
+	const sanitizedName = companyName
+		.replace(/[^a-zA-Z0-9\s-]/g, '')
+		.trim()
+		.substring(0, 50);
 
-    return `${sanitizedName}-${companyId}`;
+	return `${sanitizedName}-${companyId}`;
 }
 
 /**
  * Make authenticated request to Telnyx API
  */
-async function telnyxRequest<T>(
-    endpoint: string,
-    options: RequestInit = {}
-): Promise<{ data: T }> {
-    const url = `${TELNYX_API_BASE}${endpoint}`;
+async function telnyxRequest<T>(endpoint: string, options: RequestInit = {}): Promise<{ data: T }> {
+	const url = `${TELNYX_API_BASE}${endpoint}`;
 
-    const response = await fetch(url, {
-        ...options,
-        headers: {
-            'Authorization': `Bearer ${TELNYX_API_KEY}`,
-            'Content-Type': 'application/json',
-            ...options.headers
-        }
-    });
+	const response = await fetch(url, {
+		...options,
+		headers: {
+			Authorization: `Bearer ${TELNYX_API_KEY}`,
+			'Content-Type': 'application/json',
+			...options.headers
+		}
+	});
 
-    const data = await response.json();
+	const data = await response.json();
 
-    if (!response.ok) {
-        const error = data as TelnyxError;
-        const errorMessage = error.errors?.[0]?.detail ||
-            error.errors?.[0]?.title ||
-            'Unknown Telnyx API error';
-        throw new Error(`Telnyx API Error: ${errorMessage}`);
-    }
+	if (!response.ok) {
+		const error = data as TelnyxError;
+		const errorMessage =
+			error.errors?.[0]?.detail || error.errors?.[0]?.title || 'Unknown Telnyx API error';
+		throw new Error(`Telnyx API Error: ${errorMessage}`);
+	}
 
-    return data;
+	return data;
 }
 
 /**
@@ -172,18 +168,18 @@ export async function listAllTelnyxPhoneNumbers(): Promise<TelnyxPhoneNumber[]> 
  * List all billing groups
  */
 export async function listBillingGroups(): Promise<BillingGroup[]> {
-    const response = await telnyxRequest<BillingGroup[]>('/billing_groups', {
-        method: 'GET'
-    });
-    return response.data;
+	const response = await telnyxRequest<BillingGroup[]>('/billing_groups', {
+		method: 'GET'
+	});
+	return response.data;
 }
 
 /**
  * Find billing group by name
  */
 export async function findBillingGroupByName(name: string): Promise<BillingGroup | null> {
-    const billingGroups = await listBillingGroups();
-    return billingGroups.find(bg => bg.name === name) || null;
+	const billingGroups = await listBillingGroups();
+	return billingGroups.find((bg) => bg.name === name) || null;
 }
 
 /**
@@ -191,29 +187,29 @@ export async function findBillingGroupByName(name: string): Promise<BillingGroup
  * Returns the billing group ID
  */
 export async function createBillingGroup(
-    companyName: string,
-    companyId: string
+	companyName: string,
+	companyId: string
 ): Promise<BillingGroup> {
-    const billingGroupName = generateBillingGroupName(companyName, companyId);
+	const billingGroupName = generateBillingGroupName(companyName, companyId);
 
-    // Check if billing group already exists
-    const existing = await findBillingGroupByName(billingGroupName);
-    if (existing) {
-        console.log(`Billing group already exists: ${billingGroupName}`);
-        return existing;
-    }
+	// Check if billing group already exists
+	const existing = await findBillingGroupByName(billingGroupName);
+	if (existing) {
+		console.log(`Billing group already exists: ${billingGroupName}`);
+		return existing;
+	}
 
-    console.log(`Creating billing group: ${billingGroupName}`);
+	console.log(`Creating billing group: ${billingGroupName}`);
 
-    const response = await telnyxRequest<BillingGroup>('/billing_groups', {
-        method: 'POST',
-        body: JSON.stringify({
-            name: billingGroupName
-        })
-    });
+	const response = await telnyxRequest<BillingGroup>('/billing_groups', {
+		method: 'POST',
+		body: JSON.stringify({
+			name: billingGroupName
+		})
+	});
 
-    console.log(`✓ Billing group created: ${response.data.id}`);
-    return response.data;
+	console.log(`✓ Billing group created: ${response.data.id}`);
+	return response.data;
 }
 
 /**
@@ -221,20 +217,20 @@ export async function createBillingGroup(
  * This ensures the billing group exists before proceeding
  */
 export async function ensureBillingGroup(
-    companyName: string,
-    companyId: string
+	companyName: string,
+	companyId: string
 ): Promise<BillingGroup> {
-    const billingGroupName = generateBillingGroupName(companyName, companyId);
+	const billingGroupName = generateBillingGroupName(companyName, companyId);
 
-    // Try to find existing billing group first
-    const existing = await findBillingGroupByName(billingGroupName);
-    if (existing) {
-        console.log(`Using existing billing group: ${billingGroupName} (${existing.id})`);
-        return existing;
-    }
+	// Try to find existing billing group first
+	const existing = await findBillingGroupByName(billingGroupName);
+	if (existing) {
+		console.log(`Using existing billing group: ${billingGroupName} (${existing.id})`);
+		return existing;
+	}
 
-    // Create new billing group if it doesn't exist
-    return await createBillingGroup(companyName, companyId);
+	// Create new billing group if it doesn't exist
+	return await createBillingGroup(companyName, companyId);
 }
 
 /**
@@ -242,32 +238,34 @@ export async function ensureBillingGroup(
  * IMPORTANT: Ensures billing group exists before ordering
  */
 export async function orderPhoneNumbers(
-    phoneNumbers: string[],
-    companyName: string,
-    companyId: string
+	phoneNumbers: string[],
+	companyName: string,
+	companyId: string
 ): Promise<PhoneNumberOrder> {
-    // STEP 1: Ensure billing group exists
-    const billingGroup = await ensureBillingGroup(companyName, companyId);
+	// STEP 1: Ensure billing group exists
+	const billingGroup = await ensureBillingGroup(companyName, companyId);
 
-    if (!billingGroup || !billingGroup.id) {
-        throw new Error('Failed to create or retrieve billing group. Cannot proceed with order.');
-    }
+	if (!billingGroup || !billingGroup.id) {
+		throw new Error('Failed to create or retrieve billing group. Cannot proceed with order.');
+	}
 
-    // STEP 2: Order numbers with billing group
-    console.log(`Ordering ${phoneNumbers.length} phone number(s) for billing group ${billingGroup.id}`);
+	// STEP 2: Order numbers with billing group
+	console.log(
+		`Ordering ${phoneNumbers.length} phone number(s) for billing group ${billingGroup.id}`
+	);
 
-    const response = await telnyxRequest<PhoneNumberOrder>('/number_orders', {
-        method: 'POST',
-        body: JSON.stringify({
-            phone_numbers: phoneNumbers.map(number => ({
-                phone_number: number,
-                billing_group_id: billingGroup.id
-            }))
-        })
-    });
+	const response = await telnyxRequest<PhoneNumberOrder>('/number_orders', {
+		method: 'POST',
+		body: JSON.stringify({
+			phone_numbers: phoneNumbers.map((number) => ({
+				phone_number: number,
+				billing_group_id: billingGroup.id
+			}))
+		})
+	});
 
-    console.log(`✓ Number order created: ${response.data.id} (status: ${response.data.status})`);
-    return response.data;
+	console.log(`✓ Number order created: ${response.data.id} (status: ${response.data.status})`);
+	return response.data;
 }
 
 /**
@@ -276,62 +274,64 @@ export async function orderPhoneNumbers(
  * IMPORTANT: Ensures billing group exists before ordering
  */
 export async function bulkOrderPhoneNumbers(
-    orderingGroups: Array<{
-        country_iso: string;
-        phone_number_type: 'local' | 'toll_free' | 'national' | 'mobile';
-        count_requested: number;
-        area_code?: string;
-        state?: string;
-    }>,
-    companyName: string,
-    companyId: string
+	orderingGroups: Array<{
+		country_iso: string;
+		phone_number_type: 'local' | 'toll_free' | 'national' | 'mobile';
+		count_requested: number;
+		area_code?: string;
+		state?: string;
+	}>,
+	companyName: string,
+	companyId: string
 ): Promise<BulkNumberOrder> {
-    // STEP 1: Ensure billing group exists
-    const billingGroup = await ensureBillingGroup(companyName, companyId);
+	// STEP 1: Ensure billing group exists
+	const billingGroup = await ensureBillingGroup(companyName, companyId);
 
-    if (!billingGroup || !billingGroup.id) {
-        throw new Error('Failed to create or retrieve billing group. Cannot proceed with bulk order.');
-    }
+	if (!billingGroup || !billingGroup.id) {
+		throw new Error('Failed to create or retrieve billing group. Cannot proceed with bulk order.');
+	}
 
-    // STEP 2: Bulk order numbers with billing group
-    const totalRequested = orderingGroups.reduce((sum, group) => sum + group.count_requested, 0);
-    console.log(`Bulk ordering ${totalRequested} phone number(s) for billing group ${billingGroup.id}`);
+	// STEP 2: Bulk order numbers with billing group
+	const totalRequested = orderingGroups.reduce((sum, group) => sum + group.count_requested, 0);
+	console.log(
+		`Bulk ordering ${totalRequested} phone number(s) for billing group ${billingGroup.id}`
+	);
 
-    const response = await telnyxRequest<BulkNumberOrder>('/inexplicit_number_orders', {
-        method: 'POST',
-        body: JSON.stringify({
-            ordering_groups: orderingGroups.map(group => ({
-                ...group,
-                billing_group_id: billingGroup.id
-            }))
-        })
-    });
+	const response = await telnyxRequest<BulkNumberOrder>('/inexplicit_number_orders', {
+		method: 'POST',
+		body: JSON.stringify({
+			ordering_groups: orderingGroups.map((group) => ({
+				...group,
+				billing_group_id: billingGroup.id
+			}))
+		})
+	});
 
-    console.log(`✓ Bulk order created: ${response.data.id} (status: ${response.data.status})`);
-    return response.data;
+	console.log(`✓ Bulk order created: ${response.data.id} (status: ${response.data.status})`);
+	return response.data;
 }
 
 /**
  * Get number order status
  */
 export async function getNumberOrderStatus(orderId: string): Promise<PhoneNumberOrder> {
-    const response = await telnyxRequest<PhoneNumberOrder>(`/number_orders/${orderId}`, {
-        method: 'GET'
-    });
-    return response.data;
+	const response = await telnyxRequest<PhoneNumberOrder>(`/number_orders/${orderId}`, {
+		method: 'GET'
+	});
+	return response.data;
 }
 
 /**
  * List phone numbers in a billing group
  */
 export async function listPhoneNumbersByBillingGroup(
-    billingGroupId: string
+	billingGroupId: string
 ): Promise<Array<{ id: string; phone_number: string; status: string }>> {
-    const response = await telnyxRequest<Array<{ id: string; phone_number: string; status: string }>>(
-        `/phone_numbers?filter[billing_group_id]=${billingGroupId}`,
-        { method: 'GET' }
-    );
-    return response.data;
+	const response = await telnyxRequest<Array<{ id: string; phone_number: string; status: string }>>(
+		`/phone_numbers?filter[billing_group_id]=${billingGroupId}`,
+		{ method: 'GET' }
+	);
+	return response.data;
 }
 
 /**
@@ -341,50 +341,47 @@ export async function listPhoneNumbersByBillingGroup(
  * 3. Returns billing group and order details
  */
 export async function setupCompanyPhoneNumbers(
-    companyName: string,
-    companyId: string,
-    phoneCount: number,
-    options: {
-        country_iso?: string;
-        phone_number_type?: 'local' | 'toll_free' | 'national' | 'mobile';
-        area_code?: string;
-        state?: string;
-    } = {}
+	companyName: string,
+	companyId: string,
+	phoneCount: number,
+	options: {
+		country_iso?: string;
+		phone_number_type?: 'local' | 'toll_free' | 'national' | 'mobile';
+		area_code?: string;
+		state?: string;
+	} = {}
 ): Promise<{
-    billingGroup: BillingGroup;
-    order: BulkNumberOrder;
+	billingGroup: BillingGroup;
+	order: BulkNumberOrder;
 }> {
-    const {
-        country_iso = 'US',
-        phone_number_type = 'local',
-        area_code,
-        state
-    } = options;
+	const { country_iso = 'US', phone_number_type = 'local', area_code, state } = options;
 
-    // Step 1: Ensure billing group exists
-    console.log(`Setting up ${phoneCount} phone numbers for ${companyName} (${companyId})`);
-    const billingGroup = await ensureBillingGroup(companyName, companyId);
+	// Step 1: Ensure billing group exists
+	console.log(`Setting up ${phoneCount} phone numbers for ${companyName} (${companyId})`);
+	const billingGroup = await ensureBillingGroup(companyName, companyId);
 
-    // Step 2: Bulk order phone numbers
-    const orderingGroups = [{
-        country_iso,
-        phone_number_type,
-        count_requested: phoneCount,
-        ...(area_code && { area_code }),
-        ...(state && { state })
-    }];
+	// Step 2: Bulk order phone numbers
+	const orderingGroups = [
+		{
+			country_iso,
+			phone_number_type,
+			count_requested: phoneCount,
+			...(area_code && { area_code }),
+			...(state && { state })
+		}
+	];
 
-    const order = await bulkOrderPhoneNumbers(orderingGroups, companyName, companyId);
+	const order = await bulkOrderPhoneNumbers(orderingGroups, companyName, companyId);
 
-    console.log(`✓ Setup complete for ${companyName}`);
-    console.log(`  Billing Group: ${billingGroup.id}`);
-    console.log(`  Order ID: ${order.id}`);
-    console.log(`  Status: ${order.status}`);
+	console.log(`✓ Setup complete for ${companyName}`);
+	console.log(`  Billing Group: ${billingGroup.id}`);
+	console.log(`  Order ID: ${order.id}`);
+	console.log(`  Status: ${order.status}`);
 
-    return {
-        billingGroup,
-        order
-    };
+	return {
+		billingGroup,
+		order
+	};
 }
 
 /**
@@ -395,81 +392,83 @@ export async function setupCompanyPhoneNumbers(
  * Batch update response from Telnyx
  */
 interface BatchUpdateResponse {
-    id: string;
-    record_type: string;
-    status: string;
+	id: string;
+	record_type: string;
+	status: string;
 }
 
 /**
  * Batch update phone numbers to assign them to a voice connection.
  * This is an asynchronous operation - returns a job_id that can be polled for status.
- * 
+ *
  * @param phoneNumbers - List of phone numbers in E.164 format (e.g., +15551234567)
  *                       OR list of Telnyx phone number IDs
  * @param connectionId - The voice connection/app ID to assign numbers to (defaults to TELNYX_CONNECTION_ID)
  * @returns The batch job details including job ID
  */
 export async function batchUpdatePhoneNumbers(
-    phoneNumbers: string[],
-    connectionId: string = TELNYX_CONNECTION_ID
+	phoneNumbers: string[],
+	connectionId: string = TELNYX_CONNECTION_ID
 ): Promise<BatchUpdateResponse> {
-    if (phoneNumbers.length === 0) {
-        throw new Error('No phone numbers provided for batch update');
-    }
+	if (phoneNumbers.length === 0) {
+		throw new Error('No phone numbers provided for batch update');
+	}
 
-    console.log(`Batch updating ${phoneNumbers.length} phone number(s) to connection ${connectionId}`);
+	console.log(
+		`Batch updating ${phoneNumbers.length} phone number(s) to connection ${connectionId}`
+	);
 
-    const response = await fetch(`${TELNYX_API_BASE}/phone_numbers/update_batch`, {
-        method: 'POST',
-        headers: TELNYX_HEADERS,
-        body: JSON.stringify({
-            phone_numbers: phoneNumbers,
-            connection_id: connectionId
-        })
-    });
+	const response = await fetch(`${TELNYX_API_BASE}/phone_numbers/update_batch`, {
+		method: 'POST',
+		headers: TELNYX_HEADERS,
+		body: JSON.stringify({
+			phone_numbers: phoneNumbers,
+			connection_id: connectionId
+		})
+	});
 
-    if (response.status === 202) {
-        const data = await response.json();
-        console.log(`✓ Batch update initiated! Job ID: ${data.data.id}`);
-        return data.data as BatchUpdateResponse;
-    }
+	if (response.status === 202) {
+		const data = await response.json();
+		console.log(`✓ Batch update initiated! Job ID: ${data.data.id}`);
+		return data.data as BatchUpdateResponse;
+	}
 
-    const errorData = await response.json();
-    console.error('Batch update failed:', response.status, errorData);
-    throw new Error(`Batch update failed: ${response.status} - ${JSON.stringify(errorData)}`);
+	const errorData = await response.json();
+	console.error('Batch update failed:', response.status, errorData);
+	throw new Error(`Batch update failed: ${response.status} - ${JSON.stringify(errorData)}`);
 }
 
 /**
  * Batch update phone numbers by Telnyx ID. Uses jobs/update_number_settings (filter + settings).
  */
 export async function batchUpdatePhoneNumbersByIds(
-    telnyxIds: string[],
-    connectionId: string = TELNYX_CONNECTION_ID
+	telnyxIds: string[],
+	connectionId: string = TELNYX_CONNECTION_ID
 ): Promise<BatchUpdateResponse> {
-    if (telnyxIds.length === 0) throw new Error('No phone number IDs provided');
+	if (telnyxIds.length === 0) throw new Error('No phone number IDs provided');
 
-    console.log(`Batch updating ${telnyxIds.length} ID(s) to connection ${connectionId}`);
+	console.log(`Batch updating ${telnyxIds.length} ID(s) to connection ${connectionId}`);
 
-    const response = await fetch(`${TELNYX_API_BASE}/phone_numbers/jobs/update_number_settings`, {
-        method: 'POST',
-        headers: TELNYX_HEADERS,
-        body: JSON.stringify({
-            filter: {
-                id: { in: telnyxIds }
-            },
-            settings: {
-                connection_id: connectionId
-            }
-        })
-    });
+	const response = await fetch(`${TELNYX_API_BASE}/phone_numbers/jobs/update_number_settings`, {
+		method: 'POST',
+		headers: TELNYX_HEADERS,
+		body: JSON.stringify({
+			filter: {
+				id: { in: telnyxIds }
+			},
+			settings: {
+				connection_id: connectionId
+			}
+		})
+	});
 
-    if (response.status === 202) {
-        const data = await response.json();
-        return data.data as BatchUpdateResponse;
-    }
+	if (response.status === 202) {
+		const data = await response.json();
+		return data.data as BatchUpdateResponse;
+	}
 
-    const errorData = await response.json();
-    throw new Error(`Batch update failed: ${response.status} - ${JSON.stringify(errorData)}`);
+	const errorData = await response.json();
+	throw new Error(`Batch update failed: ${response.status} - ${JSON.stringify(errorData)}`);
 }
 
 export async function ensureCompanyNumbersAssignedToApp(): Promise<{
@@ -493,7 +492,9 @@ export async function ensureCompanyNumbersAssignedToApp(): Promise<{
 		const allTelnyxNumbers = await listAllTelnyxPhoneNumbers();
 
 		// Create a map for quick lookup: phone_number -> connection_id
-		const telnyxConnectionMap = new Map(allTelnyxNumbers.map((n) => [n.phone_number, n.connection_id]));
+		const telnyxConnectionMap = new Map(
+			allTelnyxNumbers.map((n) => [n.phone_number, n.connection_id])
+		);
 
 		// 3. Identify numbers that are not assigned to the correct voice app (keep Telnyx ID for PATCH)
 		const numbersToUpdate: Array<{ phoneNumber: string; telnyxPhoneNumberId: string }> = [];

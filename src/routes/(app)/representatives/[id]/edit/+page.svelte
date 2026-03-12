@@ -42,7 +42,7 @@
 
 <div class="min-h-screen bg-[#ECEEF3] p-6">
 	<!-- Header -->
-	<div class="mb-6 flex items-center justify-between bg-white py-7 px-11">
+	<div class="mb-6 flex items-center justify-between bg-white px-11 py-7">
 		<h1 class="font-['Poppins'] text-2xl font-medium text-[#737373]">Edit Representative</h1>
 		<button
 			onclick={handleSave}

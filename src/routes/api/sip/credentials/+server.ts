@@ -18,11 +18,7 @@
  */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import {
-	TELNYX_API_KEY,
-	TELNYX_CONNECTION_ID,
-	TELNYX_PHONE_NUMBER
-} from '$env/static/private';
+import { TELNYX_API_KEY, TELNYX_CONNECTION_ID, TELNYX_PHONE_NUMBER } from '$env/static/private';
 import { requireAuth, unauthorized, specError } from '$lib/api/spec';
 import { getFirstCompanyNumber } from '$lib/company-numbers';
 import { prisma } from '$lib/db';

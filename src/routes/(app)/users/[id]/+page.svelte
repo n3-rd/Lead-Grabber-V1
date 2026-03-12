@@ -28,7 +28,7 @@
 	<div class="rounded-xl bg-white p-6 shadow-sm">
 		<button
 			onclick={() => goto('/settings/company')}
-			class="mb-4 text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+			class="mb-4 flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
 		>
 			← Back to Team
 		</button>
@@ -43,7 +43,9 @@
 						class="h-24 w-24 rounded-full object-cover"
 					/>
 				{:else}
-					<div class="flex h-24 w-24 items-center justify-center rounded-full bg-gray-200 text-2xl font-semibold text-gray-600">
+					<div
+						class="flex h-24 w-24 items-center justify-center rounded-full bg-gray-200 text-2xl font-semibold text-gray-600"
+					>
 						{data.user.name?.charAt(0).toUpperCase() || '?'}
 					</div>
 				{/if}
@@ -52,8 +54,8 @@
 			<!-- User Info -->
 			<div class="flex-1">
 				<div class="mb-4">
-					<h1 class="text-3xl font-semibold text-gray-900 mb-2">{data.user.name}</h1>
-					<p class="text-gray-600 mb-1">{data.user.email}</p>
+					<h1 class="mb-2 text-3xl font-semibold text-gray-900">{data.user.name}</h1>
+					<p class="mb-1 text-gray-600">{data.user.email}</p>
 					{#if data.member}
 						<div class="mt-2">
 							<RoleBadge role={data.member.role} />
@@ -83,7 +85,7 @@
 
 	<!-- Assigned Messages -->
 	<div class="rounded-xl bg-white p-6 shadow-sm">
-		<h2 class="text-xl font-semibold text-gray-900 mb-4">
+		<h2 class="mb-4 text-xl font-semibold text-gray-900">
 			Assigned Messages ({data.assignedMessages.length})
 		</h2>
 		{#if data.assignedMessages.length > 0}
@@ -95,7 +97,7 @@
 								<h3 class="font-medium text-gray-900">
 									{msg.customer_name || 'Unknown Customer'}
 								</h3>
-								<p class="text-sm text-gray-600 mt-1 line-clamp-2">
+								<p class="mt-1 line-clamp-2 text-sm text-gray-600">
 									{msg.messages?.[msg.messages.length - 1]?.content || 'No content'}
 								</p>
 							</div>
@@ -113,7 +115,7 @@
 
 	<!-- Assigned Communication Logs -->
 	<div class="rounded-xl bg-white p-6 shadow-sm">
-		<h2 class="text-xl font-semibold text-gray-900 mb-4">
+		<h2 class="mb-4 text-xl font-semibold text-gray-900">
 			Assigned Communications ({data.assignedLogs.length})
 		</h2>
 		{#if data.assignedLogs.length > 0}
@@ -121,7 +123,7 @@
 				{#each data.assignedLogs as log}
 					<div class="border-b border-gray-200 pb-3 last:border-b-0 last:pb-0">
 						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-3 flex-1">
+							<div class="flex flex-1 items-center gap-3">
 								{#if log.type === 'email'}
 									<Mail class="h-4 w-4 text-gray-500" />
 								{:else if log.type === 'sms'}
@@ -130,7 +132,7 @@
 									<Phone class="h-4 w-4 text-gray-500" />
 								{/if}
 								<div class="flex-1">
-									<div class="font-medium text-gray-900 capitalize">
+									<div class="font-medium capitalize text-gray-900">
 										{log.type} - {log.direction}
 									</div>
 									<div class="text-sm text-gray-600">

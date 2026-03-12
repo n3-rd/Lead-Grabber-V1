@@ -5,11 +5,13 @@ This project has been migrated from PocketBase to PostgreSQL with Prisma.
 ## Setup
 
 1. **Install dependencies:**
+
    ```bash
    npm install
    ```
 
 2. **Set up your database:**
+
    - Create a PostgreSQL database
    - Add the connection string to your `.env` file:
      ```
@@ -17,16 +19,19 @@ This project has been migrated from PocketBase to PostgreSQL with Prisma.
      ```
 
 3. **Generate Prisma Client:**
+
    ```bash
    npm run db:generate
    ```
 
 4. **Push the schema to your database:**
+
    ```bash
    npm run db:push
    ```
-   
+
    Or create a migration:
+
    ```bash
    npm run db:migrate
    ```
@@ -36,6 +41,7 @@ This project has been migrated from PocketBase to PostgreSQL with Prisma.
 All PocketBase collections have been converted to Prisma models:
 
 ### Auth Models
+
 - `User` - Regular users (from `users` collection)
 - `SuperUser` - System administrators (from `_superusers` collection)
 - `AuthOrigin` - Authentication origins tracking
@@ -44,6 +50,7 @@ All PocketBase collections have been converted to Prisma models:
 - `Otp` - One-time passwords
 
 ### Application Models
+
 - `Company` - Companies/organizations
 - `CompanyMember` - Company membership with roles
 - `Contact` - Customer contacts

@@ -34,10 +34,11 @@
 		<div class="mb-6 flex items-center justify-between border-b border-[#949494]">
 			<div class="flex gap-6">
 				<button
-					class="relative pb-2 font-['Poppins'] text-lg font-medium leading-[21px] transition-colors {activeTab === 'portOrders'
+					class="relative pb-2 font-['Poppins'] text-lg font-medium leading-[21px] transition-colors {activeTab ===
+					'portOrders'
 						? 'text-[#577AB7]'
 						: 'text-[#A0A0A0]'}"
-					onclick={() => activeTab = 'portOrders'}
+					onclick={() => (activeTab = 'portOrders')}
 				>
 					Port Orders
 					{#if activeTab === 'portOrders'}
@@ -45,10 +46,11 @@
 					{/if}
 				</button>
 				<button
-					class="relative pb-2 font-['Poppins'] text-lg font-medium leading-[21px] transition-colors {activeTab === 'portOutRequest'
+					class="relative pb-2 font-['Poppins'] text-lg font-medium leading-[21px] transition-colors {activeTab ===
+					'portOutRequest'
 						? 'text-[#577AB7]'
 						: 'text-[#A0A0A0]'}"
-					onclick={() => activeTab = 'portOutRequest'}
+					onclick={() => (activeTab = 'portOutRequest')}
 				>
 					Port Out Request
 					{#if activeTab === 'portOutRequest'}
@@ -86,7 +88,9 @@
 
 			<!-- Table Headers -->
 			<div class="border-b border-[rgba(193,193,193,0.96)] px-4 py-3">
-				<div class="grid grid-cols-9 gap-4 font-['Poppins'] text-[15px] font-medium leading-[18px] text-[#757575]">
+				<div
+					class="grid grid-cols-9 gap-4 font-['Poppins'] text-[15px] font-medium leading-[18px] text-[#757575]"
+				>
 					<div>Number</div>
 					<div>Request #</div>
 					<div>Customer Reference</div>

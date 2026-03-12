@@ -7,7 +7,12 @@
 		class?: string;
 		disabled?: boolean;
 	}
-	let { value = $bindable(''), placeholder = '-- : --', class: className = '', disabled = false }: Props = $props();
+	let {
+		value = $bindable(''),
+		placeholder = '-- : --',
+		class: className = '',
+		disabled = false
+	}: Props = $props();
 
 	let open = $state(false);
 	let hour = $state(9);
@@ -63,12 +68,16 @@
 <div class="relative inline-block {className}" data-time-picker bind:this={pickerRoot}>
 	<button
 		type="button"
-		class="flex h-[40px] w-full items-center gap-2 rounded-[3px] border border-black bg-white px-3 pr-10 font-['Poppins'] text-lg font-light leading-[21px] text-[#808080] outline-none transition-colors hover:border-[#577AB7] disabled:opacity-50 {!displayVal() ? 'text-[#B6B6B6]' : ''}"
+		class="flex h-[40px] w-full items-center gap-2 rounded-[3px] border border-black bg-white px-3 pr-10 font-['Poppins'] text-lg font-light leading-[21px] text-[#808080] outline-none transition-colors hover:border-[#577AB7] disabled:opacity-50 {!displayVal()
+			? 'text-[#B6B6B6]'
+			: ''}"
 		{disabled}
 		onclick={openPicker}
 	>
 		<span class="flex-1 text-left">{displayVal() || placeholder}</span>
-		<Clock class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+		<Clock
+			class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+		/>
 	</button>
 	{#if open}
 		<div

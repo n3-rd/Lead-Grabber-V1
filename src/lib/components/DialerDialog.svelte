@@ -35,7 +35,9 @@
 <Dialog.Root bind:open>
 	<Dialog.Content class="w-[min(320px,92vw)] sm:max-w-[320px]">
 		<Dialog.Header>
-			<Dialog.Title class="font-['Poppins'] text-lg font-semibold text-[#808080]">{title}</Dialog.Title>
+			<Dialog.Title class="font-['Poppins'] text-lg font-semibold text-[#808080]"
+				>{title}</Dialog.Title
+			>
 			<Dialog.Description class="font-['Poppins'] text-sm text-[#969696]">
 				Tap a key to select it.
 			</Dialog.Description>
@@ -46,10 +48,10 @@
 				<button
 					type="button"
 					onclick={() => handleKey(k)}
-					disabled={disabled}
+					{disabled}
 					class="flex h-12 items-center justify-center rounded-lg border font-['Poppins'] text-xl font-medium transition-colors {disabled
 						? 'cursor-not-allowed border-[#e5e5e5] bg-[#f5f5f5] text-[#b0b0b0]'
-						: 'border-[#969696] bg-white text-[#808080] hover:bg-[#ECF3FF] hover:border-[#577AB7] hover:text-[#577AB7] active:scale-95'}"
+						: 'border-[#969696] bg-white text-[#808080] hover:border-[#577AB7] hover:bg-[#ECF3FF] hover:text-[#577AB7] active:scale-95'}"
 				>
 					{k}
 				</button>

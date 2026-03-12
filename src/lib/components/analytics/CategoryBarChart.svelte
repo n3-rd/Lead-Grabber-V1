@@ -7,14 +7,7 @@
 		Math.max(1, ...data.map(([, v]: [string, { total: number }]) => v.total))
 	);
 
-	const colors = [
-		'#577AB7',
-		'#22c55e',
-		'#f59e0b',
-		'#ec4899',
-		'#8b5cf6',
-		'#06b6d4'
-	];
+	const colors = ['#577AB7', '#22c55e', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
 	function color(i: number) {
 		return colors[i % colors.length];
 	}
@@ -78,7 +71,7 @@
 		flex: 0 0 32px;
 		font-size: 12px;
 		font-weight: 600;
-		color: #577AB7;
+		color: #577ab7;
 		text-align: right;
 	}
 	.empty {

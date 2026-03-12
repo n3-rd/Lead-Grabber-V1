@@ -40,7 +40,10 @@
 		if (meta.recording_id) return `/api/recording/${c.id}`;
 		const urls = meta.recording_urls as Record<string, string> | undefined;
 		if (urls && typeof urls === 'object') {
-			const u = urls.mp3 ?? urls.m4a ?? Object.values(urls).find((v) => typeof v === 'string' && v.startsWith('http'));
+			const u =
+				urls.mp3 ??
+				urls.m4a ??
+				Object.values(urls).find((v) => typeof v === 'string' && v.startsWith('http'));
 			return (u as string) ?? null;
 		}
 		return null;
@@ -50,13 +53,13 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+	<Dialog.Content class="flex max-h-[90vh] max-w-lg flex-col overflow-hidden">
 		<Dialog.Header>
 			<Dialog.Title>Call details</Dialog.Title>
 			<Dialog.Description>View call information and recording</Dialog.Description>
 		</Dialog.Header>
 		{#if call}
-			<div class="flex-1 overflow-y-auto space-y-4 pr-2">
+			<div class="flex-1 space-y-4 overflow-y-auto pr-2">
 				<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
 					<dt class="text-gray-500">Date & time</dt>
 					<dd class="text-gray-900">{formatDate(call.created)}</dd>
@@ -76,10 +79,14 @@
 					<dd class="text-gray-900">{call.callTrackingCategory?.name ?? '—'}</dd>
 
 					<dt class="text-gray-500">From</dt>
-					<dd class="text-gray-900">{call.direction === 'inbound' ? call.source : call.destination}</dd>
+					<dd class="text-gray-900">
+						{call.direction === 'inbound' ? call.source : call.destination}
+					</dd>
 
 					<dt class="text-gray-500">To</dt>
-					<dd class="text-gray-900">{call.direction === 'inbound' ? call.destination : call.source}</dd>
+					<dd class="text-gray-900">
+						{call.direction === 'inbound' ? call.destination : call.source}
+					</dd>
 
 					<dt class="text-gray-500">Contact</dt>
 					<dd class="text-gray-900">{call.customer?.name || call.customer?.phone || '—'}</dd>
@@ -92,22 +99,28 @@
 
 				{#if call.summary}
 					<div>
-						<h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Summary</h4>
-						<p class="text-sm text-gray-700 whitespace-pre-wrap">{call.summary}</p>
+						<h4 class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+							Summary
+						</h4>
+						<p class="whitespace-pre-wrap text-sm text-gray-700">{call.summary}</p>
 					</div>
 				{/if}
 
 				{#if call.content}
 					<div>
-						<h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Transcript</h4>
-						<p class="text-sm text-gray-700 whitespace-pre-wrap">{call.content}</p>
+						<h4 class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+							Transcript
+						</h4>
+						<p class="whitespace-pre-wrap text-sm text-gray-700">{call.content}</p>
 					</div>
 				{/if}
 
 				{#if recUrl}
 					<div>
-						<h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Recording</h4>
-						<audio controls class="w-full h-9" src={recUrl} preload="metadata">
+						<h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+							Recording
+						</h4>
+						<audio controls class="h-9 w-full" src={recUrl} preload="metadata">
 							Your browser does not support the audio element.
 						</audio>
 					</div>

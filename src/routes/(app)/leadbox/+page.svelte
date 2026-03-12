@@ -124,7 +124,7 @@
 
 			const response = await fetch('/api/upload/logo', {
 				method: 'POST',
-				body: formData,
+				body: formData
 			});
 
 			if (!response.ok) {

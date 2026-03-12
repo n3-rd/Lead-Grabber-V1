@@ -52,7 +52,8 @@
 		fieldErrors = {};
 		const err: Record<string, string> = {};
 		if (!callFlowTitle.trim()) err.callFlowTitle = 'Call Flow Title is required';
-		if (addFailover && !failoverFile) err.failover = 'Please upload failover audio when Add Failover is enabled.';
+		if (addFailover && !failoverFile)
+			err.failover = 'Please upload failover audio when Add Failover is enabled.';
 		if (Object.keys(err).length > 0) {
 			fieldErrors = err;
 			error = Object.values(err)[0];
@@ -67,12 +68,15 @@
 			let failoverConfig: unknown = undefined;
 			if (greetingFile) greetingAudioUrl = await uploadFile(greetingFile, 'greeting');
 			if (allOnCallFile) queueHoldAudioUrl = await uploadFile(allOnCallFile, 'queue');
-			if (unavailableFile) allUnavailableAudioUrl = await uploadFile(unavailableFile, 'unavailable');
+			if (unavailableFile)
+				allUnavailableAudioUrl = await uploadFile(unavailableFile, 'unavailable');
 			if (backupCellFile) backupCellAudioUrl = await uploadFile(backupCellFile, 'backup');
 			if (addFailover && failoverFile) {
 				const url = await uploadFile(failoverFile, 'failover');
 				if (url)
-					failoverConfig = [{ key: failoverKey || '4', name: failoverName, durationSec: 30, audioUrl: url }];
+					failoverConfig = [
+						{ key: failoverKey || '4', name: failoverName, durationSec: 30, audioUrl: url }
+					];
 			}
 			const res = await fetch('/api/ivr/flows', {
 				method: 'POST',
@@ -111,7 +115,7 @@
 			</h1>
 			<button
 				onclick={handleBack}
-				class="flex items-center gap-2 font-['Poppins'] text-base font-medium leading-[19px] text-[#757575] hover:text-[#577AB7] transition-colors"
+				class="flex items-center gap-2 font-['Poppins'] text-base font-medium leading-[19px] text-[#757575] transition-colors hover:text-[#577AB7]"
 			>
 				<ArrowLeft class="h-4 w-4" />
 				Back
@@ -128,13 +132,17 @@
 					<label class="block font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
 						Call Flow Title:
 					</label>
-					<SectionHelp text="A name for this call flow so you can identify it later (e.g. Main Line, Support)." />
+					<SectionHelp
+						text="A name for this call flow so you can identify it later (e.g. Main Line, Support)."
+					/>
 				</div>
 				<input
 					type="text"
 					bind:value={callFlowTitle}
 					placeholder="Enter your Call Flow Title"
-					class="h-[56px] w-full rounded-[2px] border bg-white px-3 font-['Poppins'] text-base font-medium leading-[19px] text-[rgba(128,128,128,0.54)] outline-none placeholder:text-[rgba(128,128,128,0.54)] {fieldErrors.callFlowTitle ? 'border-red-500' : 'border-[#969696]'}"
+					class="h-[56px] w-full rounded-[2px] border bg-white px-3 font-['Poppins'] text-base font-medium leading-[19px] text-[rgba(128,128,128,0.54)] outline-none placeholder:text-[rgba(128,128,128,0.54)] {fieldErrors.callFlowTitle
+						? 'border-red-500'
+						: 'border-[#969696]'}"
 				/>
 				{#if fieldErrors.callFlowTitle}
 					<p class="font-['Poppins'] text-sm text-red-600">{fieldErrors.callFlowTitle}</p>
@@ -150,7 +158,9 @@
 					<label class="block font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
 						Call Flow / Schedule Rule:
 					</label>
-					<SectionHelp text="Choose No Rules for a simple flow, or Create New Set Rule to define when this flow is active (e.g. business hours)." />
+					<SectionHelp
+						text="Choose No Rules for a simple flow, or Create New Set Rule to define when this flow is active (e.g. business hours)."
+					/>
 				</div>
 				<div class="relative">
 					<select
@@ -161,7 +171,9 @@
 						<option value="noRules">No Rules</option>
 						<option value="createNew">Create New Set Rule</option>
 					</select>
-					<ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+					<ChevronDown
+						class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+					/>
 				</div>
 			</div>
 
@@ -171,7 +183,9 @@
 					<h2 class="font-['Poppins'] text-2xl font-semibold leading-[28px] text-[#808080]">
 						General Call Flow Rules
 					</h2>
-					<SectionHelp text="Audio played in different scenarios: when all reps are on a call, when all are unavailable, and when forwarding to a backup number." />
+					<SectionHelp
+						text="Audio played in different scenarios: when all reps are on a call, when all are unavailable, and when forwarding to a backup number."
+					/>
 				</div>
 
 				<!-- All representatives are currently on call -->
@@ -180,7 +194,9 @@
 						<p class="font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
 							All representatives are currently on call.
 						</p>
-						<SectionHelp text="Hold music or message played to the caller while they wait in the queue." />
+						<SectionHelp
+							text="Hold music or message played to the caller while they wait in the queue."
+						/>
 					</div>
 					<AudioUpload bind:file={allOnCallFile} />
 				</div>
@@ -189,9 +205,12 @@
 				<div class="space-y-2">
 					<div class="flex items-center gap-2">
 						<p class="font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
-							All representatives are currently unavailable (offline or no active forwarding number).
+							All representatives are currently unavailable (offline or no active forwarding
+							number).
 						</p>
-						<SectionHelp text="Message played when no one can take the call (e.g. “We’re closed” or “Leave a message”)." />
+						<SectionHelp
+							text="Message played when no one can take the call (e.g. “We’re closed” or “Leave a message”)."
+						/>
 					</div>
 					<AudioUpload bind:file={unavailableFile} />
 				</div>
@@ -207,14 +226,22 @@
 						<label class="font-['Poppins'] text-lg font-semibold leading-[26px] text-[#808080]">
 							Add Failover
 						</label>
-						<SectionHelp text="Optional: let callers press a key (e.g. 4) to leave a voicemail or hear a message when no one is available." />
+						<SectionHelp
+							text="Optional: let callers press a key (e.g. 4) to leave a voicemail or hear a message when no one is available."
+						/>
 					</div>
 
 					{#if addFailover}
-						<div class="space-y-4 rounded border bg-white p-4 {fieldErrors.failover ? 'border-red-500' : 'border-[#808080]'}">
+						<div
+							class="space-y-4 rounded border bg-white p-4 {fieldErrors.failover
+								? 'border-red-500'
+								: 'border-[#808080]'}"
+						>
 							<div class="grid grid-cols-3 gap-4">
 								<div class="space-y-2">
-									<label class="block font-['Poppins'] text-lg font-semibold leading-[26px] text-[#808080]">
+									<label
+										class="block font-['Poppins'] text-lg font-semibold leading-[26px] text-[#808080]"
+									>
 										Select one key (4-9)
 									</label>
 									<button
@@ -232,7 +259,9 @@
 									onSelect={(k) => (failoverKey = k)}
 								/>
 								<div class="space-y-2">
-									<label class="block font-['Poppins'] text-lg font-semibold leading-[26px] text-[#808080]">
+									<label
+										class="block font-['Poppins'] text-lg font-semibold leading-[26px] text-[#808080]"
+									>
 										Give a Name
 									</label>
 									<input
@@ -243,7 +272,9 @@
 									/>
 								</div>
 								<div class="space-y-2">
-									<label class="block font-['Poppins'] text-lg font-semibold leading-[26px] text-[#808080]">
+									<label
+										class="block font-['Poppins'] text-lg font-semibold leading-[26px] text-[#808080]"
+									>
 										Voice Message
 									</label>
 									<input
@@ -273,7 +304,9 @@
 						<p class="font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">
 							All representatives unavailable — forward calls to backup cell number
 						</p>
-						<SectionHelp text="Audio played when the system tries to reach your backup number. The call will ring that number; if no answer, the flow continues (e.g. to voicemail)." />
+						<SectionHelp
+							text="Audio played when the system tries to reach your backup number. The call will ring that number; if no answer, the flow continues (e.g. to voicemail)."
+						/>
 					</div>
 					<!-- Flow Diagram -->
 					<div class="flex items-center gap-4">
@@ -282,14 +315,18 @@
 								Forward to available cell number
 							</span>
 							<div class="h-[2px] w-[93px] bg-[#577AB7]"></div>
-							<span class="font-['Poppins'] text-lg font-medium leading-[26px] text-[#808080]">Connects</span>
+							<span class="font-['Poppins'] text-lg font-medium leading-[26px] text-[#808080]"
+								>Connects</span
+							>
 						</div>
 						<div class="flex flex-col items-center gap-2">
 							<span class="font-['Poppins'] text-lg font-medium leading-[26px] text-[#808080]">
 								Attempt 5 Rings
 							</span>
 							<div class="h-[2px] w-[93px] bg-[#577AB7]"></div>
-							<span class="font-['Poppins'] text-lg font-medium leading-[26px] text-[#808080]">No Answer</span>
+							<span class="font-['Poppins'] text-lg font-medium leading-[26px] text-[#808080]"
+								>No Answer</span
+							>
 						</div>
 					</div>
 					<div>

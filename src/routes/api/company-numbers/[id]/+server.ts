@@ -14,7 +14,8 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 		const callTrackingCategoryId = body.callTrackingCategoryId as string | null | undefined;
 		const data: { callFlowId?: string | null; callTrackingCategoryId?: string | null } = {};
 		if (callFlowId !== undefined) data.callFlowId = callFlowId || null;
-		if (callTrackingCategoryId !== undefined) data.callTrackingCategoryId = callTrackingCategoryId || null;
+		if (callTrackingCategoryId !== undefined)
+			data.callTrackingCategoryId = callTrackingCategoryId || null;
 		if (Object.keys(data).length === 0) {
 			return json({ error: 'No updates provided' }, { status: 400 });
 		}

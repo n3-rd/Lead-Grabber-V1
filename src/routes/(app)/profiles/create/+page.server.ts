@@ -30,7 +30,7 @@ export const actions: Actions = {
 				company_id: user.company.id,
 				name: name || undefined,
 				email: email || undefined,
-				phone: phone || undefined,
+				phone: phone || undefined
 			});
 		} catch (error) {
 			console.error('Error creating profile:', error);
@@ -38,5 +38,5 @@ export const actions: Actions = {
 		}
 
 		throw redirect(303, '/profiles');
-	},
+	}
 };

@@ -14,10 +14,10 @@ export const GET: RequestHandler = async ({ locals }) => {
 			where: {
 				userId_companyId: {
 					userId: user.id,
-					companyId: user.company.id,
-				},
+					companyId: user.company.id
+				}
 			},
-			select: { role: true },
+			select: { role: true }
 		});
 		role = (membership?.role as string | undefined) ?? role;
 	}
@@ -31,11 +31,11 @@ export const GET: RequestHandler = async ({ locals }) => {
 			phone: null as string | null,
 			company: user.company
 				? {
-					id: user.company.id,
-					name: user.company.name ?? null,
-				}
+						id: user.company.id,
+						name: user.company.name ?? null
+					}
 				: null,
-			role,
-		},
+			role
+		}
 	});
 };

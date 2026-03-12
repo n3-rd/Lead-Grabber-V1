@@ -11,6 +11,7 @@ function toSpecContact(c: {
 	email: string | null;
 	companyName: string | null;
 	contactType: string | null;
+	avatarUrl: string | null;
 	created: Date;
 	updated: Date;
 }) {
@@ -21,9 +22,9 @@ function toSpecContact(c: {
 		email: c.email ?? '',
 		company: c.companyName ?? '',
 		type: c.contactType ?? 'phone',
-		avatarUrl: null,
+		avatarUrl: c.avatarUrl,
 		createdAt: c.created.toISOString(),
-		updatedAt: c.updated.toISOString(),
+		updatedAt: c.updated.toISOString()
 	};
 }
 
@@ -36,13 +37,13 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const search = (url.searchParams.get('search') ?? '').trim();
 	const skip = (page - 1) * limit;
 
-	const where: { companyId: string; OR?: unknown[] } = { companyId: auth.companyId };
+	const where: Record<string, any> = { companyId: auth.companyId };
 	if (search) {
 		where.OR = [
 			{ name: { contains: search, mode: 'insensitive' } },
 			{ phone: { contains: search, mode: 'insensitive' } },
 			{ email: { contains: search, mode: 'insensitive' } },
-			{ companyName: { contains: search, mode: 'insensitive' } },
+			{ companyName: { contains: search, mode: 'insensitive' } }
 		];
 	}
 
@@ -60,16 +61,17 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 				email: true,
 				companyName: true,
 				contactType: true,
+				avatarUrl: true,
 				created: true,
-				updated: true,
-			},
-		}),
+				updated: true
+			}
+		})
 	]);
 
 	return json({
 		success: true,
 		data: contacts.map(toSpecContact),
-		pagination: pagination(page, limit, total),
+		pagination: pagination(page, limit, total)
 	});
 };
 
@@ -83,9 +85,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const email = typeof body.email === 'string' ? body.email.trim() : null;
 	const company = typeof body.company === 'string' ? body.company.trim() : null;
 	const type = ['phone', 'email', 'sms', 'facebook'].includes(body.type) ? body.type : 'phone';
+	const avatarUrl = typeof body.avatarUrl === 'string' ? body.avatarUrl.trim() : null;
 
 	if (!name || !phone) {
-		return json({ success: false, error: 'name and phone are required', code: 400 }, { status: 400 });
+		return json(
+			{ success: false, error: 'name and phone are required', code: 400 },
+			{ status: 400 }
+		);
 	}
 
 	const contact = await prisma.contact.create({
@@ -96,6 +102,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			email: email ?? undefined,
 			companyName: company ?? undefined,
 			contactType: type,
+			avatarUrl: avatarUrl ?? undefined
 		},
 		select: {
 			id: true,
@@ -104,14 +111,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			email: true,
 			companyName: true,
 			contactType: true,
+			avatarUrl: true,
 			created: true,
-			updated: true,
-		},
+			updated: true
+		}
 	});
 
-	return json({
-		success: true,
-		data: toSpecContact(contact),
-		message: 'Contact created successfully',
-	}, { status: 201 });
+	return json(
+		{
+			success: true,
+			data: toSpecContact(contact),
+			message: 'Contact created successfully'
+		},
+		{ status: 201 }
+	);
 };

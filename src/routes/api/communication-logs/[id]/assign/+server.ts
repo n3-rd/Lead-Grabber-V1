@@ -9,10 +9,13 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 
 	const log = await prisma.communicationLog.findFirst({
 		where: { id: params.id, companyId: auth.companyId },
-		include: { assignedMembers: true },
+		include: { assignedMembers: true }
 	});
 	if (!log) {
-		return json({ success: false, error: 'Communication log not found', code: 404 }, { status: 404 });
+		return json(
+			{ success: false, error: 'Communication log not found', code: 404 },
+			{ status: 404 }
+		);
 	}
 
 	const body = await request.json().catch(() => ({}));
@@ -36,23 +39,27 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 				companyId: auth.companyId,
 				OR: [
 					{ name: { equals: assignedAgent, mode: 'insensitive' } },
-					{ email: { equals: assignedAgent, mode: 'insensitive' } },
-				],
-			},
+					{ email: { equals: assignedAgent, mode: 'insensitive' } }
+				]
+			}
 		});
 		if (user) {
-			await prisma.communicationLogAssignedMember.deleteMany({ where: { communicationLogId: log.id } });
+			await prisma.communicationLogAssignedMember.deleteMany({
+				where: { communicationLogId: log.id }
+			});
 			await prisma.communicationLogAssignedMember.create({
-				data: { communicationLogId: log.id, userId: user.id },
+				data: { communicationLogId: log.id, userId: user.id }
 			});
 		}
 	} else if (status === 'unassigned') {
-		await prisma.communicationLogAssignedMember.deleteMany({ where: { communicationLogId: log.id } });
+		await prisma.communicationLogAssignedMember.deleteMany({
+			where: { communicationLogId: log.id }
+		});
 	}
 
 	await prisma.communicationLog.update({
 		where: { id: params.id },
-		data: { metadata, updated: new Date() },
+		data: { metadata, updated: new Date() }
 	});
 
 	return json({ success: true, message: 'Communication log assigned successfully' });

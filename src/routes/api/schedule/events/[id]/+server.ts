@@ -17,7 +17,7 @@ function toSpecEvent(e: {
 		description: e.description ?? '',
 		startTime: e.startTime.toISOString(),
 		endTime: e.endTime.toISOString(),
-		color: e.color ?? 'blue',
+		color: e.color ?? 'blue'
 	};
 }
 
@@ -26,14 +26,20 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	if (!auth) return unauthorized();
 
 	const event = await prisma.scheduleEvent.findFirst({
-		where: { id: params.id, companyId: auth.companyId },
+		where: { id: params.id, companyId: auth.companyId }
 	});
 	if (!event) {
 		return json({ success: false, error: 'Event not found', code: 404 }, { status: 404 });
 	}
 
 	const body = await request.json().catch(() => ({}));
-	const data: { title?: string; description?: string; startTime?: Date; endTime?: Date; color?: string } = {};
+	const data: {
+		title?: string;
+		description?: string;
+		startTime?: Date;
+		endTime?: Date;
+		color?: string;
+	} = {};
 	if (typeof body.title === 'string') data.title = body.title.trim();
 	if (typeof body.description === 'string') data.description = body.description.trim();
 	if (body.startTime) data.startTime = new Date(body.startTime);
@@ -42,12 +48,12 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 
 	const updated = await prisma.scheduleEvent.update({
 		where: { id: params.id },
-		data,
+		data
 	});
 	return json({
 		success: true,
 		data: toSpecEvent(updated),
-		message: 'Event updated successfully',
+		message: 'Event updated successfully'
 	});
 };
 
@@ -56,7 +62,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	if (!auth) return unauthorized();
 
 	const event = await prisma.scheduleEvent.findFirst({
-		where: { id: params.id, companyId: auth.companyId },
+		where: { id: params.id, companyId: auth.companyId }
 	});
 	if (!event) {
 		return json({ success: false, error: 'Event not found', code: 404 }, { status: 404 });

@@ -15,28 +15,30 @@
 	<title>{statusCode} – {title}</title>
 </svelte:head>
 
-<div class="error-page min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 px-4">
-	<div class="text-center max-w-md">
-		<div class="mb-8 text-8xl font-bold tabular-nums text-slate-200 select-none">
+<div
+	class="error-page flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 px-4"
+>
+	<div class="max-w-md text-center">
+		<div class="mb-8 select-none text-8xl font-bold tabular-nums text-slate-200">
 			{statusCode}
 		</div>
-		<h1 class="font-['Poppins'] text-2xl font-semibold text-slate-800 mb-2">
+		<h1 class="mb-2 font-['Poppins'] text-2xl font-semibold text-slate-800">
 			{title}
 		</h1>
-		<p class="font-['Poppins'] text-slate-600 mb-8 leading-relaxed">
+		<p class="mb-8 font-['Poppins'] leading-relaxed text-slate-600">
 			{description}
 		</p>
-		<div class="flex flex-col sm:flex-row gap-3 justify-center">
+		<div class="flex flex-col justify-center gap-3 sm:flex-row">
 			<button
 				type="button"
 				onclick={() => typeof window !== 'undefined' && window.history.back()}
-				class="font-['Poppins'] font-medium rounded-lg px-5 py-2.5 border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
+				class="rounded-lg border border-slate-300 bg-white px-5 py-2.5 font-['Poppins'] font-medium text-slate-700 transition-colors hover:bg-slate-50"
 			>
 				← Go back
 			</button>
 			<a
 				href="/"
-				class="font-['Poppins'] font-medium rounded-lg px-5 py-2.5 bg-[#577AB7] text-white hover:bg-[#4a6ba5] transition-colors text-center"
+				class="rounded-lg bg-[#577AB7] px-5 py-2.5 text-center font-['Poppins'] font-medium text-white transition-colors hover:bg-[#4a6ba5]"
 			>
 				Home
 			</a>

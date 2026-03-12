@@ -23,7 +23,7 @@ function toSpecProfile(c: {
 		address: c.address ?? '',
 		notes: c.notes ?? '',
 		createdAt: c.created.toISOString(),
-		updatedAt: c.updated.toISOString(),
+		updatedAt: c.updated.toISOString()
 	};
 }
 
@@ -42,7 +42,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			{ name: { contains: search, mode: 'insensitive' } },
 			{ phone: { contains: search, mode: 'insensitive' } },
 			{ email: { contains: search, mode: 'insensitive' } },
-			{ companyName: { contains: search, mode: 'insensitive' } },
+			{ companyName: { contains: search, mode: 'insensitive' } }
 		];
 	}
 
@@ -62,15 +62,15 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 				address: true,
 				notes: true,
 				created: true,
-				updated: true,
-			},
-		}),
+				updated: true
+			}
+		})
 	]);
 
 	return json({
 		success: true,
 		data: contacts.map(toSpecProfile),
-		pagination: pagination(page, limit, total),
+		pagination: pagination(page, limit, total)
 	});
 };
 
@@ -98,7 +98,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			email: email ?? undefined,
 			companyName: company ?? undefined,
 			address: address ?? undefined,
-			notes: notes ?? undefined,
+			notes: notes ?? undefined
 		},
 		select: {
 			id: true,
@@ -109,8 +109,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			address: true,
 			notes: true,
 			created: true,
-			updated: true,
-		},
+			updated: true
+		}
 	});
 
 	return json(

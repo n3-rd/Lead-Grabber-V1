@@ -165,7 +165,7 @@
 			if (response.ok) {
 				toast.success('Invite cancelled');
 				// Remove from local state
-				pendingInvites = pendingInvites.filter(inv => inv.id !== inviteId);
+				pendingInvites = pendingInvites.filter((inv) => inv.id !== inviteId);
 				// Also reload from server
 				await loadPendingInvites();
 			} else {
@@ -219,7 +219,7 @@
 			const response = await fetch(`/api/company-members/${selectedMember.id}`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ role: selectedRole }),
+				body: JSON.stringify({ role: selectedRole })
 			});
 			if (response.ok) {
 				toast.success('Member role updated');
@@ -250,7 +250,10 @@
 		</div>
 
 		<div class="w-full flex-1 overflow-hidden rounded-xl bg-white p-6">
-			<Tabs.Root value={data.isAdminOrOwner ? "customization" : "members"} class="flex h-full flex-col">
+			<Tabs.Root
+				value={data.isAdminOrOwner ? 'customization' : 'members'}
+				class="flex h-full flex-col"
+			>
 				<div class="mb-6 flex items-center gap-4">
 					<h2 class="text-xl font-semibold text-primary">Company Profile</h2>
 					<div class="flex gap-4 text-gray-500">
@@ -267,128 +270,128 @@
 
 				{#if data.isAdminOrOwner}
 					<Tabs.Content value="customization" class="flex-1 overflow-y-auto">
-					<form
-						method="POST"
-						action="?/updateCompany"
-						use:enhance={() => {
-							loading = true;
-							return async ({ result }) => {
-								if (result.type === 'success') {
-									toast.success('Company settings updated successfully');
-								} else if (result.type === 'failure') {
-									toast.error(result.data?.error || 'Failed to update company');
-								} else if (result.type === 'error') {
-									toast.error(result.error || 'An error occurred');
-								}
-								loading = false;
-							};
-						}}
-						class="space-y-6"
-						enctype="multipart/form-data"
-					>
-						<div class="space-y-4">
-							<div class="space-y-2">
-								<Label for="name">Company Name</Label>
-								<Input id="name" name="name" value={company.name} required />
-							</div>
-
-							<div class="space-y-2">
-								<Label for="website">Website</Label>
-								<Input
-									id="website"
-									name="website"
-									value={company.website || ''}
-									type="url"
-									placeholder="https://example.com"
-								/>
-							</div>
-
-							<div class="space-y-2">
-								<Label for="primaryColor">Brand Color</Label>
-								<div class="flex gap-2">
-									<Input
-										id="primaryColor"
-										name="primaryColor"
-										value={company.settings.branding.primary_color}
-										type="color"
-										class="w-20 p-1"
-									/>
-									<Input value={company.settings.branding.primary_color} readonly />
+						<form
+							method="POST"
+							action="?/updateCompany"
+							use:enhance={() => {
+								loading = true;
+								return async ({ result }) => {
+									if (result.type === 'success') {
+										toast.success('Company settings updated successfully');
+									} else if (result.type === 'failure') {
+										toast.error(result.data?.error || 'Failed to update company');
+									} else if (result.type === 'error') {
+										toast.error(result.error || 'An error occurred');
+									}
+									loading = false;
+								};
+							}}
+							class="space-y-6"
+							enctype="multipart/form-data"
+						>
+							<div class="space-y-4">
+								<div class="space-y-2">
+									<Label for="name">Company Name</Label>
+									<Input id="name" name="name" value={company.name} required />
 								</div>
-							</div>
 
-							<div class="space-y-2">
-								<Label for="logo">Company Logo</Label>
-								<div class="space-y-4">
-									{#if previewUrl || company.logo}
-										<div class="relative h-32 w-32 overflow-hidden rounded-lg border">
-											<img
-												src={previewUrl || getLogoUrl(company.logo)}
-												alt="Company Logo"
-												class="h-full w-full object-contain"
-											/>
-										</div>
-									{/if}
-									<input
-										id="logo"
-										name="logo"
-										type="file"
-										accept="image/*"
-										onchange={handleFileSelect}
-										class="block w-full text-sm text-gray-500
+								<div class="space-y-2">
+									<Label for="website">Website</Label>
+									<Input
+										id="website"
+										name="website"
+										value={company.website || ''}
+										type="url"
+										placeholder="https://example.com"
+									/>
+								</div>
+
+								<div class="space-y-2">
+									<Label for="primaryColor">Brand Color</Label>
+									<div class="flex gap-2">
+										<Input
+											id="primaryColor"
+											name="primaryColor"
+											value={company.settings.branding.primary_color}
+											type="color"
+											class="w-20 p-1"
+										/>
+										<Input value={company.settings.branding.primary_color} readonly />
+									</div>
+								</div>
+
+								<div class="space-y-2">
+									<Label for="logo">Company Logo</Label>
+									<div class="space-y-4">
+										{#if previewUrl || company.logo}
+											<div class="relative h-32 w-32 overflow-hidden rounded-lg border">
+												<img
+													src={previewUrl || getLogoUrl(company.logo)}
+													alt="Company Logo"
+													class="h-full w-full object-contain"
+												/>
+											</div>
+										{/if}
+										<input
+											id="logo"
+											name="logo"
+											type="file"
+											accept="image/*"
+											onchange={handleFileSelect}
+											class="block w-full text-sm text-gray-500
                                         file:mr-4 file:rounded-md file:border-0
                                         file:bg-primary file:px-4
                                         file:py-2 file:text-sm
                                         file:font-semibold file:text-white
                                         file:hover:bg-primary/90"
-									/>
+										/>
+									</div>
+								</div>
+
+								<div class="space-y-4 pt-4">
+									<h3 class="text-lg font-medium">Notifications</h3>
+
+									<div class="flex items-center justify-between">
+										<div class="space-y-0.5">
+											<Label>Email Notifications</Label>
+											<div class="text-sm text-muted-foreground">
+												Receive email notifications for new leads
+											</div>
+										</div>
+										<Switch
+											name="emailNotifications"
+											value="true"
+											checked={company.settings.notifications.email}
+										/>
+									</div>
+
+									<div class="flex items-center justify-between">
+										<div class="space-y-0.5">
+											<Label>Web Notifications</Label>
+											<div class="text-sm text-muted-foreground">
+												Receive browser notifications for new leads
+											</div>
+										</div>
+										<Switch
+											name="webNotifications"
+											value="true"
+											checked={company.settings.notifications.web}
+										/>
+									</div>
 								</div>
 							</div>
 
-							<div class="space-y-4 pt-4">
-								<h3 class="text-lg font-medium">Notifications</h3>
-
-								<div class="flex items-center justify-between">
-									<div class="space-y-0.5">
-										<Label>Email Notifications</Label>
-										<div class="text-sm text-muted-foreground">
-											Receive email notifications for new leads
-										</div>
-									</div>
-									<Switch
-										name="emailNotifications"
-										value="true"
-										checked={company.settings.notifications.email}
-									/>
-								</div>
-
-								<div class="flex items-center justify-between">
-									<div class="space-y-0.5">
-										<Label>Web Notifications</Label>
-										<div class="text-sm text-muted-foreground">
-											Receive browser notifications for new leads
-										</div>
-									</div>
-									<Switch
-										name="webNotifications"
-										value="true"
-										checked={company.settings.notifications.web}
-									/>
-								</div>
+							<div class="flex justify-start">
+								<Button type="submit" class="bg-primary px-8 text-white" disabled={loading}>
+									{#if loading}
+										<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+										Saving Changes...
+									{:else}
+										Save Changes
+									{/if}
+								</Button>
 							</div>
-						</div>
-
-						<div class="flex justify-start">
-							<Button type="submit" class="bg-primary px-8 text-white" disabled={loading}>
-								{#if loading}
-									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-									Saving Changes...
-								{:else}
-									Save Changes
-								{/if}
-							</Button>
-						</div>
-					</form>
+						</form>
 					</Tabs.Content>
 				{/if}
 
@@ -459,7 +462,7 @@
 																</div>
 																<div class="ml-4">
 																	<button
-																		class="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline text-left"
+																		class="text-left text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
 																		onclick={(e) => {
 																			e.stopPropagation();
 																			goto(`/users/${member.user?.id}`);
@@ -668,11 +671,7 @@
 				<div class="space-y-2">
 					<Label>Invite Link</Label>
 					<div class="flex gap-2">
-						<Input
-							value={inviteLink}
-							readonly
-							class="flex-1 font-mono text-sm"
-						/>
+						<Input value={inviteLink} readonly class="flex-1 font-mono text-sm" />
 						<Button
 							variant="outline"
 							onclick={async () => {

@@ -35,7 +35,7 @@
 				{#if primaryAction.href}
 					<a
 						href={primaryAction.href}
-						class="mt-4 inline-flex items-center gap-1.5 font-['Poppins'] text-sm font-medium text-[#577AB7] hover:text-[#3d5a8a] transition-colors"
+						class="mt-4 inline-flex items-center gap-1.5 font-['Poppins'] text-sm font-medium text-[#577AB7] transition-colors hover:text-[#3d5a8a]"
 					>
 						{primaryAction.label}
 						<ArrowRight class="h-4 w-4" />
@@ -44,7 +44,7 @@
 					<button
 						type="button"
 						onclick={primaryAction.onclick}
-						class="mt-4 inline-flex items-center gap-1.5 font-['Poppins'] text-sm font-medium text-[#577AB7] hover:text-[#3d5a8a] transition-colors"
+						class="mt-4 inline-flex items-center gap-1.5 font-['Poppins'] text-sm font-medium text-[#577AB7] transition-colors hover:text-[#3d5a8a]"
 					>
 						{primaryAction.label}
 						<ArrowRight class="h-4 w-4" />
@@ -53,7 +53,7 @@
 			{/if}
 		</div>
 	{:else}
-		<div class="text-center w-full max-w-md mx-auto px-4">
+		<div class="mx-auto w-full max-w-md px-4 text-center">
 			<div
 				class="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-10 shadow-lg shadow-slate-200/50"
 			>
@@ -63,7 +63,7 @@
 					aria-hidden="true"
 				></div>
 				<div
-					class="absolute -left-4 -bottom-4 h-24 w-24 rounded-full bg-[#577AB7]/5 blur-xl"
+					class="absolute -bottom-4 -left-4 h-24 w-24 rounded-full bg-[#577AB7]/5 blur-xl"
 					aria-hidden="true"
 				></div>
 
@@ -73,11 +73,11 @@
 					>
 						<Inbox class="h-10 w-10" strokeWidth={1.5} />
 					</div>
-					<h2 class="font-['Poppins'] text-2xl font-semibold tracking-tight text-slate-700 mb-2">
+					<h2 class="mb-2 font-['Poppins'] text-2xl font-semibold tracking-tight text-slate-700">
 						{title}
 					</h2>
 					{#if description}
-						<p class="font-['Poppins'] text-base text-slate-500 leading-relaxed mb-8">
+						<p class="mb-8 font-['Poppins'] text-base leading-relaxed text-slate-500">
 							{description}
 						</p>
 					{:else if hasAction}
@@ -87,7 +87,7 @@
 						{#if primaryAction.href}
 							<a
 								href={primaryAction.href}
-								class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#577AB7] px-6 py-3 font-['Poppins'] text-base font-semibold text-white shadow-md shadow-[#577AB7]/25 transition-all hover:bg-[#4a6ba5] hover:shadow-lg hover:shadow-[#577AB7]/30 hover:-translate-y-0.5"
+								class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#577AB7] px-6 py-3 font-['Poppins'] text-base font-semibold text-white shadow-md shadow-[#577AB7]/25 transition-all hover:-translate-y-0.5 hover:bg-[#4a6ba5] hover:shadow-lg hover:shadow-[#577AB7]/30"
 							>
 								<Plus class="h-5 w-5" />
 								{primaryAction.label}
@@ -96,7 +96,7 @@
 							<button
 								type="button"
 								onclick={primaryAction.onclick}
-								class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#577AB7] px-6 py-3 font-['Poppins'] text-base font-semibold text-white shadow-md shadow-[#577AB7]/25 transition-all hover:bg-[#4a6ba5] hover:shadow-lg hover:shadow-[#577AB7]/30 hover:-translate-y-0.5"
+								class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#577AB7] px-6 py-3 font-['Poppins'] text-base font-semibold text-white shadow-md shadow-[#577AB7]/25 transition-all hover:-translate-y-0.5 hover:bg-[#4a6ba5] hover:shadow-lg hover:shadow-[#577AB7]/30"
 							>
 								<Plus class="h-5 w-5" />
 								{primaryAction.label}

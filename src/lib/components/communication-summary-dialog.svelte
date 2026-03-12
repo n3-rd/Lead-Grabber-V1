@@ -1,5 +1,5 @@
 <script lang="ts">
-	import * as Dialog from "$lib/components/ui/dialog/index";
+	import * as Dialog from '$lib/components/ui/dialog/index';
 
 	interface Props {
 		open?: boolean;
@@ -21,56 +21,48 @@
 
 	let {
 		open = $bindable(false),
-		commId = "001234",
-		date = "06-01-25",
-		time = "02:12:03",
-		category = "Sales",
-		subCategory = "Inquiry",
-		email = "sarahlee@gmail.com",
-		subject = "Book Appointment time",
-		body = "",
-		summary = "Sarah wants an appointment to test drive the Ford 150 2026. between 2:00 and 3:30 on Friday Dec 12th.",
+		commId = '001234',
+		date = '06-01-25',
+		time = '02:12:03',
+		category = 'Sales',
+		subCategory = 'Inquiry',
+		email = 'sarahlee@gmail.com',
+		subject = 'Book Appointment time',
+		body = '',
+		summary = 'Sarah wants an appointment to test drive the Ford 150 2026. between 2:00 and 3:30 on Friday Dec 12th.',
 		tasks = [],
-		sourceLabel = "Email Address",
+		sourceLabel = 'Email Address',
 		recordingUrl = null
 	}: Props = $props();
 </script>
 
 <Dialog.Root bind:open>
 	<Dialog.Content
-		class="!w-[605px] !h-[567px] !p-0 bg-white rounded shadow-[0px_4px_4px_rgba(0,0,0,0.25)] [&>button]:hidden overflow-hidden"
+		class="!h-[567px] !w-[605px] overflow-hidden rounded bg-white !p-0 shadow-[0px_4px_4px_rgba(0,0,0,0.25)] [&>button]:hidden"
 	>
-		<div class="relative w-full h-full p-6 flex flex-col overflow-hidden">
+		<div class="relative flex h-full w-full flex-col overflow-hidden p-6">
 			<!-- Header Section -->
-			<div class="flex items-start justify-between mb-4">
+			<div class="mb-4 flex items-start justify-between">
 				<!-- Left side: AI Summary and Date/Time -->
 				<div class="flex items-center gap-2">
-					<span
-						class="font-sans font-semibold text-base leading-[1.29] text-[rgba(86,86,86,0.94)]"
-					>
+					<span class="font-sans text-base font-semibold leading-[1.29] text-[rgba(86,86,86,0.94)]">
 						AI Summary:
 					</span>
-					<span
-						class="font-sans font-normal text-base leading-[1.29] text-[rgba(86,86,86,0.78)]"
-					>
+					<span class="font-sans text-base font-normal leading-[1.29] text-[rgba(86,86,86,0.78)]">
 						{date} | {time}
 					</span>
 				</div>
 
 				<!-- Right side: Comm ID, Category, Sub-Category -->
 				<div class="flex flex-col items-end gap-1">
-					<span
-						class="font-sans font-medium text-base leading-[1.29] text-[rgba(86,86,86,0.78)]"
-					>
+					<span class="font-sans text-base font-medium leading-[1.29] text-[rgba(86,86,86,0.78)]">
 						Comm ID - {commId}
 					</span>
-					<span
-						class="font-sans font-medium text-base leading-[1.29] text-[rgba(86,86,86,0.88)]"
-					>
+					<span class="font-sans text-base font-medium leading-[1.29] text-[rgba(86,86,86,0.88)]">
 						Category: {category}
 					</span>
 					<span
-						class="font-sans font-medium text-base leading-[1.29] text-right text-[rgba(86,86,86,0.88)]"
+						class="text-right font-sans text-base font-medium leading-[1.29] text-[rgba(86,86,86,0.88)]"
 					>
 						Sub-Category: {subCategory}
 					</span>
@@ -79,27 +71,25 @@
 
 			<!-- Main Content Area -->
 			<div
-				class="flex-1 min-h-0 bg-[#F7F7F7] rounded border-b border-[#BEBEBE] p-4 flex flex-col gap-4 overflow-y-auto"
+				class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto rounded border-b border-[#BEBEBE] bg-[#F7F7F7] p-4"
 			>
 				<!-- Summary Heading -->
-				<span
-					class="font-sans font-semibold text-base leading-[1.29] text-[rgba(86,86,86,0.88)]"
-				>
+				<span class="font-sans text-base font-semibold leading-[1.29] text-[rgba(86,86,86,0.88)]">
 					Summary:
 				</span>
 
 				<!-- Inner White Box -->
-				<div class="bg-[#FFFDFD] rounded p-4 flex flex-col gap-3 min-h-0 overflow-y-auto">
+				<div class="flex min-h-0 flex-col gap-3 overflow-y-auto rounded bg-[#FFFDFD] p-4">
 					<!-- Email, Subject, Body Labels and Values -->
 					<div class="flex flex-col gap-2">
 						<div class="flex items-start gap-4">
 							<span
-								class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] whitespace-nowrap flex-shrink-0"
+								class="flex-shrink-0 whitespace-nowrap font-sans text-[15px] font-normal leading-[141%] text-[rgba(86,86,86,0.78)]"
 							>
 								{sourceLabel}:
 							</span>
 							<span
-								class="font-sans font-medium text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] break-words min-w-0"
+								class="min-w-0 break-words font-sans text-[15px] font-medium leading-[141%] text-[rgba(86,86,86,0.78)]"
 							>
 								{email}
 							</span>
@@ -107,28 +97,23 @@
 						{#if recordingUrl}
 							<div class="flex flex-col gap-1">
 								<span
-									class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] whitespace-nowrap flex-shrink-0"
+									class="flex-shrink-0 whitespace-nowrap font-sans text-[15px] font-normal leading-[141%] text-[rgba(86,86,86,0.78)]"
 								>
 									Call recording:
 								</span>
-								<audio
-									controls
-									class="w-full max-w-sm h-9"
-									src={recordingUrl}
-									preload="metadata"
-								>
+								<audio controls class="h-9 w-full max-w-sm" src={recordingUrl} preload="metadata">
 									Your browser does not support the audio element.
 								</audio>
 							</div>
 						{/if}
 						<div class="flex items-start gap-4">
 							<span
-								class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] whitespace-nowrap flex-shrink-0"
+								class="flex-shrink-0 whitespace-nowrap font-sans text-[15px] font-normal leading-[141%] text-[rgba(86,86,86,0.78)]"
 							>
 								Subject Line:
 							</span>
 							<span
-								class="font-sans font-medium text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] break-words min-w-0"
+								class="min-w-0 break-words font-sans text-[15px] font-medium leading-[141%] text-[rgba(86,86,86,0.78)]"
 							>
 								{subject}
 							</span>
@@ -136,12 +121,12 @@
 						{#if body}
 							<div class="flex items-start gap-4">
 								<span
-									class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] whitespace-nowrap flex-shrink-0"
+									class="flex-shrink-0 whitespace-nowrap font-sans text-[15px] font-normal leading-[141%] text-[rgba(86,86,86,0.78)]"
 								>
 									Body:
 								</span>
 								<span
-									class="font-sans font-normal text-[15px] leading-[141%] text-[rgba(86,86,86,0.78)] break-words min-w-0"
+									class="min-w-0 break-words font-sans text-[15px] font-normal leading-[141%] text-[rgba(86,86,86,0.78)]"
 								>
 									{body}
 								</span>
@@ -151,33 +136,27 @@
 
 					<!-- Summary Text -->
 					<div class="flex flex-col gap-1">
-						<span
-							class="font-sans font-medium text-[15px] leading-[141%] text-[#797979]"
-						>
+						<span class="font-sans text-[15px] font-medium leading-[141%] text-[#797979]">
 							Summary
 						</span>
 						<p
-							class="font-sans font-normal text-xs leading-[141%] text-[rgba(86,86,86,0.78)] break-words whitespace-pre-wrap"
+							class="whitespace-pre-wrap break-words font-sans text-xs font-normal leading-[141%] text-[rgba(86,86,86,0.78)]"
 						>
 							{summary}
 						</p>
 					</div>
 
 					<!-- Separator Line -->
-					<div class="w-full h-px bg-[#979797] my-1"></div>
+					<div class="my-1 h-px w-full bg-[#979797]"></div>
 
 					<!-- Tasks to Complete -->
 					<div class="flex flex-col gap-2">
-						<span
-							class="font-sans font-semibold text-[15px] leading-[141%] text-[#797979]"
-						>
+						<span class="font-sans text-[15px] font-semibold leading-[141%] text-[#797979]">
 							Tasks to complete
 						</span>
-						<ul class="flex flex-col gap-1 list-disc list-inside">
+						<ul class="flex list-inside list-disc flex-col gap-1">
 							{#each tasks as task}
-								<li
-									class="font-sans font-normal text-xs leading-[141%] text-[#7B7B7B]"
-								>
+								<li class="font-sans text-xs font-normal leading-[141%] text-[#7B7B7B]">
 									{task}
 								</li>
 							{/each}
@@ -187,10 +166,10 @@
 			</div>
 
 			<!-- Footer: Close Button -->
-			<div class="flex justify-end mt-4 flex-shrink-0">
+			<div class="mt-4 flex flex-shrink-0 justify-end">
 				<Dialog.Close>
 					<button
-						class="w-[85px] h-[33px] bg-[#577AB7] rounded flex items-center justify-center font-sans font-medium text-lg leading-[141%] text-white hover:bg-[#577AB7]/90 transition-colors"
+						class="flex h-[33px] w-[85px] items-center justify-center rounded bg-[#577AB7] font-sans text-lg font-medium leading-[141%] text-white transition-colors hover:bg-[#577AB7]/90"
 					>
 						Close
 					</button>

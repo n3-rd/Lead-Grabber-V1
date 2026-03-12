@@ -1,8 +1,4 @@
-import {
-	BUNNY_ACCESS_KEY,
-	BUNNY_STORAGE_ZONE_NAME,
-	BUNNY_REGION
-} from '$env/static/private';
+import { BUNNY_ACCESS_KEY, BUNNY_STORAGE_ZONE_NAME, BUNNY_REGION } from '$env/static/private';
 
 const STORAGE_BASE_URL = `https://${BUNNY_REGION}/${BUNNY_STORAGE_ZONE_NAME}`;
 const CDN_BASE_URL = `https://${BUNNY_STORAGE_ZONE_NAME}.b-cdn.net`;

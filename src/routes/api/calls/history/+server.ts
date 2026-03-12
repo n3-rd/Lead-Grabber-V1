@@ -26,11 +26,12 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			skip,
 			take: limit,
 			orderBy: { created: 'desc' },
-			include: { customer: { select: { id: true, name: true } } },
-		}),
+			include: { customer: { select: { id: true, name: true } } }
+		})
 	]);
 
-	const meta = (l: { metadata?: unknown }) => (l.metadata as { startedAt?: string; endedAt?: string }) ?? {};
+	const meta = (l: { metadata?: unknown }) =>
+		(l.metadata as { startedAt?: string; endedAt?: string }) ?? {};
 	const data = logs.map((l) => {
 		const m = meta(l);
 		return {
@@ -43,13 +44,13 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			durationFormatted: formatDuration(l.duration),
 			status: l.status,
 			startedAt: m.startedAt ?? l.created.toISOString(),
-			endedAt: m.endedAt ?? l.created.toISOString(),
+			endedAt: m.endedAt ?? l.created.toISOString()
 		};
 	});
 
 	return json({
 		success: true,
 		data,
-		pagination: pagination(page, limit, total),
+		pagination: pagination(page, limit, total)
 	});
 };

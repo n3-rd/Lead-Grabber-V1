@@ -17,11 +17,11 @@ Database: **PostgreSQL** or **SQLite** via raw SQL (no ORM).
 
 ## 2. Services & Ports
 
-| Service        | Entry script   | Default port | Description                          |
-|----------------|----------------|-------------|--------------------------------------|
-| **Calls**      | `run_calls.py` | **5200**    | Telnyx voice webhook, IVR, voicemail |
-| **SMS**        | `run_sms.py`   | **5300**    | Telnyx SMS webhook, KB, booking      |
-| **Email**      | `run_email.py` | **5100**    | Gmail poll, triage, threads, orch.  |
+| Service   | Entry script   | Default port | Description                          |
+| --------- | -------------- | ------------ | ------------------------------------ |
+| **Calls** | `run_calls.py` | **5200**     | Telnyx voice webhook, IVR, voicemail |
+| **SMS**   | `run_sms.py`   | **5300**     | Telnyx SMS webhook, KB, booking      |
+| **Email** | `run_email.py` | **5100**     | Gmail poll, triage, threads, orch.   |
 
 Ports are overridable via env: `SMS_PORT`, and for email `PORT` (see config). Calls service uses port **5200** in `run_calls.py`.
 
@@ -33,10 +33,10 @@ Ports are overridable via env: `SMS_PORT`, and for email `PORT` (see config). Ca
 
 Base URL (example): `http://localhost:5200`
 
-| Method | Path                     | Description |
-|--------|--------------------------|-------------|
+| Method   | Path                     | Description                       |
+| -------- | ------------------------ | --------------------------------- |
 | **GET**  | `/health`                | Liveness. Returns `{"ok": true}`. |
-| **POST** | `/webhooks/telnyx/voice` | Telnyx voice/call webhook. |
+| **POST** | `/webhooks/telnyx/voice` | Telnyx voice/call webhook.        |
 
 **GET /health**
 
@@ -60,10 +60,10 @@ Base URL (example): `http://localhost:5200`
 
 Base URL (example): `http://localhost:5300`
 
-| Method | Path                    | Description |
-|--------|-------------------------|-------------|
-| **GET**  | `/health`               | Liveness. Returns `{"ok": true}`. |
-| **POST** | `/webhooks/telnyx/sms`  | Telnyx SMS webhook. |
+| Method   | Path                   | Description                       |
+| -------- | ---------------------- | --------------------------------- |
+| **GET**  | `/health`              | Liveness. Returns `{"ok": true}`. |
+| **POST** | `/webhooks/telnyx/sms` | Telnyx SMS webhook.               |
 
 **GET /health**
 
@@ -84,12 +84,12 @@ Base URL (example): `http://localhost:5300`
 
 Base URL (example): `http://localhost:5100`
 
-| Method | Path                          | Description |
-|--------|-------------------------------|-------------|
-| **GET**  | `/healthz`                    | Liveness + DB check. |
-| **GET**  | `/api/emails/incoming`        | List last 200 incoming emails (from DB). |
-| **GET**  | `/api/threads`                | List last 200 email threads. |
-| **POST** | `/api/orchestrator/run_once`  | Run orchestrator once (process unprocessed incoming). |
+| Method   | Path                         | Description                                           |
+| -------- | ---------------------------- | ----------------------------------------------------- |
+| **GET**  | `/healthz`                   | Liveness + DB check.                                  |
+| **GET**  | `/api/emails/incoming`       | List last 200 incoming emails (from DB).              |
+| **GET**  | `/api/threads`               | List last 200 email threads.                          |
+| **POST** | `/api/orchestrator/run_once` | Run orchestrator once (process unprocessed incoming). |
 
 **GET /healthz**
 
@@ -128,48 +128,48 @@ Base URL (example): `http://localhost:5100`
 
 **contacts**
 
-| Column        | Type      | Description |
-|---------------|-----------|-------------|
-| contact_id    | TEXT PK   | UUID.       |
-| name          | TEXT      |             |
-| company       | TEXT      |             |
-| notes         | TEXT      |             |
-| created_at    | TIMESTAMP |             |
-| updated_at    | TIMESTAMP |             |
-| last_seen_at  | TIMESTAMP |             |
+| Column       | Type      | Description |
+| ------------ | --------- | ----------- |
+| contact_id   | TEXT PK   | UUID.       |
+| name         | TEXT      |             |
+| company      | TEXT      |             |
+| notes        | TEXT      |             |
+| created_at   | TIMESTAMP |             |
+| updated_at   | TIMESTAMP |             |
+| last_seen_at | TIMESTAMP |             |
 
 **contact_identities**
 
-| Column     | Type      | Description |
-|------------|-----------|-------------|
-| contact_id | TEXT      | FK to contacts. |
-| kind       | TEXT      | `email` or `phone`. |
+| Column     | Type      | Description                |
+| ---------- | --------- | -------------------------- |
+| contact_id | TEXT      | FK to contacts.            |
+| kind       | TEXT      | `email` or `phone`.        |
 | value      | TEXT      | Normalized email or phone. |
-| is_primary | INTEGER   | 0/1. |
-| created_at | TIMESTAMP |             |
+| is_primary | INTEGER   | 0/1.                       |
+| created_at | TIMESTAMP |                            |
 
 - Unique on `(kind, value)`.
 
 **comm_events** (communication log)
 
-| Column        | Type      | Description |
-|---------------|-----------|-------------|
-| id            | PK        | Auto.       |
-| channel       | TEXT      | `voice`, `sms`, `email`. |
-| direction     | TEXT      | `in`, `out`. |
-| contact_id    | TEXT      |             |
-| identity_kind | TEXT      | `phone`, `email`. |
-| identity_value| TEXT      |             |
-| external_id   | TEXT      | e.g. Telnyx message/call/recording id. |
-| thread_key    | TEXT      | e.g. thread_id (email), phone, call_control_id. |
-| subject       | TEXT      |             |
-| body_text     | TEXT      | Content/transcript. |
-| summary_gpt   | TEXT      | AI summary (email set; voice/sms often empty). |
-| urgency_gpt   | INTEGER   | 1–5 (email from triage). |
-| category_gpt  | TEXT      |             |
-| subcat_gpt    | TEXT      |             |
-| internal_ts    | BIGINT    | ms.         |
-| created_at    | TIMESTAMP |             |
+| Column         | Type      | Description                                     |
+| -------------- | --------- | ----------------------------------------------- |
+| id             | PK        | Auto.                                           |
+| channel        | TEXT      | `voice`, `sms`, `email`.                        |
+| direction      | TEXT      | `in`, `out`.                                    |
+| contact_id     | TEXT      |                                                 |
+| identity_kind  | TEXT      | `phone`, `email`.                               |
+| identity_value | TEXT      |                                                 |
+| external_id    | TEXT      | e.g. Telnyx message/call/recording id.          |
+| thread_key     | TEXT      | e.g. thread_id (email), phone, call_control_id. |
+| subject        | TEXT      |                                                 |
+| body_text      | TEXT      | Content/transcript.                             |
+| summary_gpt    | TEXT      | AI summary (email set; voice/sms often empty).  |
+| urgency_gpt    | INTEGER   | 1–5 (email from triage).                        |
+| category_gpt   | TEXT      |                                                 |
+| subcat_gpt     | TEXT      |                                                 |
+| internal_ts    | BIGINT    | ms.                                             |
+| created_at     | TIMESTAMP |                                                 |
 
 - Indexes: `(contact_id, internal_ts)`, `(thread_key, internal_ts)`.
 
@@ -177,26 +177,26 @@ Base URL (example): `http://localhost:5100`
 
 **voice_calls**
 
-| Column                   | Type      |
-|--------------------------|-----------|
-| id                       | PK        |
+| Column                   | Type        |
+| ------------------------ | ----------- |
+| id                       | PK          |
 | inbound_call_control_id  | TEXT UNIQUE |
-| outbound_call_control_id | TEXT      |
-| from_number, to_number   | TEXT      |
-| dept                     | TEXT      |
-| status                   | TEXT      |
-| started_at, ended_at     | TIMESTAMP |
-| voicemail_recording_id   | TEXT      |
-| voicemail_url            | TEXT      |
-| voicemail_local_path     | TEXT      |
-| transcript               | TEXT      |
-| kb_answer                | TEXT      |
-| answer_token             | TEXT      |
+| outbound_call_control_id | TEXT        |
+| from_number, to_number   | TEXT        |
+| dept                     | TEXT        |
+| status                   | TEXT        |
+| started_at, ended_at     | TIMESTAMP   |
+| voicemail_recording_id   | TEXT        |
+| voicemail_url            | TEXT        |
+| voicemail_local_path     | TEXT        |
+| transcript               | TEXT        |
+| kb_answer                | TEXT        |
+| answer_token             | TEXT        |
 
 **answer_pages**
 
 | Column     | Type      |
-|------------|-----------|
+| ---------- | --------- |
 | token      | TEXT PK   |
 | contact_id | TEXT      |
 | channel    | TEXT      |
@@ -209,7 +209,7 @@ Base URL (example): `http://localhost:5100`
 **telnyx_events**
 
 | Column      | Type      |
-|-------------|-----------|
+| ----------- | --------- |
 | id          | TEXT PK   |
 | event_type  | TEXT      |
 | received_at | TIMESTAMP |
@@ -218,15 +218,15 @@ Base URL (example): `http://localhost:5100`
 
 **sms_messages**
 
-| Column             | Type      |
-|--------------------|-----------|
-| id                 | PK        |
-| telnyx_message_id  | TEXT      |
-| direction          | TEXT      |
-| from_number, to_number | TEXT |
-| body               | TEXT      |
-| status             | TEXT      |
-| created_at         | TIMESTAMP |
+| Column                 | Type      |
+| ---------------------- | --------- |
+| id                     | PK        |
+| telnyx_message_id      | TEXT      |
+| direction              | TEXT      |
+| from_number, to_number | TEXT      |
+| body                   | TEXT      |
+| status                 | TEXT      |
+| created_at             | TIMESTAMP |
 
 **sms_sessions** — per-phone state for booking flow.
 
@@ -262,15 +262,15 @@ Base URL (example): `http://localhost:5100`
 
 ## 6. Summary: backend-only endpoints
 
-| Service | Method | Endpoint                       | Purpose |
-|---------|--------|--------------------------------|---------|
-| Calls   | GET    | `/health`                      | Health  |
-| Calls   | POST   | `/webhooks/telnyx/voice`       | Telnyx voice webhook |
-| SMS     | GET    | `/health`                      | Health  |
-| SMS     | POST   | `/webhooks/telnyx/sms`         | Telnyx SMS webhook |
-| Email   | GET    | `/healthz`                     | Health + DB |
-| Email   | GET    | `/api/emails/incoming`         | List incoming emails |
-| Email   | GET    | `/api/threads`                 | List email threads |
-| Email   | POST   | `/api/orchestrator/run_once`   | Run orchestrator once |
+| Service | Method | Endpoint                     | Purpose               |
+| ------- | ------ | ---------------------------- | --------------------- |
+| Calls   | GET    | `/health`                    | Health                |
+| Calls   | POST   | `/webhooks/telnyx/voice`     | Telnyx voice webhook  |
+| SMS     | GET    | `/health`                    | Health                |
+| SMS     | POST   | `/webhooks/telnyx/sms`       | Telnyx SMS webhook    |
+| Email   | GET    | `/healthz`                   | Health + DB           |
+| Email   | GET    | `/api/emails/incoming`       | List incoming emails  |
+| Email   | GET    | `/api/threads`               | List email threads    |
+| Email   | POST   | `/api/orchestrator/run_once` | Run orchestrator once |
 
 There are **no** other backend endpoints in this codebase (no `/api/communication-logs`, no `/api/recording/...`, no `/api/messages`). The communication log is the **`comm_events`** table; consumers read it directly from the database or would need new endpoints to be added.

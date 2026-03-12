@@ -8,9 +8,7 @@ describe('getFileUrl', () => {
 	});
 
 	it('returns path as-is when already http(s)', () => {
-		expect(getFileUrl('https://cdn.example.com/file.mp3')).toBe(
-			'https://cdn.example.com/file.mp3'
-		);
+		expect(getFileUrl('https://cdn.example.com/file.mp3')).toBe('https://cdn.example.com/file.mp3');
 		expect(getFileUrl('http://example.com/path')).toBe('http://example.com/path');
 	});
 

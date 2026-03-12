@@ -1,7 +1,7 @@
 <script lang="ts">
-  let { children } = $props();
+	let { children } = $props();
 </script>
 
 <div class="auth-layout">
-  <main>{@render children()}</main>
-</div> 
+	<main>{@render children()}</main>
+</div>

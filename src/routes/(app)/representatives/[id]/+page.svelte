@@ -41,7 +41,7 @@
 
 <div class="min-h-screen bg-[#ECEEF3] p-6">
 	<!-- Header -->
-	<div class="mb-6 flex items-center justify-between bg-white py-7 px-11">
+	<div class="mb-6 flex items-center justify-between bg-white px-11 py-7">
 		<h1 class="font-['Poppins'] text-2xl font-medium text-[#737373]">Representative</h1>
 		<button
 			onclick={handleSave}
@@ -61,20 +61,28 @@
 				</p>
 			</div>
 			<div>
-				<p class="mb-1 font-['Poppins'] text-lg font-medium leading-[23px] text-[#565656]">Phone:</p>
+				<p class="mb-1 font-['Poppins'] text-lg font-medium leading-[23px] text-[#565656]">
+					Phone:
+				</p>
 				<p class="font-['Poppins'] text-lg font-normal leading-[23px] text-[rgba(86,86,86,0.78)]">
 					{representative.phone}
 				</p>
 			</div>
 			<div>
-				<p class="mb-1 font-['Poppins'] text-lg font-medium leading-[23px] text-[#565656]">Email:</p>
+				<p class="mb-1 font-['Poppins'] text-lg font-medium leading-[23px] text-[#565656]">
+					Email:
+				</p>
 				<p class="font-['Poppins'] text-lg font-normal leading-[23px] text-[rgba(86,86,86,0.78)]">
 					{representative.email}
 				</p>
 			</div>
 			<div>
-				<p class="mb-1 font-['Poppins'] text-lg font-medium leading-[23px] text-[#565656]">Location:</p>
-				<p class="mb-4 font-['Poppins'] text-lg font-normal leading-[23px] text-[rgba(86,86,86,0.78)]">
+				<p class="mb-1 font-['Poppins'] text-lg font-medium leading-[23px] text-[#565656]">
+					Location:
+				</p>
+				<p
+					class="mb-4 font-['Poppins'] text-lg font-normal leading-[23px] text-[rgba(86,86,86,0.78)]"
+				>
 					{representative.location}
 				</p>
 				<div class="flex items-center gap-3">
@@ -135,11 +143,7 @@
 					<div class="space-y-[10px]">
 						{#each representative.rooms as room}
 							<div class="flex items-center gap-2">
-								<input
-									type="checkbox"
-									checked
-									class="h-5 w-5 rounded border border-[#848484]"
-								/>
+								<input type="checkbox" checked class="h-5 w-5 rounded border border-[#848484]" />
 								<span class="font-['Poppins'] text-[14px] text-[#808080]">{room}</span>
 							</div>
 						{/each}

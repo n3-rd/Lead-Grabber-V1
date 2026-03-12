@@ -16,12 +16,12 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 				user: {
 					OR: [
 						{ name: { contains: search, mode: 'insensitive' } },
-						{ email: { contains: search, mode: 'insensitive' } },
-					],
-				},
-			}),
+						{ email: { contains: search, mode: 'insensitive' } }
+					]
+				}
+			})
 		},
-		include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
+		include: { user: { select: { id: true, name: true, email: true, avatar: true } } }
 	});
 
 	const data = members.map((m) => ({
@@ -30,7 +30,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		email: m.user.email ?? '',
 		phone: null as string | null,
 		department: (m.role as string) ?? null,
-		avatarUrl: m.user.avatar ?? null,
+		avatarUrl: m.user.avatar ?? null
 	}));
 	return json({ success: true, data });
 };

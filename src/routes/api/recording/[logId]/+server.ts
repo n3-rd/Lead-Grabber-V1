@@ -50,13 +50,16 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	const data = await telnyxRes.json();
 	const downloadUrls = data?.data?.download_urls ?? data?.download_urls;
-	const audioUrl = typeof downloadUrls?.mp3 === 'string'
-		? downloadUrls.mp3
-		: typeof downloadUrls?.wav === 'string'
-			? downloadUrls.wav
-			: typeof downloadUrls === 'object' && downloadUrls !== null
-				? (Object.values(downloadUrls).find((v) => typeof v === 'string' && v.startsWith('http')) as string | undefined)
-				: undefined;
+	const audioUrl =
+		typeof downloadUrls?.mp3 === 'string'
+			? downloadUrls.mp3
+			: typeof downloadUrls?.wav === 'string'
+				? downloadUrls.wav
+				: typeof downloadUrls === 'object' && downloadUrls !== null
+					? (Object.values(downloadUrls).find(
+							(v) => typeof v === 'string' && v.startsWith('http')
+						) as string | undefined)
+					: undefined;
 
 	if (!audioUrl) {
 		return json({ error: 'No download URL in recording' }, { status: 502 });

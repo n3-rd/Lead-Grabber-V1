@@ -125,7 +125,17 @@
 		}
 	];
 
-	import { Mail, MessageSquare, Phone, Globe, Facebook, Linkedin, Icon, Search, Mic } from 'lucide-svelte';
+	import {
+		Mail,
+		MessageSquare,
+		Phone,
+		Globe,
+		Facebook,
+		Linkedin,
+		Icon,
+		Search,
+		Mic
+	} from 'lucide-svelte';
 
 	const iconMap = {
 		email: Mail,
@@ -141,29 +151,28 @@
 	}
 
 	// Filtered and searched rows
-	$: filteredRows = rows.filter(row =>
-		(selectedFilter === 'all' || row.type === selectedFilter) &&
-		(
-			row.date.toLowerCase().includes(search.toLowerCase()) ||
-			row.type.toLowerCase().includes(search.toLowerCase()) ||
-			row.source.toLowerCase().includes(search.toLowerCase()) ||
-			row.endpoint.toLowerCase().includes(search.toLowerCase()) ||
-			row.company.toLowerCase().includes(search.toLowerCase()) ||
-			row.disposition.toLowerCase().includes(search.toLowerCase())
-		)
+	$: filteredRows = rows.filter(
+		(row) =>
+			(selectedFilter === 'all' || row.type === selectedFilter) &&
+			(row.date.toLowerCase().includes(search.toLowerCase()) ||
+				row.type.toLowerCase().includes(search.toLowerCase()) ||
+				row.source.toLowerCase().includes(search.toLowerCase()) ||
+				row.endpoint.toLowerCase().includes(search.toLowerCase()) ||
+				row.company.toLowerCase().includes(search.toLowerCase()) ||
+				row.disposition.toLowerCase().includes(search.toLowerCase()))
 	);
 
-	let selectedLog: typeof rows[0] | null = null;
+	let selectedLog: (typeof rows)[0] | null = null;
 
 	// Example summary data for demonstration
 	const summaryData = {
-		commId: "001234",
-		category: "Sales",
-		subCategory: "Book/Demo",
-		date: "06-01-25",
-		time: "02:12:03",
-		email: "sarahlee@gmail.com",
-		subject: "Demo Link and Appointment time",
+		commId: '001234',
+		category: 'Sales',
+		subCategory: 'Book/Demo',
+		date: '06-01-25',
+		time: '02:12:03',
+		email: 'sarahlee@gmail.com',
+		subject: 'Demo Link and Appointment time',
 		body: `Hello Sarah,
 As per our conversation see demo link and as we discuss i book a appointment at 10am at the office.
 
@@ -171,7 +180,7 @@ https://demolink1344/csag.com
 
 Looking forward to see you
 if you have any question just five me a shout`,
-		task: "AI has to update the CRM & Engagement Score"
+		task: 'AI has to update the CRM & Engagement Score'
 	};
 
 	function openSummary(log) {
@@ -183,73 +192,75 @@ if you have any question just five me a shout`,
 </script>
 
 <!-- Header -->
-<div class="flex flex-col gap-2 my-4">
+<div class="my-4 flex flex-col gap-2">
 	<h1 class="text-2xl font-semibold">Communication Log</h1>
-	<p class="text-base text-muted-foreground text-[#8a8fa7]">
+	<p class="text-base text-[#8a8fa7] text-muted-foreground">
 		Instant updates to keep you informed and in control.
 	</p>
 </div>
 
 <!-- Filters & Search -->
-<div class="flex items-center gap-4 flex-wrap">
-	<div class="flex gap-2 flex-wrap">
+<div class="flex flex-wrap items-center gap-4">
+	<div class="flex flex-wrap gap-2">
 		{#each filters as filter}
 			<button
-				class="px-4 py-2 rounded-lg border-none font-medium transition-colors
+				class="rounded-lg border-none px-4 py-2 font-medium transition-colors
 					{selectedFilter === filter.key
-						? 'bg-primary text-white'
-						: 'bg-[#e7eaf6] text-primary hover:bg-[#d6d9e6]'}"
-				on:click={() => selectedFilter = filter.key}
+					? 'bg-primary text-white'
+					: 'bg-[#e7eaf6] text-primary hover:bg-[#d6d9e6]'}"
+				on:click={() => (selectedFilter = filter.key)}
 			>
 				{filter.label}
 			</button>
 		{/each}
 	</div>
-	<div class="ml-auto flex items-center justify-between bg-white rounded-xl px-3 py-1">
-		<Search class="text-primary mr-2" />
+	<div class="ml-auto flex items-center justify-between rounded-xl bg-white px-3 py-1">
+		<Search class="mr-2 text-primary" />
 		<input
 			type="text"
 			placeholder="Search"
 			bind:value={search}
-			class="bg-transparent outline-none border-none py-2 px-2 text-base"
+			class="border-none bg-transparent px-2 py-2 text-base outline-none"
 		/>
-		<Mic class="text-primary mr-2" />
+		<Mic class="mr-2 text-primary" />
 	</div>
 </div>
 
 <!-- Table -->
-<div class="bg-[#f4f6fb] rounded-xl py-4 mt-4 overflow-x-auto">
+<div class="mt-4 overflow-x-auto rounded-xl bg-[#f4f6fb] py-4">
 	<!-- Apply min-w-[1000px] or max-content to force potential overflow -->
 	<table class="w-full min-w-[1000px] border-collapse">
 		<thead>
 			<tr>
-				<th class="py-3 px-2 text-left text-[#8a8fa7] font-semibold bg-[#f4f6fb]">Date</th>
-				<th class="py-3 px-2 text-left text-[#8a8fa7] font-semibold bg-[#f4f6fb]">Type</th>
-				<th class="py-3 px-2 text-left text-[#8a8fa7] font-semibold bg-[#f4f6fb]">Source ID</th>
-				<th class="py-3 px-2 text-left text-[#8a8fa7] font-semibold bg-[#f4f6fb]">End Point</th>
-				<th class="py-3 px-2 text-left text-[#8a8fa7] font-semibold bg-[#f4f6fb]">Ext.</th>
-				<th class="py-3 px-2 text-left text-[#8a8fa7] font-semibold bg-[#f4f6fb]">Company</th>
-				<th class="py-3 px-2 text-left text-[#8a8fa7] font-semibold bg-[#f4f6fb]">Disposition</th>
+				<th class="bg-[#f4f6fb] px-2 py-3 text-left font-semibold text-[#8a8fa7]">Date</th>
+				<th class="bg-[#f4f6fb] px-2 py-3 text-left font-semibold text-[#8a8fa7]">Type</th>
+				<th class="bg-[#f4f6fb] px-2 py-3 text-left font-semibold text-[#8a8fa7]">Source ID</th>
+				<th class="bg-[#f4f6fb] px-2 py-3 text-left font-semibold text-[#8a8fa7]">End Point</th>
+				<th class="bg-[#f4f6fb] px-2 py-3 text-left font-semibold text-[#8a8fa7]">Ext.</th>
+				<th class="bg-[#f4f6fb] px-2 py-3 text-left font-semibold text-[#8a8fa7]">Company</th>
+				<th class="bg-[#f4f6fb] px-2 py-3 text-left font-semibold text-[#8a8fa7]">Disposition</th>
 			</tr>
 		</thead>
 		<tbody>
 			{#each filteredRows as row}
-				<tr class="bg-white border-b last:border-b-0 border-[#e7eaf6] cursor-pointer hover:bg-[#f0f2f8] transition"
-					on:click={() => openSummary(row)}>
-					<td class="py-3 px-2">{row.date}</td>
-					<td class="py-3 px-2">
+				<tr
+					class="cursor-pointer border-b border-[#e7eaf6] bg-white transition last:border-b-0 hover:bg-[#f0f2f8]"
+					on:click={() => openSummary(row)}
+				>
+					<td class="px-2 py-3">{row.date}</td>
+					<td class="px-2 py-3">
 						<div class="flex items-center gap-2">
 							{#if icon(row.type)}
-								<svelte:component this={icon(row.type)} class="w-5 h-5 " />
+								<svelte:component this={icon(row.type)} class="h-5 w-5 " />
 							{/if}
 							<span class="capitalize">{row.direction}</span>
 						</div>
 					</td>
-					<td class="py-3 px-2">{row.source}</td>
-					<td class="py-3 px-2">{row.endpoint}</td>
-					<td class="py-3 px-2">{row.ext}</td>
-					<td class="py-3 px-2">{row.company}</td>
-					<td class="py-3 px-2">{row.disposition}</td>
+					<td class="px-2 py-3">{row.source}</td>
+					<td class="px-2 py-3">{row.endpoint}</td>
+					<td class="px-2 py-3">{row.ext}</td>
+					<td class="px-2 py-3">{row.company}</td>
+					<td class="px-2 py-3">{row.disposition}</td>
 				</tr>
 			{/each}
 		</tbody>
@@ -258,42 +269,69 @@ if you have any question just five me a shout`,
 
 {#if selectedLog}
 	<!-- Overlay -->
-	<div class="fixed inset-0 bg-black/30 z-40 flex items-center justify-center" on:click={closeSummary}>
+	<div
+		class="fixed inset-0 z-40 flex items-center justify-center bg-black/30"
+		on:click={closeSummary}
+	>
 		<!-- Popup Card -->
-		<div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 relative z-50" on:click|stopPropagation>
-			<button class="absolute top-3 right-3 text-gray-400 hover:text-gray-600" on:click={closeSummary} aria-label="Close">
+		<div
+			class="relative z-50 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
+			on:click|stopPropagation
+		>
+			<button
+				class="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+				on:click={closeSummary}
+				aria-label="Close"
+			>
 				&times;
 			</button>
-			<div class="flex justify-between items-start mb-2">
+			<div class="mb-2 flex items-start justify-between">
 				<div>
-					<div class="text-sm text-[#8a8fa7] font-semibold">AI Summary:</div>
-					<div class="text-xs text-[#8a8fa7] mt-1">{summaryData.date} | <span class="font-mono">{summaryData.time}</span></div>
+					<div class="text-sm font-semibold text-[#8a8fa7]">AI Summary:</div>
+					<div class="mt-1 text-xs text-[#8a8fa7]">
+						{summaryData.date} | <span class="font-mono">{summaryData.time}</span>
+					</div>
 				</div>
 				<div class="text-right">
-					<div class="text-xs text-[#8a8fa7] font-semibold">Comm ID - {summaryData.commId}</div>
-					<div class="text-xs"><span class="font-semibold text-[#8a8fa7]">Category:</span> <span class="text-gray-700">{summaryData.category}</span></div>
-					<div class="text-xs"><span class="font-semibold text-[#8a8fa7]">Sub-Category:</span> <span class="text-gray-700">{summaryData.subCategory}</span></div>
+					<div class="text-xs font-semibold text-[#8a8fa7]">Comm ID - {summaryData.commId}</div>
+					<div class="text-xs">
+						<span class="font-semibold text-[#8a8fa7]">Category:</span>
+						<span class="text-gray-700">{summaryData.category}</span>
+					</div>
+					<div class="text-xs">
+						<span class="font-semibold text-[#8a8fa7]">Sub-Category:</span>
+						<span class="text-gray-700">{summaryData.subCategory}</span>
+					</div>
 				</div>
 			</div>
-			<div class="font-semibold mt-2 mb-1 text-[#8a8fa7]">Summary:</div>
-			<div class="bg-[#f4f6fb] rounded-md p-4 text-sm mb-3">
-				<div><span class="font-semibold text-[#8a8fa7]">Email Address:</span> <span class="font-mono">{summaryData.email}</span></div>
-				<div><span class="font-semibold text-[#8a8fa7]">Subject Line:</span> <span class="font-semibold">{summaryData.subject}</span></div>
+			<div class="mb-1 mt-2 font-semibold text-[#8a8fa7]">Summary:</div>
+			<div class="mb-3 rounded-md bg-[#f4f6fb] p-4 text-sm">
+				<div>
+					<span class="font-semibold text-[#8a8fa7]">Email Address:</span>
+					<span class="font-mono">{summaryData.email}</span>
+				</div>
+				<div>
+					<span class="font-semibold text-[#8a8fa7]">Subject Line:</span>
+					<span class="font-semibold">{summaryData.subject}</span>
+				</div>
 				<div><span class="font-semibold text-[#8a8fa7]">Body:</span></div>
-				<div class="bg-white rounded p-3 mt-2 whitespace-pre-line">
-					Hello Sarah,<br>
-					As per our conversation see demo link and as we discuss i book a appointment at 10am at the office.<br><br>
-					<a href="https://demolink1344/csag.com" class="text-purple-600 underline break-all" target="_blank">https://demolink1344/csag.com</a><br><br>
-					Looking forward to see you<br>
+				<div class="mt-2 whitespace-pre-line rounded bg-white p-3">
+					Hello Sarah,<br />
+					As per our conversation see demo link and as we discuss i book a appointment at 10am at the
+					office.<br /><br />
+					<a
+						href="https://demolink1344/csag.com"
+						class="break-all text-purple-600 underline"
+						target="_blank">https://demolink1344/csag.com</a
+					><br /><br />
+					Looking forward to see you<br />
 					if you have any question just five me a shout
 				</div>
 			</div>
-			<div class="text-sm mt-2">
+			<div class="mt-2 text-sm">
 				<span class="font-semibold text-[#8a8fa7]">Task:</span>
 				<span class="font-semibold">AI has to update the CRM & Engagement Score</span>
 			</div>
 		</div>
 	</div>
 {/if}
-
-

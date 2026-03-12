@@ -41,46 +41,46 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const [categories, companyNumbers, voiceLogs, countsByCategory, totals, callsByDay, durationAgg] =
 		await Promise.all([
-		prisma.callTrackingCategory.findMany({
-			where: { companyId },
-			orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }]
-		}),
-		prisma.companyPhoneNumber.findMany({
-			where: { companyId },
-			include: { callTrackingCategory: { select: { id: true, name: true } } },
-			orderBy: { created: 'asc' }
-		}),
-		prisma.communicationLog.findMany({
-			where: {
-				companyId,
-				type: 'voice',
-				created: { gte: start, lte: end }
-			},
-			orderBy: { created: 'desc' },
-			take: 50,
-			include: {
-				callTrackingCategory: { select: { id: true, name: true } },
-				customer: { select: { id: true, name: true, phone: true } }
-			}
-		}),
-		prisma.communicationLog.groupBy({
-			by: ['callTrackingCategoryId', 'direction'],
-			where: {
-				companyId,
-				type: 'voice',
-				created: { gte: start, lte: end }
-			},
-			_count: { id: true }
-		}),
-		prisma.communicationLog.groupBy({
-			by: ['direction'],
-			where: {
-				companyId,
-				type: 'voice',
-				created: { gte: start, lte: end }
-			},
-			_count: { id: true }
-		}),
+			prisma.callTrackingCategory.findMany({
+				where: { companyId },
+				orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }]
+			}),
+			prisma.companyPhoneNumber.findMany({
+				where: { companyId },
+				include: { callTrackingCategory: { select: { id: true, name: true } } },
+				orderBy: { created: 'asc' }
+			}),
+			prisma.communicationLog.findMany({
+				where: {
+					companyId,
+					type: 'voice',
+					created: { gte: start, lte: end }
+				},
+				orderBy: { created: 'desc' },
+				take: 50,
+				include: {
+					callTrackingCategory: { select: { id: true, name: true } },
+					customer: { select: { id: true, name: true, phone: true } }
+				}
+			}),
+			prisma.communicationLog.groupBy({
+				by: ['callTrackingCategoryId', 'direction'],
+				where: {
+					companyId,
+					type: 'voice',
+					created: { gte: start, lte: end }
+				},
+				_count: { id: true }
+			}),
+			prisma.communicationLog.groupBy({
+				by: ['direction'],
+				where: {
+					companyId,
+					type: 'voice',
+					created: { gte: start, lte: end }
+				},
+				_count: { id: true }
+			}),
 			// Calls per day for chart (raw for date bucketing)
 			prisma.$queryRaw<
 				{ day: Date; direction: string; count: bigint }[]
@@ -90,7 +90,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   GROUP BY created::date, direction
   ORDER BY day`.then((rows) =>
 				rows.map((r) => ({
-					day: r.day instanceof Date ? r.day.toISOString().slice(0, 10) : String(r.day).slice(0, 10),
+					day:
+						r.day instanceof Date ? r.day.toISOString().slice(0, 10) : String(r.day).slice(0, 10),
 					direction: r.direction,
 					count: Number(r.count)
 				}))
@@ -123,7 +124,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	byCategory['_none'] = { name: 'Uncategorized', inbound: 0, outbound: 0, total: 0 };
 	for (const row of countsByCategory) {
 		const key = row.callTrackingCategoryId ?? '_none';
-		const name = key === '_none' ? 'Uncategorized' : categoryNames.get(key) ?? 'Unknown';
+		const name = key === '_none' ? 'Uncategorized' : (categoryNames.get(key) ?? 'Unknown');
 		if (!byCategory[key]) byCategory[key] = { name, inbound: 0, outbound: 0, total: 0 };
 		const count = row._count.id;
 		if (row.direction === 'inbound') byCategory[key].inbound = count;
@@ -176,7 +177,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			inboundTotal,
 			outboundTotal,
 			totalCalls: inboundTotal + outboundTotal,
-			byCategory: Object.entries(byCategory).filter(([, v]) => v.total > 0 || v.name === 'Uncategorized')
+			byCategory: Object.entries(byCategory).filter(
+				([, v]) => v.total > 0 || v.name === 'Uncategorized'
+			)
 		}
 	};
 };

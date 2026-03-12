@@ -48,7 +48,9 @@ function toE164(raw: string): string {
 	return digits ? `+${digits}` : '';
 }
 
-async function findTelnyxNumber(e164: string): Promise<{ id: string; phone_number: string } | null> {
+async function findTelnyxNumber(
+	e164: string
+): Promise<{ id: string; phone_number: string } | null> {
 	const res = await fetch(
 		`${TELNYX_API_BASE}/phone_numbers?filter[phone_number]=${encodeURIComponent(e164)}`,
 		{ headers: TELNYX_HEADERS }
@@ -134,7 +136,9 @@ async function main() {
 				callFlowId: null
 			}
 		});
-		console.log(`Number linked to company: ${company.name} (${company.id}). callFlowId = null (temporary).`);
+		console.log(
+			`Number linked to company: ${company.name} (${company.id}). callFlowId = null (temporary).`
+		);
 	}
 
 	console.log('Done.');

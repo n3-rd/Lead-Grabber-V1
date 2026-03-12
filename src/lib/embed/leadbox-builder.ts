@@ -2,26 +2,26 @@ import { leadboxStyles } from './styles';
 import { icons } from './icons';
 
 export interface LeadboxConfig {
-  id: string;
-  leadboxData: any;
-  companyId: string;
-  baseUrl: string;
+	id: string;
+	leadboxData: any;
+	companyId: string;
+	baseUrl: string;
 }
 
 function escapeForJs(str: string): string {
-  return JSON.stringify(str);
+	return JSON.stringify(str);
 }
 
 export function buildLeadboxScript(config: LeadboxConfig): string {
-  const { id, leadboxData, companyId, baseUrl } = config;
+	const { id, leadboxData, companyId, baseUrl } = config;
 
-  // Prepare data for injection
-  const dataJson = JSON.stringify({ ...leadboxData, leadBoxOpen: false });
-  const iconsJson = JSON.stringify(icons);
-  const stylesJson = JSON.stringify(leadboxStyles);
+	// Prepare data for injection
+	const dataJson = JSON.stringify({ ...leadboxData, leadBoxOpen: false });
+	const iconsJson = JSON.stringify(icons);
+	const stylesJson = JSON.stringify(leadboxStyles);
 
-  // Build the script with proper escaping
-  return `(function() {
+	// Build the script with proper escaping
+	return `(function() {
   const leadboxData = ${dataJson};
   const companyId = ${escapeForJs(companyId)};
   const baseUrl = ${escapeForJs(baseUrl)};

@@ -20,7 +20,9 @@
 		<h2 class="mb-8 text-center font-sans text-black md:mb-12">Click to Demo</h2>
 
 		<!-- Top Row -->
-		<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:mb-8 md:grid-cols-3 md:gap-6 lg:grid-cols-5">
+		<div
+			class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:mb-8 md:grid-cols-3 md:gap-6 lg:grid-cols-5"
+		>
 			{#each topRowDemos as demo}
 				<button
 					class="flex h-40 w-full items-center justify-center rounded-lg bg-[#FFE5E5] text-center font-sans text-black transition-colors hover:bg-[#FFD5D5]"
@@ -53,7 +55,9 @@
 			</div>
 
 			<!-- Bottom Row Cards -->
-			<div class="order-1 grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:order-2 lg:col-span-4 lg:grid-cols-4">
+			<div
+				class="order-1 grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:order-2 lg:col-span-4 lg:grid-cols-4"
+			>
 				{#each bottomRowDemos as demo}
 					<button
 						class="flex h-40 w-full flex-col items-center justify-center rounded-lg bg-[#FFE5E5] text-center font-sans text-black transition-colors hover:bg-[#FFD5D5]"

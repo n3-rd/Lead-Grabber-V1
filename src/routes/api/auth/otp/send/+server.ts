@@ -27,7 +27,10 @@ export const POST: RequestHandler = async ({ request }) => {
 				sentTo: email
 			});
 			if (!result.success) {
-				return json({ success: false, error: result.error ?? 'Failed to send code' }, { status: 500 });
+				return json(
+					{ success: false, error: result.error ?? 'Failed to send code' },
+					{ status: 500 }
+				);
 			}
 			return json({ success: true, message: 'Verification code sent to your email' });
 		}
@@ -43,7 +46,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 		const existing = await prisma.user.findUnique({ where: { email } });
 		if (existing) {
-			return json({ success: false, error: 'An account with this email already exists' }, { status: 400 });
+			return json(
+				{ success: false, error: 'An account with this email already exists' },
+				{ status: 400 }
+			);
 		}
 		const passwordHash = await hashPassword(password);
 		const result = await createAndSendOtp({
@@ -53,7 +59,10 @@ export const POST: RequestHandler = async ({ request }) => {
 			signupPayload: { name, passwordHash }
 		});
 		if (!result.success) {
-			return json({ success: false, error: result.error ?? 'Failed to send code' }, { status: 500 });
+			return json(
+				{ success: false, error: result.error ?? 'Failed to send code' },
+				{ status: 500 }
+			);
 		}
 		return json({ success: true, message: 'Verification code sent to your email' });
 	} catch (e) {

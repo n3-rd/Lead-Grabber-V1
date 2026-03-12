@@ -59,7 +59,8 @@
 			const body: Record<string, unknown> = { title: callFlowTitle.trim() };
 			if (greetingFile) body.greetingAudioUrl = await uploadFile(greetingFile, 'greeting');
 			if (allOnCallFile) body.queueHoldAudioUrl = await uploadFile(allOnCallFile, 'queue');
-			if (unavailableFile) body.allUnavailableAudioUrl = await uploadFile(unavailableFile, 'unavailable');
+			if (unavailableFile)
+				body.allUnavailableAudioUrl = await uploadFile(unavailableFile, 'unavailable');
 			if (backupCellFile) body.backupCellAudioUrl = await uploadFile(backupCellFile, 'backup');
 			const res = await fetch(`/api/ivr/flows/${flowId}`, {
 				method: 'PATCH',
@@ -80,7 +81,9 @@
 <div class="min-h-screen bg-[#ECEEF3] p-4">
 	<div class="mb-4 rounded-[3px] bg-white px-4 py-3">
 		<div class="flex items-center justify-between">
-			<h1 class="font-['Poppins'] text-[23px] font-semibold leading-[30px] text-[#747474]">Edit Call Flow</h1>
+			<h1 class="font-['Poppins'] text-[23px] font-semibold leading-[30px] text-[#747474]">
+				Edit Call Flow
+			</h1>
 			<button
 				onclick={handleBack}
 				class="flex items-center gap-2 font-['Poppins'] text-base font-medium leading-[19px] text-[#757575] transition-colors hover:text-[#577AB7]"
@@ -94,7 +97,11 @@
 		<div class="space-y-8">
 			<div class="space-y-2">
 				<div class="flex items-center gap-2">
-					<label for="edit-flow-title" class="block font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]">Call Flow Title:</label>
+					<label
+						for="edit-flow-title"
+						class="block font-['Poppins'] text-lg font-semibold leading-[21px] text-[#808080]"
+						>Call Flow Title:</label
+					>
 					<SectionHelp text="A name for this call flow so you can identify it later." />
 				</div>
 				<input
@@ -102,16 +109,24 @@
 					type="text"
 					bind:value={callFlowTitle}
 					placeholder="Enter your Call Flow Title"
-					class="h-[56px] w-full rounded-[2px] border bg-white px-3 font-['Poppins'] text-base font-medium leading-[19px] text-[#808080] outline-none {fieldErrors.callFlowTitle ? 'border-red-500' : 'border-[#969696]'}"
+					class="h-[56px] w-full rounded-[2px] border bg-white px-3 font-['Poppins'] text-base font-medium leading-[19px] text-[#808080] outline-none {fieldErrors.callFlowTitle
+						? 'border-red-500'
+						: 'border-[#969696]'}"
 				/>
 				{#if fieldErrors.callFlowTitle}
 					<p class="font-['Poppins'] text-sm text-red-600">{fieldErrors.callFlowTitle}</p>
 				{/if}
 			</div>
-			<AudioUpload label="Greeting:" bind:file={greetingFile} existingUrl={flow?.greetingAudioUrl ?? null} />
+			<AudioUpload
+				label="Greeting:"
+				bind:file={greetingFile}
+				existingUrl={flow?.greetingAudioUrl ?? null}
+			/>
 			<div class="space-y-2">
 				<div class="flex items-center gap-2">
-					<p class="font-['Poppins'] text-lg font-semibold text-[#808080]">All representatives on call (hold music):</p>
+					<p class="font-['Poppins'] text-lg font-semibold text-[#808080]">
+						All representatives on call (hold music):
+					</p>
 					<SectionHelp text="Hold music or message played while the caller waits in the queue." />
 				</div>
 				<AudioUpload bind:file={allOnCallFile} existingUrl={flow?.queueHoldAudioUrl ?? null} />
@@ -121,7 +136,10 @@
 					<p class="font-['Poppins'] text-lg font-semibold text-[#808080]">All unavailable:</p>
 					<SectionHelp text="Message played when no one can take the call." />
 				</div>
-				<AudioUpload bind:file={unavailableFile} existingUrl={flow?.allUnavailableAudioUrl ?? null} />
+				<AudioUpload
+					bind:file={unavailableFile}
+					existingUrl={flow?.allUnavailableAudioUrl ?? null}
+				/>
 			</div>
 			<div class="space-y-2">
 				<div class="flex items-center gap-2">

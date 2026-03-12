@@ -9,7 +9,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 
 	const contact = await prisma.contact.findFirst({
 		where: { id: params.contactId, companyId: auth.companyId },
-		select: { id: true, name: true, phone: true },
+		select: { id: true, name: true, phone: true }
 	});
 	if (!contact) {
 		return json({ success: false, error: 'Contact not found', code: 404 }, { status: 404 });
@@ -23,11 +23,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 	const where = {
 		companyId: auth.companyId,
 		type: 'sms' as const,
-		OR: [
-			{ customerId: contact.id },
-			{ source: phone },
-			{ destination: phone },
-		],
+		OR: [{ customerId: contact.id }, { source: phone }, { destination: phone }]
 	};
 	const [total, logs] = await Promise.all([
 		prisma.communicationLog.count({ where }),
@@ -35,8 +31,8 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 			where,
 			skip,
 			take: limit,
-			orderBy: { created: 'desc' },
-		}),
+			orderBy: { created: 'desc' }
+		})
 	]);
 
 	const data = logs.map((l) => ({
@@ -44,13 +40,13 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 		direction: l.direction,
 		message: l.content ?? l.summary ?? '',
 		status: l.status === 'success' || l.status === 'completed' ? 'delivered' : l.status,
-		timestamp: l.created.toISOString(),
+		timestamp: l.created.toISOString()
 	}));
 
 	return json({
 		success: true,
 		data,
 		contact: { id: contact.id, name: contact.name ?? '', phone: contact.phone ?? '' },
-		pagination: pagination(page, limit, total),
+		pagination: pagination(page, limit, total)
 	});
 };

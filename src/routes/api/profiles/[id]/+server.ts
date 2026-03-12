@@ -23,7 +23,7 @@ function toSpecProfile(c: {
 		address: c.address ?? '',
 		notes: c.notes ?? '',
 		createdAt: c.created.toISOString(),
-		updatedAt: c.updated.toISOString(),
+		updatedAt: c.updated.toISOString()
 	};
 }
 
@@ -42,8 +42,8 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			address: true,
 			notes: true,
 			created: true,
-			updated: true,
-		},
+			updated: true
+		}
 	});
 	if (!contact) {
 		return json({ success: false, error: 'Profile not found', code: 404 }, { status: 404 });
@@ -56,7 +56,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	if (!auth) return unauthorized();
 
 	const contact = await prisma.contact.findFirst({
-		where: { id: params.id, companyId: auth.companyId },
+		where: { id: params.id, companyId: auth.companyId }
 	});
 	if (!contact) {
 		return json({ success: false, error: 'Profile not found', code: 404 }, { status: 404 });
@@ -83,13 +83,13 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 			address: true,
 			notes: true,
 			created: true,
-			updated: true,
-		},
+			updated: true
+		}
 	});
 	return json({
 		success: true,
 		data: toSpecProfile(updated),
-		message: 'Profile updated successfully',
+		message: 'Profile updated successfully'
 	});
 };
 
@@ -98,7 +98,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	if (!auth) return unauthorized();
 
 	const contact = await prisma.contact.findFirst({
-		where: { id: params.id, companyId: auth.companyId },
+		where: { id: params.id, companyId: auth.companyId }
 	});
 	if (!contact) {
 		return json({ success: false, error: 'Profile not found', code: 404 }, { status: 404 });

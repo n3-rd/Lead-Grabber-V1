@@ -17,7 +17,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	try {
 		const profile = await prisma.contact.findFirst({
-			where: { id: params.id, companyId },
+			where: { id: params.id, companyId }
 		});
 
 		if (!profile) {
@@ -30,11 +30,11 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		let communications = await prisma.communicationLog.findMany({
 			where: {
 				customerId: params.id,
-				companyId,
+				companyId
 			},
 			orderBy: { created: 'desc' },
 			take: 200,
-			include: { customer: true },
+			include: { customer: true }
 		});
 
 		// If no communications by customerId and we have a phone, fetch all and filter by phone
@@ -43,7 +43,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				where: { companyId },
 				orderBy: { created: 'desc' },
 				take: 500,
-				include: { customer: true },
+				include: { customer: true }
 			});
 
 			const profileLast10 = profilePhoneDigits.slice(-10);
@@ -63,8 +63,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				const sourceLast7 = sourceDigits.slice(-7);
 				const destLast7 = destDigits.slice(-7);
 
-				const exactMatch =
-					sourceDigits === profilePhoneDigits || destDigits === profilePhoneDigits;
+				const exactMatch = sourceDigits === profilePhoneDigits || destDigits === profilePhoneDigits;
 				const last10Match =
 					(sourceLast10 && sourceLast10 === profileLast10) ||
 					(destLast10 && destLast10 === profileLast10);
@@ -78,19 +77,21 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		}
 
 		const metadata = (val: unknown): Record<string, unknown> | null =>
-			val && typeof val === 'object' && !Array.isArray(val) ? (val as Record<string, unknown>) : null;
+			val && typeof val === 'object' && !Array.isArray(val)
+				? (val as Record<string, unknown>)
+				: null;
 
 		const comms = communications.map((log) => {
 			const dateObj = new Date(log.created);
 			const date = dateObj.toLocaleDateString('en-US', {
 				month: 'short',
 				day: '2-digit',
-				year: 'numeric',
+				year: 'numeric'
 			});
 			const time = dateObj.toLocaleTimeString('en-US', {
 				hour: 'numeric',
 				minute: '2-digit',
-				hour12: true,
+				hour12: true
 			});
 
 			let status: 'red' | 'green' | 'blue' = 'blue';
@@ -107,30 +108,23 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				id: log.id,
 				date,
 				time,
-				type: log.type as
-					| 'email'
-					| 'sms'
-					| 'voice'
-					| 'web'
-					| 'facebook'
-					| 'chatbot'
-					| 'leadform',
+				type: log.type as 'email' | 'sms' | 'voice' | 'web' | 'facebook' | 'chatbot' | 'leadform',
 				direction: (log.direction === 'inbound' ? 'In' : 'Out') as 'In' | 'Out',
 				source: log.source ?? 'Unknown',
 				endpoint: log.destination ?? log.customer?.name ?? 'Unknown',
 				purpose: purpose != null ? String(purpose) : null,
 				summary: log.summary ?? (log.content ? log.content.substring(0, 50) : null),
 				commId: log.id,
-				status,
+				status
 			};
 		});
 
 		return {
 			profile: {
 				...profile,
-				past_names: Array.isArray(profile.pastNames) ? profile.pastNames : [],
+				past_names: Array.isArray(profile.pastNames) ? profile.pastNames : []
 			},
-			communications: comms,
+			communications: comms
 		};
 	} catch (e) {
 		if (e && typeof e === 'object' && 'status' in e && (e as { status: number }).status === 404) {
@@ -153,7 +147,7 @@ export const actions: Actions = {
 		try {
 			await prisma.contact.updateMany({
 				where: { id, companyId: user.company.id },
-				data: { name, email, phone, updated: new Date() },
+				data: { name, email, phone, updated: new Date() }
 			});
 			return { success: true };
 		} catch (e) {
@@ -166,12 +160,12 @@ export const actions: Actions = {
 		if (!user?.company) return { success: false };
 		try {
 			await prisma.contact.deleteMany({
-				where: { id: params.id, companyId: user.company.id },
+				where: { id: params.id, companyId: user.company.id }
 			});
 			return { success: true };
 		} catch (e) {
 			console.error('Error deleting profile:', e);
 			return { success: false };
 		}
-	},
+	}
 };

@@ -4,10 +4,10 @@
 
 	let numbers = $state('');
 	let currentStep = $state(1);
-	
+
 	// Calculate progress based on current step (each step is 25% of total)
 	let eligibilityProgress = $state(25);
-	
+
 	$effect(() => {
 		eligibilityProgress = (currentStep / 4) * 100;
 	});
@@ -44,7 +44,9 @@
 
 				<!-- Form Section -->
 				<div class="mb-6 space-y-4">
-					<label class="block font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]">
+					<label
+						class="block font-['Poppins'] text-[15px] font-semibold leading-[18px] text-[#757575]"
+					>
 						Paste Numbers
 					</label>
 					<textarea
@@ -58,7 +60,7 @@
 						<Info class="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" />
 						<p class="font-['Poppins'] text-sm leading-relaxed text-gray-700">
 							Numbers must be separated by either commas or line breaks, and in
-							<a href="#" class="text-blue-600 hover:underline inline-flex items-center gap-1">
+							<a href="#" class="inline-flex items-center gap-1 text-blue-600 hover:underline">
 								E.164 format
 								<ExternalLink class="h-3 w-3" />
 							</a>

@@ -38,6 +38,7 @@ model User {
   receivedInvites                   Invite[]                             @relation("InvitedUser")
   personalShortcuts                 Shortcut[]
   fcmTokens                         FcmToken[]
+  assignedTasks                     Task[]                               @relation("UserTasks")
 
   @@index([email])
   @@index([tokenKey])
@@ -146,6 +147,7 @@ model Company {
   callTrackingCategories  CallTrackingCategory[]
   scheduleEvents          ScheduleEvent[]
   shortcuts               Shortcut[]
+  tasks                   Task[]
 
   @@map("companies")
 }
@@ -295,6 +297,7 @@ model Contact {
 
   // Relations
   communicationLogs CommunicationLog[]
+  tasks             Task[]
 
   @@index([companyId])
   @@map("contacts")
@@ -581,4 +584,32 @@ model FcmToken {
   @@unique([userId, deviceId])
   @@index([userId])
   @@map("fcm_tokens")
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  companyId    String
+  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contactId    String?
+  contact      Contact?   @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  assignedToId String?
+  assignedTo   User?      @relation("UserTasks", fields: [assignedToId], references: [id], onDelete: SetNull)
+  title        String
+  description  String?
+  status       TaskStatus @default(todo)
+  dueDate      DateTime?
+  created      DateTime   @default(now())
+  updated      DateTime   @updatedAt
+
+  @@index([companyId])
+  @@index([contactId])
+  @@index([assignedToId])
+  @@map("tasks")
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  completed
+  cancelled
 }

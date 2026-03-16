@@ -32,9 +32,10 @@ Every API endpoint in the project. Auth: “Session” = requires `app_session` 
 | `/api/recording`                | [logId] GET                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `/api/representatives`          | GET; [id] GET, communication-logs GET                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `/api/schedule`                 | events GET, POST; events/[id] PUT, DELETE                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `/api/shortcuts`                | personal GET, POST; personal/[id] DELETE; team GET                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `/api/shortcuts`                | personal GET, POST; personal/[id] DELETE; team GET                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `/api/sip`                      | credentials GET                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `/api/sms`                      | send POST, history GET, history/[contactId] GET                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `/api/tasks`                    | GET, POST; [id] GET, PUT, DELETE                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `/api/telnyx`                   | POST (send SMS); test GET; dial POST; call-webhook GET, POST, PUT; webhook GET, POST, PUT, OPTIONS; webhook-backup GET, POST, PUT, OPTIONS; test-call GET, POST; test-call-end GET, POST; test-webhook GET, POST; answer-call POST; hangup POST; setup-company GET, POST; numbers/search GET; numbers/list GET; numbers/buy POST; numbers/update POST; numbers/orders GET; numbers/[phone_number_id] DELETE; porting/check POST; porting/orders GET, POST; porting/loa-configurations GET; verified-numbers GET, POST; verified-numbers/verify POST; ivr/gather POST; ivr/speak POST; ivr/bridge POST; ivr/flows GET, POST |
 | `/api/upload`                   | avatar POST, ivr POST, logo POST                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `/api/webhooks`                 | inbound-email POST; telnyx/incoming-call POST; telnyx/incoming-sms POST                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
@@ -514,24 +515,49 @@ Example response:
 
 ```json
 {
-	"success": true,
-	"data": {
-		"id": "clx...",
-		"name": "Jane Agent",
-		"email": "jane@acme.com",
-		"phone": null,
-		"company": {
-			"id": "cmp_123",
-			"name": "Acme"
-		},
-		"role": "admin"
+	{
+		"success": true,
+		"data": {
+			"id": "clx...",
+			"name": "Jane Agent",
+			"email": "jane@acme.com",
+			"phone": null,
+			"company": {
+				"id": "cmp_123",
+				"name": "Acme"
+			},
+			"role": "admin"
+		}
 	}
-}
-```
 
----
+	---
 
-## Standard response shapes
+	## 37. Tasks
+
+	| Method | Path               | Auth    | Request                                                                    | Response                                             |
+	| ------ | ------------------ | ------- | -------------------------------------------------------------------------- | ---------------------------------------------------- |
+	| GET    | `/api/tasks`       | Session | Query: page, limit, contactId?, assignedToId?, status?                     | `{ success, data, pagination }`                      |
+	| POST   | `/api/tasks`       | Session | Body: title, description?, contactId?, dueDate?, assignedTo?, status?      | 201 `{ success, data, message }`                     |
+	| GET    | `/api/tasks/[id]`  | Session | —                                                                          | `{ success, data }` (spec task shape)                |
+	| PUT    | `/api/tasks/[id]`  | Session | Body: title?, description?, contactId?, dueDate?, assignedTo?, status?     | `{ success, data, message }`                         |
+	| DELETE | `/api/tasks/[id]`  | Session | —                                                                          | `{ success, message }`                               |
+
+	**Spec task shape:**
+	- `id`: string
+	- `title`: string
+	- `description`: string (can be empty)
+	- `status`: string (`todo` \| `in_progress` \| `completed` \| `cancelled`)
+	- `dueDate`: ISO-string \| null
+	- `contactId`: string \| null
+	- `assignedToId`: string \| null
+	- `createdAt`: ISO-string
+	- `updatedAt`: ISO-string
+	- `contact`: object \| null (`{ id, name, phone, email }`)
+	- `assignedTo`: object \| null (`{ id, name, email }`)
+
+	---
+
+	## Standard response shapes
 
 - **specSuccess:** `{ success: true, data?, message? }`
 - **specError/unauthorized:** `{ success: false, error, code? }` with status 401/400/404/500

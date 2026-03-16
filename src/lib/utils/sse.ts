@@ -1,37 +1,62 @@
-// Store active SSE connections
-const connections = new Set<ReadableStreamDefaultController>();
+// Store active SSE connections grouped by companyId
+const companyConnections = new Map<string, Set<ReadableStreamDefaultController>>();
 
-// Function to add an SSE connection
-export function addSSEConnection(controller: ReadableStreamDefaultController) {
-	connections.add(controller);
+// Function to add an SSE connection for a specific company
+export function addSSEConnection(companyId: string, controller: ReadableStreamDefaultController) {
+	if (!companyConnections.has(companyId)) {
+		companyConnections.set(companyId, new Set());
+	}
+	companyConnections.get(companyId)!.add(controller);
 }
 
 // Function to remove an SSE connection
-export function removeSSEConnection(controller: ReadableStreamDefaultController) {
-	connections.delete(controller);
+export function removeSSEConnection(
+	companyId: string,
+	controller: ReadableStreamDefaultController
+) {
+	const connections = companyConnections.get(companyId);
+	if (connections) {
+		connections.delete(controller);
+		if (connections.size === 0) {
+			companyConnections.delete(companyId);
+		}
+	}
 }
 
-// Function to broadcast events to all connected clients
-export function broadcastCallEvent(event: {
-	type: string;
-	name?: string;
-	phone?: string;
-	callId?: string;
-}) {
+// Function to broadcast events to all connected clients of a company
+export function broadcastCallEvent(
+	companyId: string,
+	event: {
+		type: string;
+		[key: string]: any;
+	}
+) {
+	const connections = companyConnections.get(companyId);
+	if (!connections) return;
+
+	const eventName = event.type;
 	const data = JSON.stringify(event);
-	console.log('Broadcasting SSE event:', event);
+	console.log(`Broadcasting SSE event [${eventName}] to company ${companyId}:`, event);
 
 	for (const controller of connections) {
 		try {
-			controller.enqueue(`data: ${data}\n\n`);
+			controller.enqueue(`event: ${eventName}\ndata: ${data}\n\n`);
 		} catch {
 			// Remove failed connections
 			connections.delete(controller);
 		}
 	}
+
+	if (connections.size === 0) {
+		companyConnections.delete(companyId);
+	}
 }
 
-// Function to get the count of active connections
+// Function to get the total count of active connections
 export function getActiveSSEConnectionCount(): number {
-	return connections.size;
+	let total = 0;
+	for (const connections of companyConnections.values()) {
+		total += connections.size;
+	}
+	return total;
 }

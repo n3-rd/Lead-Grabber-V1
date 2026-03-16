@@ -1,4 +1,5 @@
 import { prisma } from '$lib/db';
+import { broadcastCallEvent } from './sse';
 
 export type NotificationType =
 	| 'email'
@@ -53,6 +54,26 @@ export async function createNotification(input: CreateNotificationInput) {
 				input.source_name ?? input.source_identifier ?? ''
 			);
 		}
+
+		// Broadcast via SSE
+		broadcastCallEvent(input.company_id, {
+			type: 'new_notification',
+			notification
+		});
+
+		// Specialized events for UI convenience
+		if (input.type === 'sms' && input.direction === 'inbound') {
+			broadcastCallEvent(input.company_id, {
+				type: 'new_sms',
+				notification
+			});
+		} else if (input.type === 'voice' && input.direction === 'inbound') {
+			broadcastCallEvent(input.company_id, {
+				type: 'incoming_call',
+				notification
+			});
+		}
+
 		return notification;
 	} catch (err: unknown) {
 		const code =

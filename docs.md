@@ -205,10 +205,42 @@ Provider: Brevo (`BREVO_API_KEY` required). If not configured, `/api/email/send`
 
 ## 13. Events (SSE)
 
-| Method | Path               | Auth | Request | Response                                                                                         |
-| ------ | ------------------ | ---- | ------- | ------------------------------------------------------------------------------------------------ |
-| GET    | `/api/events`      | No   | —       | **SSE stream**: `Content-Type: text/event-stream`; sends `connected`, then `heartbeat` every 30s |
-| GET    | `/api/events/test` | No   | —       | Broadcasts test incoming_call; `{ success, message, instructions }`                              |
+Real-time updates via Server-Sent Events.
+
+| Method | Path               | Auth    | Request | Response                                                                                                        |
+| ------ | ------------------ | ------- | ------- | --------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/events`      | Session | —       | **SSE stream**: `Content-Type: text/event-stream`; company-scoped; sends `connected`, then `heartbeat` every 30s |
+| GET    | `/api/events/test` | Session | —       | Broadcasts test `incoming_call` to your company; `{ success, message }`                                          |
+
+### SSE Format
+
+All events follow the standard SSE format:
+```
+event: <event_name>
+data: <json_payload>
+```
+
+### Event Types
+
+- **`connected`**: Sent immediately on connection.
+- **`heartbeat`**: Sent every 30 seconds to keep the connection alive.
+- **`new_notification`**: Sent whenever any new notification is created for the company.
+- **`new_sms`**: Specialized event for inbound SMS messages.
+- **`incoming_call`**: Specialized event for inbound voice calls.
+
+### Examples
+
+**`new_sms` event**
+```
+event: new_sms
+data: {"type":"new_sms","notification":{"id":"notif_123","type":"sms","sourceName":"John Doe","messagePreview":"Hello there!","threadId":"..."}}
+```
+
+**`heartbeat` event**
+```
+event: heartbeat
+data: {"type":"heartbeat"}
+```
 
 ---
 

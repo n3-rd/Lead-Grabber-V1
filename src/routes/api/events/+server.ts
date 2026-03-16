@@ -1,28 +1,38 @@
 import { addSSEConnection, removeSSEConnection } from '$lib/utils/sse';
+import { requireAuth, unauthorized } from '$lib/api/spec';
 
-export const GET = async () => {
+export const GET = async ({ locals }) => {
+	const auth = requireAuth(locals);
+	if (!auth) return unauthorized();
+
+	const companyId = auth.companyId;
+
 	const stream = new ReadableStream({
 		start(controller) {
-			// Add this connection to our set
-			addSSEConnection(controller);
+			// Add this connection to our company's set
+			addSSEConnection(companyId, controller);
 
 			// Send initial connection message
-			controller.enqueue(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
+			controller.enqueue(
+				`event: connected\ndata: ${JSON.stringify({ type: 'connected', companyId })}\n\n`
+			);
 
 			// Keep connection alive with periodic heartbeat
 			const heartbeat = setInterval(() => {
 				try {
-					controller.enqueue(`data: ${JSON.stringify({ type: 'heartbeat' })}\n\n`);
+					controller.enqueue(
+						`event: heartbeat\ndata: ${JSON.stringify({ type: 'heartbeat' })}\n\n`
+					);
 				} catch {
 					clearInterval(heartbeat);
-					removeSSEConnection(controller);
+					removeSSEConnection(companyId, controller);
 				}
 			}, 30000);
 
 			// Cleanup when connection is closed
 			return () => {
 				clearInterval(heartbeat);
-				removeSSEConnection(controller);
+				removeSSEConnection(companyId, controller);
 			};
 		},
 		cancel() {
@@ -34,9 +44,7 @@ export const GET = async () => {
 		headers: {
 			'Content-Type': 'text/event-stream',
 			'Cache-Control': 'no-cache',
-			Connection: 'keep-alive',
-			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Headers': 'Cache-Control'
+			Connection: 'keep-alive'
 		}
 	});
 };

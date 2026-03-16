@@ -109,6 +109,8 @@
 						]
 					: []),
 				{ title: 'Knowledge Base', url: '/knowledge-base', icon: BookOpen, href: '/knowledge-base' }
+,
+        { title: 'Manage Account', url: '/settings/manage-account', icon: UserCircle, href: '/settings/manage-account' }
 			]
 		}
 	]);

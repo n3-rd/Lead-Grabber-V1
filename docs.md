@@ -25,6 +25,7 @@ Every API endpoint in the project. Auth: “Session” = requires `app_session` 
 | `/api/invites`                  | GET; [id] DELETE, resend POST                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `/api/ivr`                      | flows GET, POST; flows/[id] GET, PATCH, DELETE; flows/[id]/rules GET, POST; flows/[flowId]/rules/[ruleId] GET, PATCH, DELETE                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `/api/me`                       | GET                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `/api/account`                 | DELETE                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `/api/messages`                 | GET, POST, PATCH; draft POST                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `/api/notifications`            | GET, PATCH; [id] GET, read PUT, reply POST; unread-count GET                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `/api/profiles`                 | GET, POST; [id] GET, PUT, DELETE                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
@@ -468,6 +469,35 @@ Returns the authenticated user's SIP/WebRTC connection config and a short-lived 
 ---
 
 ## 35. Current user
+
+## 36. Account deletion
+
+| Method | Path              | Auth    | Request | Response |
+| ------ | ----------------- | ------- | ------- | -------- |
+| DELETE | `/api/account`    | Session | —       | `{ success, message }` |
+
+**Deletes the current authenticated user account.**
+
+- Requires valid session (`app_session` cookie).
+- Deletes user record and all associated data (contacts, logs, company membership, etc.).
+- Logs out user and clears session cookie.
+- Response: `{ success, message }` (message may indicate deletion status or errors).
+
+**Example request:**
+
+```http
+DELETE /api/account
+Cookie: app_session=<session-cookie>
+```
+
+**Example response:**
+
+```json
+{
+	"success": true,
+	"message": "Account deleted successfully."
+}
+```
 
 | Method | Path      | Auth    | Request | Response                                                       |
 | ------ | --------- | ------- | ------- | -------------------------------------------------------------- |

@@ -357,6 +357,7 @@ _Note: Invite creation has no REST endpoint in this list; it may be done via a p
 | ------ | --------------------------------- | ------- | ---------------------------------------------------------------- | -------------------------------------------------- |
 | GET    | `/api/notifications`              | Session | Query: page, perPage, type?, read? (true\|false)                 | `{ success, data, pagination }` |
 | PATCH  | `/api/notifications`              | Session | Body: `{ id, read }`                                             | Updated notification                               |
+| POST   | `/api/notifications/mark-all-read` | Session | —                                                                | `{ success, count, message }`                      |
 | GET    | `/api/notifications/[id]`         | Session | —                                                                | `{ success, data }` (single notification)          |
 | PUT    | `/api/notifications/[id]/read`    | Session | —                                                                | `{ success, message }` (marks read)                |
 | POST   | `/api/notifications/[id]/reply`   | Session | Body: `{ message, replyMethod }` (replyMethod: sms\|email\|call) | Marks read; `{ success }` (stub: no actual send)   |
@@ -591,9 +592,23 @@ Cookie: app_session=<session-cookie>
 }
 ```
 
-| Method | Path      | Auth    | Request | Response                                                       |
-| ------ | --------- | ------- | ------- | -------------------------------------------------------------- |
-| GET    | `/api/me` | Session | —       | `{ success, data: { id, name, email, phone, company, role } }` |
+| Method | Path      | Auth    | Request                     | Response                                                       |
+| ------ | --------- | ------- | --------------------------- | -------------------------------------------------------------- |
+| GET    | `/api/me` | Session | —                           | `{ success, data: { id, name, email, phone, company, role, avatar } }` |
+| PUT    | `/api/me` | Session | `{ name?, email?, avatar? }` | `{ success, data: { ...updatedUser } }`                        |
+
+Example request:
+
+```http
+PUT /api/me
+Content-Type: application/json
+Cookie: app_session=<session-cookie>
+
+{
+  "name": "Jane Doe",
+  "email": "jane@acme.com"
+}
+```
 
 Example request:
 

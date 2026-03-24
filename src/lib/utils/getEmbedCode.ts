@@ -1,10 +1,5 @@
 import { PUBLIC_BASE_URL } from '$env/static/public';
-
-function normalizeUrl(baseUrl: string, path: string): string {
-	const normalizedBase = baseUrl.replace(/\/+$/, '');
-	const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-	return `${normalizedBase}${normalizedPath}`;
-}
+import { normalizeUrl } from '$lib/utils';
 
 export function getLeadboxEmbedCode(id: string = 'default') {
 	const url = normalizeUrl(PUBLIC_BASE_URL, `/embed/leadbox/${id}?t=${Date.now()}`);

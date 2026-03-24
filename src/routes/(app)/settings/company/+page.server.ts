@@ -4,12 +4,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { sendInviteEmail } from '$lib/server/brevo';
 import { PUBLIC_BASE_URL, PUBLIC_ENV } from '$env/static/public';
 import { saveUploadedFile } from '$lib/utils/file-upload';
-
-function normalizeUrl(baseUrl: string, path: string): string {
-	const normalizedBase = baseUrl.replace(/\/+$/, '');
-	const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-	return `${normalizedBase}${normalizedPath}`;
-}
+import { normalizeUrl } from '$lib/utils';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = locals.user;

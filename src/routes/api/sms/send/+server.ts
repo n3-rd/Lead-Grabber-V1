@@ -10,6 +10,7 @@ import {
 	TELNYX_MESSAGING_PROFILE_ID
 } from '$env/static/private';
 import { PUBLIC_BASE_URL } from '$env/static/public';
+import { normalizeUrl } from '$lib/utils';
 import { normalizePhoneNumber } from '$lib/utils/phone';
 import { logCommunication } from '$lib/utils/communication-log';
 import { getFirstCompanyNumber } from '$lib/company-numbers';
@@ -54,8 +55,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					to: formatted,
 					text: message,
 					messaging_profile_id: TELNYX_MESSAGING_PROFILE_ID,
-					webhook_url: `${PUBLIC_BASE_URL}/api/telnyx/webhook`,
-					webhook_failover_url: `${PUBLIC_BASE_URL}/api/telnyx/webhook-backup`,
+					webhook_url: normalizeUrl(PUBLIC_BASE_URL, '/api/telnyx/webhook'),
+					webhook_failover_url: normalizeUrl(PUBLIC_BASE_URL, '/api/telnyx/webhook-backup'),
 					use_profile_webhooks: false,
 					type: 'SMS'
 				})

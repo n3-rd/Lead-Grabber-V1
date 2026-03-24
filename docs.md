@@ -8,7 +8,7 @@ Every API endpoint in the project. Auth: “Session” = requires `app_session` 
 
 | Prefix                          | Endpoints                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/api/auth`                     | signup, login, refresh, otp/send, otp/verify                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `/api/auth`                     | signup, login, refresh, otp/send, otp/verify, forgot-password, reset-password                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `/api/a2p`                      | communication-log, contacts, emails/incoming, threads, orchestrator/run_once                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `/api/area-codes`               | GET                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `/api/calls`                    | history, history/[contactId], log, pending, test                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
@@ -49,8 +49,10 @@ Every API endpoint in the project. Auth: “Session” = requires `app_session` 
 | Method | Path                | Auth    | Request               | Response                                                     |
 | ------ | ------------------- | ------- | --------------------- | ------------------------------------------------------------ |
 | POST   | `/api/auth/signup`  | No      | `{ email, password }` | `{ success, user, token }` or 400                            |
-| POST   | `/api/auth/login`   | No      | `{ email, password }` | `{ success, user, token }` + Set-Cookie `app_session` or 401 |
-| POST   | `/api/auth/refresh` | Session | —                     | `{ success, user, token }` + Set-Cookie `app_session` or 401 |
+| POST   | `/api/auth/login`           | No      | `{ email, password }`        | `{ success, user, token }` + Set-Cookie `app_session` or 401 |
+| POST   | `/api/auth/refresh`         | Session | —                            | `{ success, user, token }` + Set-Cookie `app_session` or 401 |
+| POST   | `/api/auth/forgot-password` | No      | `{ email }`                  | `{ success, message }`                                       |
+| POST   | `/api/auth/reset-password`  | No      | `{ token, id, newPassword }` | `{ success, message }` or 400                                |
 
 **Canonical flow going forward**
 
@@ -84,6 +86,63 @@ Codes are **5 digits**, expire in **10 minutes**, and are sent by email (Brevo).
 - `intent`: `"login"` \| `"signup"`.
 - **Login:** verifies code for the user record; on success sets session and returns `{ success: true, redirect: "/dashboard" }` with `Set-Cookie`.
 - **Signup:** verifies code for the signup record (keyed by email); on success creates user from stored name/password hash, sets session, returns `{ success: true, redirect: "/create-company" }` with `Set-Cookie`.
+
+### Password Reset
+
+Standard flow:
+1. User requests a reset link via `forgot-password`.
+2. A unique token is generated, hashed, and stored in the `Otp` table (`collectionRef: "password-reset"`).
+3. An email is sent to the user with a link to `/reset-password?token=<token>&id=<otp_id>`.
+4. User submits the form on `/reset-password` which calls `POST /api/auth/reset-password`.
+
+| Method | Path                        | Auth | Request                      | Response                |
+| ------ | --------------------------- | ---- | ---------------------------- | ----------------------- |
+| POST   | `/api/auth/forgot-password` | No   | `{ email }`                  | `{ success, message }`  |
+| POST   | `/api/auth/reset-password`  | No   | `{ token, id, newPassword }` | `{ success, message } ` |
+
+**Forgot Password Example**
+
+Request:
+```http
+POST /api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+Response (200 OK):
+```json
+{
+  "success": true,
+  "message": "If an account exists with this email, you will receive a reset link."
+}
+```
+
+**Reset Password Example**
+
+Request:
+```http
+POST /api/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "4711142df351553bdf4ccffa4ea170818274cd952072bdc15ab541329518a8c0",
+  "id": "cmn4a0w860000nm2yzrb3br6l",
+  "newPassword": "new-secure-password"
+}
+```
+
+Response (200 OK):
+```json
+{
+  "success": true,
+  "message": "Your password has been reset successfully."
+}
+```
+
+_Note: Reset links expire in 1 hour. Resetting password rotates `tokenKey`, invalidating all existing sessions._
 
 ---
 

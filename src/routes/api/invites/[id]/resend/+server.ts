@@ -3,12 +3,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { sendInviteEmail } from '$lib/server/brevo';
 import { PUBLIC_BASE_URL, PUBLIC_ENV } from '$env/static/public';
-
-function normalizeUrl(baseUrl: string, path: string): string {
-	const normalizedBase = baseUrl.replace(/\/+$/, '');
-	const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-	return `${normalizedBase}${normalizedPath}`;
-}
+import { normalizeUrl } from '$lib/utils';
 
 export const POST: RequestHandler = async ({ params, locals }) => {
 	const user = locals.user;

@@ -195,6 +195,9 @@
 								required
 								class="w-full rounded-lg border-transparent bg-gray-100 px-4 py-3 focus:border-primary/60 focus:bg-white focus:ring-0"
 							/>
+							<div class="mt-2 text-right">
+								<a href="/forgot-password" class="text-sm text-primary hover:underline">Forgot password?</a>
+							</div>
 						</div>
 						<Button
 							type="submit"

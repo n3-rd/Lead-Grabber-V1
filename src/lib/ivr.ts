@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { normalizeUrl } from './utils';
 
 const DAY_MAP: Record<number, string> = {
 	0: 'Sun',
@@ -158,7 +159,5 @@ export function toAbsoluteAudioUrl(
 ): string | null {
 	if (!path) return null;
 	if (path.startsWith('http')) return path;
-	const base = baseUrl.replace(/\/$/, '');
-	const p = path.startsWith('/') ? path : `/${path}`;
-	return `${base}${p}`;
+	return normalizeUrl(baseUrl, path);
 }

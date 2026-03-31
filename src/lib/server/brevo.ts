@@ -23,6 +23,18 @@ export async function sendEmail({ to, subject, htmlContent }: SendEmailParams) {
 		return { messageId: 'dev-mode-mock-id' };
 	}
 
+	console.log(`[Brevo] Sending email to ${JSON.stringify(to)} with subject "${subject}"`);
+	const payload = {
+		sender: {
+			name: 'Lead Grabber',
+			email: 'noreply@viewroom.ca'
+		},
+		to,
+		subject,
+		htmlContent
+	};
+	console.log('[Brevo] Payload:', JSON.stringify(payload, null, 2));
+
 	const response = await fetch('https://api.brevo.com/v3/smtp/email', {
 		method: 'POST',
 		headers: {
@@ -30,24 +42,20 @@ export async function sendEmail({ to, subject, htmlContent }: SendEmailParams) {
 			'api-key': BREVO_API_KEY,
 			'content-type': 'application/json'
 		},
-		body: JSON.stringify({
-			sender: {
-				name: 'Lead Grabber',
-				email: 'noreply@viewroom.ca'
-			},
-			to,
-			subject,
-			htmlContent
-		})
+		body: JSON.stringify(payload)
 	});
+
+	console.log(`[Brevo] Response Status: ${response.status} ${response.statusText}`);
 
 	if (!response.ok) {
 		const error = await response.json();
-		console.error('Brevo API error:', error);
+		console.error('[Brevo] API Error:', JSON.stringify(error, null, 2));
 		throw new Error(`Brevo API error: ${JSON.stringify(error)}`);
 	}
 
-	return await response.json();
+	const result = await response.json();
+	console.log('[Brevo] API Success:', JSON.stringify(result, null, 2));
+	return result;
 }
 
 export async function sendInviteEmail({

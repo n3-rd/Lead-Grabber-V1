@@ -33,7 +33,7 @@ export async function sendEmail({ to, subject, htmlContent }: SendEmailParams) {
 		body: JSON.stringify({
 			sender: {
 				name: 'Lead Grabber',
-				email: 'noreply@leadgrabber.v1' // User should update this to a verified sender in Brevo
+				email: 'noreply@viewroom.ca'
 			},
 			to,
 			subject,

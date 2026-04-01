@@ -37,7 +37,7 @@ model User {
   sentInvites                       Invite[]                             @relation("InvitedBy")
   receivedInvites                   Invite[]                             @relation("InvitedUser")
   personalShortcuts                 Shortcut[]
-  fcmTokens                         FcmToken[]
+  devices                           UserDevice[]
   assignedTasks                     Task[]                               @relation("UserTasks")
 
   @@index([email])
@@ -570,20 +570,21 @@ model Shortcut {
   @@map("shortcuts")
 }
 
-// ClearSky spec: FCM/APNS device tokens for push
-model FcmToken {
+// ClearSky spec: APNS/FCM device tokens for push notifications and VoIP
+model UserDevice {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String
-  platform  String?  // ios | android
-  deviceId  String?
+  deviceId  String
+  platform  String?  // ios | android | web
+  fcmToken  String?
+  voipToken String?
   created   DateTime @default(now())
   updated   DateTime @updatedAt
 
   @@unique([userId, deviceId])
   @@index([userId])
-  @@map("fcm_tokens")
+  @@map("user_devices")
 }
 
 model Task {

@@ -1,4 +1,4 @@
-import { TELNYX_API_KEY, TELNYX_CONNECTION_ID } from '$env/static/private';
+import { TELNYX_API_KEY, TELNYX_CONNECTION_ID, TELNYX_MESSAGING_PROFILE_ID } from '$env/static/private';
 import { prisma } from '$lib/db';
 
 const TELNYX_API_BASE = 'https://api.telnyx.com/v2';
@@ -29,9 +29,26 @@ async function assignNumberVoice(phoneId: string): Promise<boolean> {
 	return res.ok;
 }
 
-/** Assign a Telnyx number to our voice connection (for use after buy). Voice only; messaging not used. */
+/** PATCH base phone number resource to set messaging_profile_id. */
+async function assignNumberMessaging(phoneId: string): Promise<boolean> {
+	if (!TELNYX_MESSAGING_PROFILE_ID) return true;
+	const path = phoneId.startsWith('+') ? encodeURIComponent(phoneId) : phoneId;
+	const url = `${TELNYX_API_BASE}/phone_numbers/${path}/messaging`;
+	const res = await fetch(url, {
+		method: 'PATCH',
+		headers: TELNYX_HEADERS,
+		body: JSON.stringify({ messaging_profile_id: String(TELNYX_MESSAGING_PROFILE_ID) })
+	});
+	if (!res.ok) {
+		const errorBody = await res.json();
+		console.error('Messaging PATCH failed:', res.status, phoneId, errorBody);
+	}
+	return res.ok;
+}
+
+/** Assign a Telnyx number to our voice connection and messaging profile. */
 export async function assignNumberToApp(telnyxPhoneNumberId: string): Promise<void> {
-	await assignNumberVoice(telnyxPhoneNumberId);
+	await Promise.all([assignNumberVoice(telnyxPhoneNumberId), assignNumberMessaging(telnyxPhoneNumberId)]);
 }
 
 interface TelnyxError {

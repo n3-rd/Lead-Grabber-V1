@@ -44,25 +44,31 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	for (const to of recipients) {
 		const formatted = normalizePhoneNumber(to);
 		try {
+			const payload = {
+				from: fromNumber,
+				to: formatted,
+				text: message,
+				messaging_profile_id: TELNYX_MESSAGING_PROFILE_ID,
+				webhook_url: normalizeUrl(PUBLIC_BASE_URL, '/api/telnyx/webhook'),
+				webhook_failover_url: normalizeUrl(PUBLIC_BASE_URL, '/api/telnyx/webhook-backup'),
+				use_profile_webhooks: false,
+				type: 'SMS'
+			};
+			console.log(`[Telnyx SMS] Sending to ${formatted} from ${fromNumber}`);
+			console.log('[Telnyx SMS] Payload:', JSON.stringify(payload, null, 2));
+
 			const response = await fetch('https://api.telnyx.com/v2/messages', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${TELNYX_API_KEY}`
 				},
-				body: JSON.stringify({
-					from: fromNumber,
-					to: formatted,
-					text: message,
-					messaging_profile_id: TELNYX_MESSAGING_PROFILE_ID,
-					webhook_url: normalizeUrl(PUBLIC_BASE_URL, '/api/telnyx/webhook'),
-					webhook_failover_url: normalizeUrl(PUBLIC_BASE_URL, '/api/telnyx/webhook-backup'),
-					use_profile_webhooks: false,
-					type: 'SMS'
-				})
+				body: JSON.stringify(payload)
 			});
+			console.log(`[Telnyx SMS] Response Status: ${response.status} ${response.statusText}`);
 			const result = await response.json();
 			if (response.ok && result.data?.id) {
+				console.log('[Telnyx SMS] API Success:', JSON.stringify(result, null, 2));
 				await logCommunication({
 					type: 'sms',
 					direction: 'outbound',
@@ -76,6 +82,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				});
 				results.push({ recipient: formatted, messageId: result.data.id, status: 'sent' });
 			} else {
+				console.error('[Telnyx SMS] API Error:', JSON.stringify(result, null, 2));
 				const err = result.errors?.[0]?.detail ?? 'Send failed';
 				results.push({ recipient: formatted, status: 'failed', error: err });
 			}

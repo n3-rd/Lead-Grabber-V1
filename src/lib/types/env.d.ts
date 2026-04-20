@@ -26,5 +26,7 @@ declare global {
 		NODE_ENV: string;
 		PUBLIC_BASE_URL: string;
 		PUBLIC_ENV: string;
+		/** Base64 or raw JSON; optional; used for FCM push (see FIREBASE_SERVICE_ACCOUNT_JSON in .env.example). */
+		FIREBASE_SERVICE_ACCOUNT_JSON?: string;
 	}
 }

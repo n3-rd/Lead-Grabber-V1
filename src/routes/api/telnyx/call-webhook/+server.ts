@@ -7,6 +7,7 @@ import { prisma } from '$lib/db';
 import { getActiveCallFlow, toAbsoluteAudioUrl } from '$lib/ivr';
 import { getCompanyAndFlowByPhoneNumber, toE164 } from '$lib/company-numbers';
 import { PUBLIC_BASE_URL } from '$env/static/public';
+import { notifyIncomingCallViaPush } from '$lib/server/push/incoming-call';
 
 const TELNYX_PUBLIC_KEY = process.env.TELNYX_PUBLIC_KEY;
 
@@ -147,6 +148,16 @@ export const POST: RequestHandler = async ({ request }) => {
 						'callFlowId:',
 						numberInfo?.callFlowId ?? 'none'
 					);
+
+					if (numberInfo?.companyId) {
+						void notifyIncomingCallViaPush({
+							companyId: numberInfo.companyId,
+							callControlId,
+							from: fromNumber,
+							to: toRaw,
+							callerName
+						}).catch((err) => console.error('[push] incoming call notify:', err));
+					}
 
 					if (!numberInfo) {
 						addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });

@@ -79,6 +79,14 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ error: 'Invalid webhook signature' }, { status: 401 });
 		}
 
+		// FORWARD TO CLEARSKY ENGINE:
+		// Send a copy of every Telnyx Voice webhook to the new AI Signals pipeline
+		fetch('https://clearskysoftware.net/api/signals/telnyx/voice', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: rawBody
+		}).catch(err => console.error('[ClearSky Forwarding Error]', err));
+
 		// IVR, recording, and comm-log creation always run locally. A2P is used only for
 		// communication-logs UI (e.g. isA2pCommLogEnabled / api/a2p/communication-log).
 		const body = JSON.parse(rawBody);

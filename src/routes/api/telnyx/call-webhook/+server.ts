@@ -178,7 +178,11 @@ export const POST: RequestHandler = async ({ request }) => {
 						});
 						if (active) {
 							const clientState = Buffer.from(
-								JSON.stringify({ ivrFlowId: active.flow.id, ivrRuleId: active.rule.id })
+								JSON.stringify({ 
+									ivrFlowId: active.flow.id, 
+									ivrRuleId: active.rule.id,
+									ivrPath: active.flow.title
+								})
 							).toString('base64');
 							try {
 								await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
@@ -340,8 +344,10 @@ export const POST: RequestHandler = async ({ request }) => {
 				const hangupUrl = resolveAudioUrl(rule.hangupAudioUrl, baseUrl);
 				const promptsUrl = resolveAudioUrl(rule.promptsAudioUrl, baseUrl);
 
-				const encodeClientState = (extra: Record<string, unknown>) =>
-					Buffer.from(JSON.stringify({ ivrFlowId, ivrRuleId, ...extra })).toString('base64');
+				const encodeClientState = (extra: Record<string, unknown>) => {
+					let ivrPath = (payload?.client_state ? JSON.parse(Buffer.from(payload.client_state as string, 'base64').toString('utf8')).ivrPath : '') || '';
+					return Buffer.from(JSON.stringify({ ivrFlowId, ivrRuleId, ivrPath, ...extra })).toString('base64');
+				};
 
 				// Timeout or no digits: failover or hangup
 				if (status !== 'valid' || !digits.trim()) {
@@ -390,17 +396,34 @@ export const POST: RequestHandler = async ({ request }) => {
 
 				const digit = digits.trim().charAt(0);
 
-				// # = leave message / hangup
+				// # = leave message / record voicemail
 				if (digit === '#') {
-					if (hangupUrl) {
-						const hangupState = Buffer.from(JSON.stringify({ afterPlaybackHangup: true })).toString(
-							'base64'
-						);
-						await telnyxPlayback(callControlId, hangupUrl, hangupState);
-					} else {
+					try {
+						// Start a fresh recording for the voicemail
+						await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/recording_start`, {
+							method: 'POST',
+							headers: TELNYX_HEADERS,
+							body: JSON.stringify({
+								format: 'mp3',
+								channels: 'single'
+							})
+						});
+						
+						// Provide prompt
+						await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/speak`, {
+							method: 'POST',
+							headers: TELNYX_HEADERS,
+							body: JSON.stringify({
+								payload: 'Please leave your message after the tone. When you are finished, you may hang up.',
+								voice: 'female',
+								language: 'en-US'
+							})
+						});
+						console.log('📞 IVR recording started for voicemail (#)');
+					} catch (err) {
+						console.error('❌ Failed to start voicemail recording:', err);
 						await telnyxHangup(callControlId);
 					}
-					console.log('📞 IVR user chose hangup (#)');
 					break;
 				}
 
@@ -431,22 +454,38 @@ export const POST: RequestHandler = async ({ request }) => {
 				}
 
 				const match = keyPrompts.find((p) => String(p.key).trim() === digit);
+				
+				// --- GAP 6: EMERGENCY BYPASS & FLAG ---
+				const isEmergency = digit === '3' || match?.name?.toLowerCase().includes('emergency');
+				const callPriority = isEmergency ? 'emergency' : 'standard';
+
 				if (match?.extension) {
 					const to = String(match.extension).trim();
 					const transferAudioUrl = match.transferAudioUrl
 						? resolveAudioUrl(match.transferAudioUrl, baseUrl)
 						: null;
+					
+					// Update path in client state
+					const currentPath = (payload?.client_state ? JSON.parse(Buffer.from(payload.client_state as string, 'base64').toString('utf8')).ivrPath : '') || '';
+					const newPath = currentPath ? `${currentPath} > ${match.name || digit}` : (match.name || digit);
+
 					if (transferAudioUrl) {
 						// Play transfer audio first, then transfer on playback.ended
-						// Include ivrFlowId/ivrRuleId so * can return to menu
 						const transferState = Buffer.from(
-							JSON.stringify({ afterPlaybackTransfer: true, transferTo: to, ivrFlowId, ivrRuleId })
+							JSON.stringify({ 
+								afterPlaybackTransfer: true, 
+								transferTo: to, 
+								ivrFlowId, 
+								ivrRuleId, 
+								ivrPath: newPath,
+								callPriority
+							})
 						).toString('base64');
 						await telnyxPlayback(callControlId, transferAudioUrl, transferState);
-						console.log('▶️ IVR playing transfer audio for', match.name ?? digit);
+						console.log('▶️ IVR playing transfer audio for', match.name ?? digit, isEmergency ? '(EMERGENCY)' : '');
 					} else {
 						await telnyxTransfer(callControlId, to);
-						console.log('📞 IVR transfer to', to, match.name ?? digit);
+						console.log('📞 IVR transfer to', to, match.name ?? digit, isEmergency ? '(EMERGENCY)' : '');
 					}
 				} else {
 					// Unknown key: treat like timeout, failover or hangup
@@ -845,9 +884,20 @@ export const POST: RequestHandler = async ({ request }) => {
 										sentiment = analysis.sentiment;
 										actionItems = analysis.actionItems;
 
+										// Resolve final path and priority from client state
+										let finalIvrPath = 'Direct Call';
+										let finalPriority = 'standard';
+										if (payload?.client_state) {
+											try {
+												const decoded = JSON.parse(Buffer.from(payload.client_state as string, 'base64').toString('utf8'));
+												finalIvrPath = decoded.ivrPath || finalIvrPath;
+												finalPriority = decoded.callPriority || finalPriority;
+											} catch (e) {}
+										}
+
 										// FORWARD TO CLEARSKY ENGINE:
 										// Now that we have the full transcript, send it to the AI Signals pipeline
-										fetch('https://clearskysoftware.net/api/signals/telnyx/voice', {
+										fetch('https://clearskysoftware.net/api/signals/telnyx/a2p', {
 											method: 'POST',
 											headers: { 'Content-Type': 'application/json' },
 											body: JSON.stringify({
@@ -857,7 +907,9 @@ export const POST: RequestHandler = async ({ request }) => {
 														from: contactNumber || 'Unknown',
 														to: companyNumber || 'Unknown',
 														call_control_id: callControlId,
-														transcription: { text: transcript }
+														transcription: { text: transcript },
+														ivr_path: finalIvrPath,
+														call_priority: finalPriority
 													}
 												}
 											})

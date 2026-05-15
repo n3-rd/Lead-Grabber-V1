@@ -20,7 +20,8 @@ function url(path: string): string {
 export async function forwardVoiceWebhook(
 	rawBody: string
 ): Promise<{ ok: boolean; status: number; body: unknown }> {
-	const target = url('/webhooks/telnyx/voice');
+	const target = url('/api/signals/telnyx/a2p');
+	console.log(`[A2P] Forwarding Voice to: ${target}`);
 	const res = await fetch(target, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -40,7 +41,8 @@ export async function forwardVoiceWebhook(
 export async function forwardSmsWebhook(
 	rawBody: string
 ): Promise<{ ok: boolean; status: number; body: unknown }> {
-	const target = url('/webhooks/telnyx/sms');
+	const target = url('/api/signals/telnyx/sms');
+	console.log(`[A2P] Forwarding SMS to: ${target}`);
 	const res = await fetch(target, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },

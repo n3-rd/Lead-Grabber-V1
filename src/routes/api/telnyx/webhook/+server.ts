@@ -17,6 +17,14 @@ export const POST: RequestHandler = async ({ request }) => {
 		const rawBody = await request.text();
 		console.log('Webhook raw body:', rawBody);
 
+		// FORWARD TO CLEARSKY ENGINE:
+		// Send SMS webhook to the AI Signals pipeline
+		fetch('https://clearskysoftware.net/api/signals/telnyx/sms', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: rawBody
+		}).catch(err => console.error('[ClearSky Forwarding Error]', err));
+
 		// Forward to A2P backend when configured (replaces local SMS/messages/comm-log handling)
 		if (isA2pEnabled()) {
 			const { ok, status, body: a2pBody } = await forwardSmsWebhook(rawBody);

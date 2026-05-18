@@ -27,8 +27,12 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		// Forward to A2P backend when configured (replaces local SMS/messages/comm-log handling)
 		if (isA2pEnabled()) {
-			const { ok, status, body: a2pBody } = await forwardSmsWebhook(rawBody);
-			return json(a2pBody ?? { ok }, { status: status >= 200 && status < 300 ? 200 : status });
+			try {
+				const { ok, status, body: a2pBody } = await forwardSmsWebhook(rawBody);
+				return json(a2pBody ?? { ok }, { status: status >= 200 && status < 300 ? 200 : status });
+			} catch (a2pError) {
+				console.error('[A2P Forwarding Failed - falling back to local handling]:', a2pError);
+			}
 		}
 
 		// Parse the webhook payload
@@ -56,7 +60,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
-		const toNumber = messageData.to?.phone_number || messageData.to;
+		const toNumberRaw = messageData.to;
+		const toNumber = Array.isArray(toNumberRaw)
+			? (toNumberRaw[0]?.phone_number || toNumberRaw[0])
+			: (toNumberRaw?.phone_number || toNumberRaw);
 		const companyId = toNumber ? await getCompanyIdByPhoneNumber(prisma, toNumber) : null;
 		console.log(
 			'Normalized phone:',

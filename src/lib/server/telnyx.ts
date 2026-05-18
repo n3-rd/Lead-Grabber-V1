@@ -508,59 +508,68 @@ export async function ensureCompanyNumbersAssignedToApp(): Promise<{
 		// 2. Get all phone numbers from Telnyx to check their current assignment
 		const allTelnyxNumbers = await listAllTelnyxPhoneNumbers();
 
-		// Create a map for quick lookup: phone_number -> connection_id
-		const telnyxConnectionMap = new Map(
-			allTelnyxNumbers.map((n) => [n.phone_number, n.connection_id])
+		// Create a map for quick lookup: phone_number -> { connectionId, messagingProfileId }
+		const telnyxMap = new Map(
+			allTelnyxNumbers.map((n) => [
+				n.phone_number,
+				{ connectionId: n.connection_id, messagingProfileId: n.messaging_profile_id }
+			])
 		);
 
-		// 3. Identify numbers that are not assigned to the correct voice app (keep Telnyx ID for PATCH)
-		const numbersToUpdate: Array<{ phoneNumber: string; telnyxPhoneNumberId: string }> = [];
+		let assignedCount = 0;
 		let skippedCount = 0;
+		let failedCount = 0;
 
 		for (const dbNumber of companyNumbers) {
 			const phoneNumber = dbNumber.phoneNumber!;
 			const id = dbNumber.telnyxPhoneNumberId!;
-			const currentConnectionId = telnyxConnectionMap.get(phoneNumber);
+			const telnyxInfo = telnyxMap.get(phoneNumber);
 
-			if (telnyxConnectionMap.has(phoneNumber)) {
-				if (currentConnectionId !== TELNYX_CONNECTION_ID) {
-					numbersToUpdate.push({ phoneNumber, telnyxPhoneNumberId: id });
+			if (telnyxInfo) {
+				let voiceChanged = false;
+				let smsChanged = false;
+
+				// Voice connection check
+				if (telnyxInfo.connectionId !== TELNYX_CONNECTION_ID) {
+					console.log(
+						`[Telnyx Sync] Voice connection ID mismatch for ${phoneNumber}. Expected: ${TELNYX_CONNECTION_ID}, Got: ${telnyxInfo.connectionId}`
+					);
+					const ok = await assignNumberVoice(phoneNumber);
+					if (ok) {
+						voiceChanged = true;
+					} else {
+						failedCount++;
+					}
+				}
+
+				// Messaging profile check
+				if (TELNYX_MESSAGING_PROFILE_ID && telnyxInfo.messagingProfileId !== TELNYX_MESSAGING_PROFILE_ID) {
+					console.log(
+						`[Telnyx Sync] Messaging profile ID mismatch for ${phoneNumber}. Expected: ${TELNYX_MESSAGING_PROFILE_ID}, Got: ${telnyxInfo.messagingProfileId}`
+					);
+					const ok = await assignNumberMessaging(phoneNumber);
+					if (ok) {
+						smsChanged = true;
+					} else {
+						failedCount++;
+					}
+				}
+
+				if (voiceChanged || smsChanged) {
+					assignedCount++;
 				} else {
 					skippedCount++;
 				}
+			} else {
+				console.warn(`[Telnyx Sync] Number ${phoneNumber} is in DB but not found in Telnyx account.`);
+				skippedCount++;
 			}
 		}
 
-		// 4. Batch assign via Telnyx batch API (or fallback to per-number PATCH)
-		if (numbersToUpdate.length > 0) {
-			const idsToUpdate = numbersToUpdate.map((n) => n.telnyxPhoneNumberId);
-			console.log(
-				`Found ${idsToUpdate.length} numbers to assign to voice app ${TELNYX_CONNECTION_ID}.`
-			);
-			try {
-				await batchUpdatePhoneNumbersByIds(idsToUpdate, TELNYX_CONNECTION_ID);
-				return {
-					assigned: idsToUpdate.length,
-					skipped: skippedCount,
-					failed: 0
-				};
-			} catch (err) {
-				console.error('Batch assignment failed, falling back to per-number PATCH:', err);
-				let assigned = 0;
-				// Use E.164 for PATCH: Telnyx accepts it and DB may have wrong/stale telnyxPhoneNumberId (e.g. UUID vs numeric id)
-				for (const { phoneNumber } of numbersToUpdate) {
-					if (await assignNumberVoice(phoneNumber)) assigned++;
-				}
-				return {
-					assigned,
-					skipped: skippedCount,
-					failed: idsToUpdate.length - assigned
-				};
-			}
-		} else {
-			console.log('All company numbers are already correctly assigned.');
-			return { assigned: 0, skipped: companyNumbers.length, failed: 0 };
-		}
+		console.log(
+			`[Telnyx Sync] Finished. Assigned/Updated: ${assignedCount}, Skipped: ${skippedCount}, Failed: ${failedCount}`
+		);
+		return { assigned: assignedCount, skipped: skippedCount, failed: failedCount };
 	} catch (error) {
 		console.error('Error in ensureCompanyNumbersAssignedToApp:', error);
 		return { assigned: 0, skipped: 0, failed: companyNumbers.length };

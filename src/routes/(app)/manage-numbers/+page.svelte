@@ -32,6 +32,7 @@
 	type CompanyNumber = {
 		id: string;
 		phoneNumber: string;
+		connectionLabel?: string | null;
 		callFlowId?: string | null;
 		callFlow?: { id: string; title: string } | null;
 		callTrackingCategoryId?: string | null;
@@ -46,6 +47,13 @@
 	let numberToDelete = $state<{ id: string; number: string } | null>(null);
 	let deleteDialogOpen = $state(false);
 	let isDeleting = $state(false);
+	let connectionOptions = $state<string[]>([
+		'ClearSky Software',
+		'Outbound Dialer',
+		'Inbound Routing',
+		'Voice Only',
+		'Unassigned'
+	]);
 
 	// Mock data for numbers (fallback)
 	const mockNumbers = [
@@ -287,6 +295,25 @@
 	function copyOrderId(id: string) {
 		navigator.clipboard.writeText(id);
 		toast.success('Order ID copied');
+	}
+
+	async function handleConnectionChange(cpId: string, value: string) {
+		try {
+			const res = await fetch(`/api/company-numbers/${cpId}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ connectionLabel: value || null })
+			});
+			const result = await res.json();
+			if (result.success && result.number) {
+				companyNumbers = companyNumbers.map((c) => (c.id === cpId ? result.number : c));
+				toast.success('Connection updated');
+			} else {
+				toast.error(result.error || 'Failed to update connection');
+			}
+		} catch (e) {
+			toast.error('Failed to update connection');
+		}
 	}
 
 	$effect(() => {
@@ -906,7 +933,25 @@
 										<td
 											class="py-3 font-['Poppins'] text-[14px] font-normal leading-[17px] text-[#808080]"
 										>
-											{num.connection}
+											{#if assigned}
+												<div class="flex flex-col gap-1">
+													<span class="text-[11px] font-medium text-[#A0A0A0]">Connection</span>
+													<select
+														class="min-w-[160px] rounded border border-[#969696] bg-white px-2 py-1 font-['Poppins'] text-sm text-[#808080] outline-none"
+														value={assigned.connectionLabel ?? ''}
+														onchange={(e) =>
+															handleConnectionChange(assigned.id, e.currentTarget.value)
+														}
+													>
+														<option value="">Select connection</option>
+														{#each connectionOptions as option}
+															<option value={option}>{option}</option>
+														{/each}
+													</select>
+												</div>
+											{:else}
+												<span class="text-[#B6B6B6]">—</span>
+											{/if}
 										</td>
 										<td
 											class="py-3 font-['Poppins'] text-[14px] font-normal leading-[17px] text-[#808080]"

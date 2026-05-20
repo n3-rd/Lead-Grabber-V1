@@ -31,6 +31,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const body = await request.json();
 		const phoneNumber = toE164((body.phoneNumber as string) ?? '');
 		const telnyxPhoneNumberId = body.telnyxPhoneNumberId as string | undefined;
+		const connectionLabel = body.connectionLabel as string | undefined;
 		if (!phoneNumber) {
 			return json({ error: 'phoneNumber is required' }, { status: 400 });
 		}
@@ -38,7 +39,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			data: {
 				companyId: locals.user.company.id,
 				phoneNumber,
-				...(telnyxPhoneNumberId && { telnyxPhoneNumberId })
+				...(telnyxPhoneNumberId && { telnyxPhoneNumberId }),
+				...(connectionLabel && { connectionLabel })
 			}
 		});
 		return json({ success: true, number: created });

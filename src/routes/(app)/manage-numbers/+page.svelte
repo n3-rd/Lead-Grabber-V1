@@ -47,13 +47,6 @@
 	let numberToDelete = $state<{ id: string; number: string } | null>(null);
 	let deleteDialogOpen = $state(false);
 	let isDeleting = $state(false);
-	let connectionOptions = $state<string[]>([
-		'ClearSky Software',
-		'Outbound Dialer',
-		'Inbound Routing',
-		'Voice Only',
-		'Unassigned'
-	]);
 
 	// Mock data for numbers (fallback)
 	const mockNumbers = [
@@ -936,18 +929,13 @@
 											{#if assigned}
 												<div class="flex flex-col gap-1">
 													<span class="text-[11px] font-medium text-[#A0A0A0]">Connection</span>
-													<select
+													<input
+														type="text"
 														class="min-w-[160px] rounded border border-[#969696] bg-white px-2 py-1 font-['Poppins'] text-sm text-[#808080] outline-none"
 														value={assigned.connectionLabel ?? ''}
-														onchange={(e) =>
-															handleConnectionChange(assigned.id, e.currentTarget.value)
-														}
-													>
-														<option value="">Select connection</option>
-														{#each connectionOptions as option}
-															<option value={option}>{option}</option>
-														{/each}
-													</select>
+														placeholder="Enter connection"
+														onblur={(e) => handleConnectionChange(assigned.id, e.currentTarget.value)}
+													/>
 												</div>
 											{:else}
 												<span class="text-[#B6B6B6]">—</span>

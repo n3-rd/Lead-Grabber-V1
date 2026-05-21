@@ -895,6 +895,17 @@ export const POST: RequestHandler = async ({ request }) => {
 											} catch (e) {}
 										}
 
+										let companyNumberLabel = 'Unknown Number';
+										if (companyNumber) {
+											const cNumberObj = await prisma.companyPhoneNumber.findUnique({
+												where: { phoneNumber: toE164(companyNumber) },
+												select: { connectionLabel: true }
+											});
+											if (cNumberObj?.connectionLabel) {
+												companyNumberLabel = cNumberObj.connectionLabel;
+											}
+										}
+
 										// FORWARD TO CLEARSKY ENGINE:
 										// Now that we have the full transcript, send it to the AI Signals pipeline
 										fetch('https://clearskysoftware.net/api/signals/telnyx/a2p', {
@@ -906,6 +917,7 @@ export const POST: RequestHandler = async ({ request }) => {
 													payload: {
 														from: contactNumber || 'Unknown',
 														to: companyNumber || 'Unknown',
+														to_label: companyNumberLabel,
 														call_control_id: callControlId,
 														transcription: { text: transcript },
 														ivr_path: finalIvrPath,

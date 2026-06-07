@@ -17,13 +17,32 @@ export const POST: RequestHandler = async ({ request }) => {
 		const rawBody = await request.text();
 		console.log('Webhook raw body:', rawBody);
 
+		let smsText = '';
+		let smsSender = 'Anonymous';
+		let smsId = `sms_${Date.now()}`;
+		try {
+			const parsed = JSON.parse(rawBody);
+			const msgPayload = parsed.data?.payload || parsed;
+			smsText = msgPayload.text || '';
+			smsSender = msgPayload.from?.phone_number || msgPayload.from || 'Anonymous';
+			smsId = msgPayload.id || smsId;
+		} catch (e) {}
+
 		// FORWARD TO CLEARSKY ENGINE:
 		// Send SMS webhook to the AI Signals pipeline
-		fetch('https://clearskysoftware.net/api/signals/telnyx/sms', {
+		const clearskyUrl = process.env.CLEARSKY_API_URL || 'https://testsite.clearskysoftware.net';
+		fetch(`${clearskyUrl}/next-api/signals/test`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: rawBody
-		}).catch(err => console.error('[ClearSky Forwarding Error]', err));
+			body: JSON.stringify({
+				author_name: smsSender,
+				customer_phone: smsSender !== 'Anonymous' ? smsSender : undefined,
+				rating: 0,
+				comment: smsText,
+				mode: 'sms',
+				sessionId: smsId
+			})
+		}).catch(err => console.error('[ClearSky Pipeline Forwarding Error]', err));
 
 		// Forward to A2P backend when configured (replaces local SMS/messages/comm-log handling)
 		if (isA2pEnabled()) {

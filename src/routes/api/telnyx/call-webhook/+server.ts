@@ -908,24 +908,19 @@ export const POST: RequestHandler = async ({ request }) => {
 
 										// FORWARD TO CLEARSKY ENGINE:
 										// Now that we have the full transcript, send it to the AI Signals pipeline
-										fetch('https://clearskysoftware.net/api/signals/telnyx/a2p', {
+										const clearskyUrl = process.env.CLEARSKY_API_URL || 'https://testsite.clearskysoftware.net';
+										fetch(`${clearskyUrl}/next-api/signals/test`, {
 											method: 'POST',
 											headers: { 'Content-Type': 'application/json' },
 											body: JSON.stringify({
-												data: {
-													event_type: 'call.transcription',
-													payload: {
-														from: contactNumber || 'Unknown',
-														to: companyNumber || 'Unknown',
-														to_label: companyNumberLabel,
-														call_control_id: callControlId,
-														transcription: { text: transcript },
-														ivr_path: finalIvrPath,
-														call_priority: finalPriority
-													}
-												}
+												author_name: contactNumber || 'Unknown Caller',
+												customer_phone: contactNumber || undefined,
+												rating: 0,
+												comment: transcript,
+												mode: 'call',
+												sessionId: callControlId
 											})
-										}).catch(err => console.error('[ClearSky Forwarding Error]', err));
+										}).catch(err => console.error('[ClearSky Pipeline Forwarding Error]', err));
 									}
 								} catch (err) {
 									console.error('❌ Groq processing failed:', err);

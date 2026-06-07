@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { prisma } from '$lib/db';
-import { draftResponse } from '$lib/ai/groq';
+import { draftResponse } from '$lib/ai/openai';
 
 /** Generate a draft reply for a thread (human-in-the-loop). Auth required. */
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -25,7 +25,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			return json({ error: 'Message not found' }, { status: 404 });
 		}
 
-		const messages = Array.isArray(message.messages) ? message.messages : [];
+		const messages = (Array.isArray(message.messages) ? message.messages : []) as any[];
 		const lastInbound = [...messages]
 			.reverse()
 			.find((m: { is_agent_reply?: boolean }) => !m?.is_agent_reply);

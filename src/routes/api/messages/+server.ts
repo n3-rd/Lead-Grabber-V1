@@ -5,7 +5,7 @@ import { getLogsForMessage } from '$lib/utils/inbox-log-link';
 import { logCommunication } from '$lib/utils/communication-log';
 import { createNotification } from '$lib/utils/notifications';
 import { createOrUpdateContact } from '$lib/utils/contacts';
-import { analyzeIncomingMessage } from '$lib/ai/groq';
+import { analyzeIncomingMessage } from '$lib/ai/openai';
 
 const CORS_HEADERS = {
 	'Access-Control-Allow-Origin': '*',
@@ -64,8 +64,8 @@ export const POST: RequestHandler = async ({ request }) => {
 					: []
 				: [];
 
-		// AI first so we can store Groq summary + purpose in CommunicationLog
-		const analysis = await analyzeIncomingMessage(messageContent, threadMessages);
+		// AI first so we can store OpenAI summary + purpose in CommunicationLog
+		const analysis = await analyzeIncomingMessage(messageContent, threadMessages as any);
 
 		const aiData = analysis
 			? {

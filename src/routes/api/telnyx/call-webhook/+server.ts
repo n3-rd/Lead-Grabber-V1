@@ -874,7 +874,7 @@ export const POST: RequestHandler = async ({ request }) => {
 							const audioUrl = getFirstAudioUrl(recUrls);
 							if (audioUrl) {
 								try {
-									const { transcribeAudio, analyzeCallLog } = await import('$lib/server/groq');
+									const { transcribeAudio, analyzeCallLog } = await import('$lib/server/openai');
 									transcript = await transcribeAudio(audioUrl);
 									if (transcript) {
 										const analysis = await analyzeCallLog(transcript);
@@ -883,8 +883,8 @@ export const POST: RequestHandler = async ({ request }) => {
 										urgency = analysis.urgency;
 										sentiment = analysis.sentiment;
 										actionItems = analysis.actionItems;
-
-										// Resolve final path and priority from client state
+                                        
+                                        // Resolve final path and priority from client state
 										let finalIvrPath = 'Direct Call';
 										let finalPriority = 'standard';
 										if (payload?.client_state) {
@@ -923,7 +923,7 @@ export const POST: RequestHandler = async ({ request }) => {
 										}).catch(err => console.error('[ClearSky Pipeline Forwarding Error]', err));
 									}
 								} catch (err) {
-									console.error('❌ Groq processing failed:', err);
+									console.error('❌ OpenAI processing failed:', err);
 								}
 							}
 

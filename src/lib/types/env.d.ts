@@ -22,6 +22,7 @@ declare global {
 		/** Optional: full URL to A2P comm-log API (e.g. http://host:5100/api/comm-events). When set, comm log is fetched from API instead of DB. */
 		A2P_COMMLOG_API_URL?: string;
 		GROQ_API_KEY: string;
+		OPEN_AI_KEY: string;
 		POCKETBASE_URL: string;
 		NODE_ENV: string;
 		PUBLIC_BASE_URL: string;

@@ -244,7 +244,7 @@ describe('IVR webhook simulation', () => {
 			expect(body.to).toBe('+15559876000');
 		});
 
-		it('starts hangup playback when digit is #', async () => {
+		it('starts recording voicemail when digit is #', async () => {
 			const { POST } = await import('../src/routes/api/telnyx/call-webhook/+server');
 			await POST({
 				request: new Request('http://localhost/api/telnyx/call-webhook', {
@@ -264,14 +264,19 @@ describe('IVR webhook simulation', () => {
 				})
 			});
 
-			const playbackCalls = mockFetch.mock.calls.filter(
+			const recordingCalls = mockFetch.mock.calls.filter(
 				(c: { 0: string }) =>
-					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-789/actions/playback_start'
+					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-789/actions/recording_start'
 			);
-			expect(playbackCalls.length).toBe(1);
-			const body = JSON.parse(playbackCalls[0][1]?.body ?? '{}');
-			expect(body.audio_url).toContain('/h.mp3');
-			expect(body.client_state).toBeDefined();
+			expect(recordingCalls.length).toBe(1);
+
+			const speakCalls = mockFetch.mock.calls.filter(
+				(c: { 0: string }) =>
+					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-789/actions/speak'
+			);
+			expect(speakCalls.length).toBe(1);
+			const body = JSON.parse(speakCalls[0][1]?.body ?? '{}');
+			expect(body.payload).toContain('Please leave your message');
 		});
 
 		it('re-gathers on timeout when under failover count', async () => {

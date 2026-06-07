@@ -1,18 +1,15 @@
-import Groq from 'groq-sdk';
+import { OPEN_AI_KEY } from '$env/static/private';
 
-const GROQ_MODEL = 'llama-3.1-8b-instant';
+const OPENAI_API_URL = 'https://api.openai.com/v1';
+const OPENAI_MODEL = 'gpt-4o-mini';
 
-let client: Groq | null = null;
-
-function getClient(): Groq | null {
-	if (client) return client;
-	const key = process.env.GROQ_API_KEY;
+function getApiKey(): string | null {
+	const key = OPEN_AI_KEY || process.env.OPEN_AI_KEY;
 	if (!key?.trim()) {
-		console.warn('[groq] GROQ_API_KEY not set — AI classification/summary skipped');
+		console.warn('[openai] OPEN_AI_KEY not set — AI classification/summary skipped');
 		return null;
 	}
-	client = new Groq({ apiKey: key });
-	return client;
+	return key;
 }
 
 export type UrgencyLevel = 1 | 2 | 3 | 4 | 5;
@@ -32,17 +29,50 @@ function levelToUrgency(level: number): UrgencyColor {
 }
 
 /**
+ * Helper to call OpenAI Chat Completions API
+ */
+async function callOpenAI(messages: any[], maxTokens = 150, temperature = 0.2, responseFormat?: any) {
+	const apiKey = getApiKey();
+	if (!apiKey) return null;
+
+	try {
+		const response = await fetch(`${OPENAI_API_URL}/chat/completions`, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${apiKey}`,
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				model: OPENAI_MODEL,
+				messages,
+				max_tokens: maxTokens,
+				temperature,
+				...(responseFormat && { response_format: responseFormat })
+			})
+		});
+
+		if (!response.ok) {
+			const errorText = await response.text();
+			console.error('[openai] API error:', errorText);
+			return null;
+		}
+
+		const data = await response.json();
+		return data.choices?.[0]?.message?.content?.trim() || null;
+	} catch (e) {
+		console.error('[openai] fetch error:', e);
+		return null;
+	}
+}
+
+/**
  * Classify message: urgency (1-5 → green/blue/red), sentiment, intent.
  * Pre-configured categories: Sales vs Support; subcategories like inquiry, booking, complaint, follow-up.
  */
 export async function classifyMessage(content: string): Promise<ClassificationResult | null> {
-	const groq = getClient();
-	if (!groq || !content?.trim()) return null;
-
 	try {
-		const res = await groq.chat.completions.create({
-			model: GROQ_MODEL,
-			messages: [
+		const raw = await callOpenAI(
+			[
 				{
 					role: 'system',
 					content: `You are a classifier for customer communications. Respond with ONLY valid JSON, no markdown.
@@ -58,11 +88,11 @@ Output format: {"urgencyLevel": N, "sentiment": "...", "intent": "..."}`
 					content: content.slice(0, 4000)
 				}
 			],
-			max_tokens: 128,
-			temperature: 0.1
-		});
+			128,
+			0.1,
+			{ type: 'json_object' }
+		);
 
-		const raw = res.choices?.[0]?.message?.content?.trim();
 		if (!raw) return null;
 
 		const parsed = JSON.parse(raw.replace(/^```\w*\n?|\n?```$/g, '').trim()) as {
@@ -77,10 +107,10 @@ Output format: {"urgencyLevel": N, "sentiment": "...", "intent": "..."}`
 			sentiment: typeof parsed.sentiment === 'string' ? parsed.sentiment : 'support',
 			intent: typeof parsed.intent === 'string' ? parsed.intent : 'other'
 		};
-		console.log('[groq] classify:', result);
+		console.log('[openai] classify:', result);
 		return result;
 	} catch (e) {
-		console.error('[groq] classify error:', e);
+		console.error('[openai] classify error:', e);
 		return null;
 	}
 }
@@ -92,9 +122,6 @@ export async function summarizeMessage(
 	content: string,
 	threadContext?: { role: string; content: string }[]
 ): Promise<string | null> {
-	const groq = getClient();
-	if (!groq || !content?.trim()) return null;
-
 	try {
 		const contextBlock = threadContext?.length
 			? '\n\nPrevious messages in thread:\n' +
@@ -104,9 +131,8 @@ export async function summarizeMessage(
 					.join('\n')
 			: '';
 
-		const res = await groq.chat.completions.create({
-			model: GROQ_MODEL,
-			messages: [
+		const summary = await callOpenAI(
+			[
 				{
 					role: 'system',
 					content:
@@ -117,15 +143,14 @@ export async function summarizeMessage(
 					content: content.slice(0, 3000) + contextBlock
 				}
 			],
-			max_tokens: 150,
-			temperature: 0.2
-		});
+			150,
+			0.2
+		);
 
-		const summary = res.choices?.[0]?.message?.content?.trim();
-		if (summary) console.log('[groq] summary:', summary);
+		if (summary) console.log('[openai] summary:', summary);
 		return summary || null;
 	} catch (e) {
-		console.error('[groq] summarize error:', e);
+		console.error('[openai] summarize error:', e);
 		return null;
 	}
 }
@@ -139,9 +164,6 @@ export async function draftResponse(
 	threadContext: { role: string; content: string }[],
 	channel: 'email' | 'sms' | 'chatbot' = 'chatbot'
 ): Promise<string | null> {
-	const groq = getClient();
-	if (!groq || !latestMessage?.trim()) return null;
-
 	try {
 		const contextBlock =
 			threadContext.length > 0
@@ -152,9 +174,8 @@ export async function draftResponse(
 						.join('\n')
 				: '';
 
-		const res = await groq.chat.completions.create({
-			model: GROQ_MODEL,
-			messages: [
+		const draft = await callOpenAI(
+			[
 				{
 					role: 'system',
 					content: `You are a helpful agent drafting a reply. Channel: ${channel}.
@@ -169,14 +190,13 @@ export async function draftResponse(
 						contextBlock + '\n\nLatest message to respond to:\n' + latestMessage.slice(0, 2000)
 				}
 			],
-			max_tokens: 500,
-			temperature: 0.4
-		});
+			500,
+			0.4
+		);
 
-		const draft = res.choices?.[0]?.message?.content?.trim();
 		return draft || null;
 	} catch (e) {
-		console.error('[groq] draftResponse error:', e);
+		console.error('[openai] draftResponse error:', e);
 		return null;
 	}
 }
@@ -216,6 +236,6 @@ export async function analyzeIncomingMessage(
 		}),
 		...(summary && { aiSummary: summary })
 	};
-	console.log('[groq] analyzeIncomingMessage:', out);
+	console.log('[openai] analyzeIncomingMessage:', out);
 	return out;
 }

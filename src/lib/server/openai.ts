@@ -1,10 +1,10 @@
-import { GROQ_API_KEY } from '$env/static/private';
+import { OPEN_AI_KEY } from '$env/static/private';
 
-const GROQ_API_URL = 'https://api.groq.com/openai/v1';
+const OPENAI_API_URL = 'https://api.openai.com/v1';
 
 /**
- * Transcribe audio using Groq's distil-whisper-large-v3-en model.
- * Note: Groq requires a file upload, so we need to fetch the audio first and send it as FormData.
+ * Transcribe audio using OpenAI's whisper-1 model.
+ * Note: OpenAI requires a file upload, so we fetch the audio first and send it as FormData.
  */
 export async function transcribeAudio(audioUrl: string): Promise<string> {
 	try {
@@ -17,22 +17,22 @@ export async function transcribeAudio(audioUrl: string): Promise<string> {
 
 		const formData = new FormData();
 		formData.append('file', audioBlob, 'recording.mp3');
-		formData.append('model', 'whisper-large-v3');
+		formData.append('model', 'whisper-1');
 		formData.append('response_format', 'text');
 
-		console.log('🎙️ Sending to Groq for transcription...');
-		const response = await fetch(`${GROQ_API_URL}/audio/transcriptions`, {
+		console.log('🎙️ Sending to OpenAI for transcription...');
+		const response = await fetch(`${OPENAI_API_URL}/audio/transcriptions`, {
 			method: 'POST',
 			headers: {
-				Authorization: `Bearer ${GROQ_API_KEY}`
+				Authorization: `Bearer ${OPEN_AI_KEY}`
 			},
 			body: formData
 		});
 
 		if (!response.ok) {
 			const errorText = await response.text();
-			console.error('Groq Transcription Error:', errorText);
-			throw new Error(`Groq Transcription Failed: ${response.status} ${response.statusText}`);
+			console.error('OpenAI Transcription Error:', errorText);
+			throw new Error(`OpenAI Transcription Failed: ${response.status} ${response.statusText}`);
 		}
 
 		const transcript = await response.text();
@@ -45,7 +45,7 @@ export async function transcribeAudio(audioUrl: string): Promise<string> {
 }
 
 /**
- * Analyze call transcript using Llama 3 to generate summary, intent, urgency, and action items.
+ * Analyze call transcript using OpenAI GPT-4o-mini to generate summary, intent, urgency, and action items.
  */
 export async function analyzeCallLog(transcript: string): Promise<{
 	summary: string;
@@ -68,15 +68,15 @@ export async function analyzeCallLog(transcript: string): Promise<{
     "${transcript}"
     `;
 
-		console.log('🧠 Sending to Groq for analysis...');
-		const response = await fetch(`${GROQ_API_URL}/chat/completions`, {
+		console.log('🧠 Sending to OpenAI for analysis...');
+		const response = await fetch(`${OPENAI_API_URL}/chat/completions`, {
 			method: 'POST',
 			headers: {
-				Authorization: `Bearer ${GROQ_API_KEY}`,
+				Authorization: `Bearer ${OPEN_AI_KEY}`,
 				'Content-Type': 'application/json'
 			},
 			body: JSON.stringify({
-				model: 'llama-3.3-70b-versatile',
+				model: 'gpt-4o-mini',
 				messages: [
 					{
 						role: 'system',
@@ -92,22 +92,22 @@ export async function analyzeCallLog(transcript: string): Promise<{
 
 		if (!response.ok) {
 			const errorText = await response.text();
-			console.error('Groq Analysis Error:', errorText);
-			throw new Error(`Groq Analysis Failed: ${response.status} ${response.statusText}`);
+			console.error('OpenAI Analysis Error:', errorText);
+			throw new Error(`OpenAI Analysis Failed: ${response.status} ${response.statusText}`);
 		}
 
 		const data = await response.json();
 		const content = data.choices[0]?.message?.content;
 
 		if (!content) {
-			throw new Error('No content received from Groq analysis');
+			throw new Error('No content received from OpenAI analysis');
 		}
 
 		const result = JSON.parse(content);
 		console.log('✅ Analysis complete:', result);
 
 		return {
-			summary: result.summary,
+			summary: result.summary || 'No summary generated',
 			intent: result.intent ?? '',
 			urgency: result.urgency?.toLowerCase() || 'medium',
 			actionItems: result.actionItems || [],

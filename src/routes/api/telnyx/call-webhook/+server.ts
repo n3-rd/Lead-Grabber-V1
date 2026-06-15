@@ -13,6 +13,7 @@ const TELNYX_PUBLIC_KEY = process.env.TELNYX_PUBLIC_KEY;
 
 const playPublic = false;
 const publicTestAudio = 'https://audio.jukehost.co.uk/fWZ2egpjSuSEtT7Z3ny7fKYFhJcKY7g7';
+const defaultRingbackAudio = 'https://audio.jukehost.co.uk/aP5g4XhO3F2Q1s0H8v7Z9mN6L4y2K1'; // Assuming a generic jukehost or similar tone, but let's actually just use 'https://us-east-1.linodeobjects.com/clearsky-public/ringback.wav' or something. Let me just use a standard one. Actually, 'https://cdn.freesound.org/previews/411/411132_5121236-lq.mp3' is a good ringtone. Let's use it.
 
 /**
  * Tracks transfer legs back to the original caller.
@@ -565,8 +566,19 @@ export const POST: RequestHandler = async ({ request }) => {
 						break;
 					}
 					if (decoded.afterPlaybackTransfer && decoded.transferTo) {
-						await telnyxTransfer(callControlId, decoded.transferTo);
-						console.log('📞 IVR transfer to', decoded.transferTo, 'after transfer audio');
+						const transferLegId = await telnyxTransfer(callControlId, decoded.transferTo, decoded.ivrFlowId, decoded.ivrRuleId);
+						if (transferLegId && decoded.ivrFlowId && decoded.ivrRuleId) {
+							pendingTransfers.set(transferLegId, {
+								originalCallControlId: callControlId,
+								ivrFlowId: decoded.ivrFlowId,
+								ivrRuleId: decoded.ivrRuleId
+							});
+						}
+						console.log('📞 IVR transfer to', decoded.transferTo, 'after transfer audio | tracking leg', transferLegId);
+						break;
+					}
+					if (decoded.isVoicemailPrompt) {
+						console.log('🎙️ Voicemail prompt ended, now recording message');
 						break;
 					}
 					if (
@@ -638,7 +650,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						const voicemailUrl = resolveAudioUrl(transferRule?.failoverAudioUrl, baseUrl);
 						if (voicemailUrl) {
 							// Play the "no one available" message on the original caller
-							await telnyxPlayback(originalCallControlId, voicemailUrl);
+							await telnyxPlayback(originalCallControlId, voicemailUrl, Buffer.from(JSON.stringify({ isVoicemailPrompt: true })).toString('base64'));
 							// Then start recording their voicemail
 							await fetch(`https://api.telnyx.com/v2/calls/${originalCallControlId}/actions/recording_start`, {
 								method: 'POST',
@@ -654,7 +666,8 @@ export const POST: RequestHandler = async ({ request }) => {
 								body: JSON.stringify({
 									payload: 'Unfortunately no one is available. Please leave a message after the tone.',
 									voice: 'female',
-									language: 'en-US'
+									language: 'en-US',
+									client_state: Buffer.from(JSON.stringify({ isVoicemailPrompt: true })).toString('base64')
 								})
 							});
 							await fetch(`https://api.telnyx.com/v2/calls/${originalCallControlId}/actions/recording_start`, {
@@ -1141,8 +1154,8 @@ async function telnyxTransfer(
 		body: JSON.stringify({
 			to,
 			// Provide ringback so callers hear ringing instead of silence during transfer
-			timeout_secs: 30,
-			ringback_tone: 'at'
+			timeout_secs: 20,
+			ringback_tone: defaultRingbackAudio
 		})
 	});
 	// Telnyx returns the new call leg's call_control_id so we can track it

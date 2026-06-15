@@ -14,6 +14,17 @@ const TELNYX_PUBLIC_KEY = process.env.TELNYX_PUBLIC_KEY;
 const playPublic = false;
 const publicTestAudio = 'https://audio.jukehost.co.uk/fWZ2egpjSuSEtT7Z3ny7fKYFhJcKY7g7';
 
+/**
+ * Tracks transfer legs back to the original caller.
+ * Key = transfer leg call_control_id
+ * Value = { originalCallControlId, ivrFlowId, ivrRuleId }
+ * This lets us play voicemail on the original caller if the transfer is not answered.
+ */
+const pendingTransfers = new Map<
+	string,
+	{ originalCallControlId: string; ivrFlowId: string; ivrRuleId: string }
+>();
+
 function resolveAudioUrl(path: string | null | undefined, baseUrl: string): string | null {
 	if (playPublic) return publicTestAudio;
 	return toAbsoluteAudioUrl(path, baseUrl);
@@ -486,8 +497,17 @@ export const POST: RequestHandler = async ({ request }) => {
 						await telnyxPlayback(callControlId, transferAudioUrl, transferState);
 						console.log('▶️ IVR playing transfer audio for', match.name ?? digit, isEmergency ? '(EMERGENCY)' : '');
 					} else {
-						await telnyxTransfer(callControlId, to);
-						console.log('📞 IVR transfer to', to, match.name ?? digit, isEmergency ? '(EMERGENCY)' : '');
+						const transferLegId = await telnyxTransfer(callControlId, to, ivrFlowId, ivrRuleId);
+						if (transferLegId) {
+							pendingTransfers.set(transferLegId, {
+								originalCallControlId: callControlId,
+								ivrFlowId,
+								ivrRuleId
+							});
+							console.log('📞 IVR transfer to', to, match.name ?? digit, '| tracking leg', transferLegId);
+						} else {
+							console.log('📞 IVR transfer to', to, match.name ?? digit, isEmergency ? '(EMERGENCY)' : '');
+						}
 					}
 				} else {
 					// Unknown key: treat like timeout, failover or hangup
@@ -597,6 +617,61 @@ export const POST: RequestHandler = async ({ request }) => {
 			case 'call.hangup': {
 				console.log('📞 Call hangup:', callControlId);
 				await logCallEvent(callControlId, 'ended', payload);
+
+				// --- Transfer no-answer → voicemail ---
+				// If this hangup is for a transfer leg that timed out/was not answered,
+				// play the failover (voicemail) audio on the original caller's leg.
+				const hangupCause = (payload?.hangup_cause as string) ?? '';
+				const noAnswerCauses = ['timeout', 'user_busy', 'no_answer', 'busy', 'call_rejected'];
+				const pendingTransfer = pendingTransfers.get(callControlId);
+				if (pendingTransfer && noAnswerCauses.some((c) => hangupCause.toLowerCase().includes(c))) {
+					pendingTransfers.delete(callControlId);
+					const { originalCallControlId, ivrFlowId: tFlowId, ivrRuleId: tRuleId } = pendingTransfer;
+					console.log('📞 Transfer not answered (', hangupCause, '), playing voicemail on original caller', originalCallControlId);
+					try {
+						const baseUrl = PUBLIC_BASE_URL || 'https://example.com';
+						const transferFlow = await prisma.callFlow.findUnique({
+							where: { id: tFlowId },
+							include: { rules: { where: { id: tRuleId } } }
+						});
+						const transferRule = transferFlow?.rules?.[0];
+						const voicemailUrl = resolveAudioUrl(transferRule?.failoverAudioUrl, baseUrl);
+						if (voicemailUrl) {
+							// Play the "no one available" message on the original caller
+							await telnyxPlayback(originalCallControlId, voicemailUrl);
+							// Then start recording their voicemail
+							await fetch(`https://api.telnyx.com/v2/calls/${originalCallControlId}/actions/recording_start`, {
+								method: 'POST',
+								headers: TELNYX_HEADERS,
+								body: JSON.stringify({ format: 'mp3', channels: 'single' })
+							});
+							console.log('🎙️ Voicemail recording started for original caller after transfer no-answer');
+						} else {
+							// No failover audio configured — just speak a default message and record
+							await fetch(`https://api.telnyx.com/v2/calls/${originalCallControlId}/actions/speak`, {
+								method: 'POST',
+								headers: TELNYX_HEADERS,
+								body: JSON.stringify({
+									payload: 'Unfortunately no one is available. Please leave a message after the tone.',
+									voice: 'female',
+									language: 'en-US'
+								})
+							});
+							await fetch(`https://api.telnyx.com/v2/calls/${originalCallControlId}/actions/recording_start`, {
+								method: 'POST',
+								headers: TELNYX_HEADERS,
+								body: JSON.stringify({ format: 'mp3', channels: 'single' })
+							});
+							console.log('🎙️ Default voicemail TTS + recording started (no failover audio configured)');
+						}
+					} catch (err) {
+						console.error('❌ Failed to start voicemail after transfer no-answer:', err);
+					}
+					break; // Don't process the rest of call.hangup for a transfer leg
+				} else if (pendingTransfer) {
+					// Transfer leg hung up for another reason (e.g. answered then caller hung up) — clean up
+					pendingTransfers.delete(callControlId);
+				}
 
 				// Create call record with duration on hangup (recording link added later in call.recording.saved)
 				const hangupDuration = computeDurationFromPayload(payload);
@@ -1054,8 +1129,13 @@ async function telnyxHangup(callControlId: string): Promise<void> {
 	});
 }
 
-async function telnyxTransfer(callControlId: string, to: string): Promise<void> {
-	await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/transfer`, {
+async function telnyxTransfer(
+	callControlId: string,
+	to: string,
+	ivrFlowId?: string,
+	ivrRuleId?: string
+): Promise<string | null> {
+	const res = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/transfer`, {
 		method: 'POST',
 		headers: TELNYX_HEADERS,
 		body: JSON.stringify({
@@ -1065,6 +1145,14 @@ async function telnyxTransfer(callControlId: string, to: string): Promise<void> 
 			ringback_tone: 'at'
 		})
 	});
+	// Telnyx returns the new call leg's call_control_id so we can track it
+	try {
+		const data = await res.json();
+		const newLegId = data?.data?.call_control_id as string | undefined;
+		return newLegId ?? null;
+	} catch {
+		return null;
+	}
 }
 
 // Log call events to database (Prisma)

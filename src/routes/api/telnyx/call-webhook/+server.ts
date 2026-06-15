@@ -1250,13 +1250,27 @@ async function telnyxTransfer(
 		});
 	}
 
-	console.log(`📡 Sending Telnyx transfer request for ${callControlId} to ${to}...`);
+	let timeoutSecs = 20; // Default fallback
+	if (ivrFlowId && ivrRuleId) {
+		try {
+			const flow = await prisma.callFlow.findUnique({
+				where: { id: ivrFlowId },
+				include: { rules: { where: { id: ivrRuleId } } }
+			});
+			const rule = flow?.rules?.[0];
+			if (rule) {
+				timeoutSecs = (rule as { failoverDelayMinutes?: number }).failoverDelayMinutes ?? 20;
+			}
+		} catch (e) {}
+	}
+
+	console.log(`📡 Sending Telnyx transfer request for ${callControlId} to ${to} (timeout: ${timeoutSecs}s)...`);
 	const res = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/transfer`, {
 		method: 'POST',
 		headers: TELNYX_HEADERS,
 		body: JSON.stringify({
 			to,
-			timeout_secs: 20,
+			timeout_secs: timeoutSecs,
 			ringback_tone: defaultRingbackAudio
 		})
 	});

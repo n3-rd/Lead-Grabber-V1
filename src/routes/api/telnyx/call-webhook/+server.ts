@@ -219,22 +219,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						}
 					}
 				} else {
-					// For outbound calls, we can still auto-answer
-					if (callControlId) {
-						try {
-							await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
-								method: 'POST',
-								headers: {
-									'Content-Type': 'application/json',
-									Authorization: `Bearer ${TELNYX_API_KEY}`
-								},
-								body: JSON.stringify({ record: 'record-from-answer' })
-							});
-							console.log('✅ Outbound call answered and recording started');
-						} catch (error) {
-							console.error('❌ Error answering/recording outbound call:', error);
-						}
-					}
+					console.log('📞 Outbound call initiated:', callControlId, 'from:', fromNumber, 'to:', toRaw);
 				}
 				break;
 			}
@@ -1148,24 +1133,28 @@ async function telnyxTransfer(
 	ivrFlowId?: string,
 	ivrRuleId?: string
 ): Promise<string | null> {
+	console.log(`📡 Sending Telnyx transfer request for ${callControlId} to ${to}...`);
 	const res = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/transfer`, {
 		method: 'POST',
 		headers: TELNYX_HEADERS,
 		body: JSON.stringify({
 			to,
-			// Provide ringback so callers hear ringing instead of silence during transfer
-			timeout_secs: 20,
-			ringback_tone: defaultRingbackAudio
+			timeout_secs: 20
 		})
 	});
-	// Telnyx returns the new call leg's call_control_id so we can track it
-	try {
-		const data = await res.json();
-		const newLegId = data?.data?.call_control_id as string | undefined;
-		return newLegId ?? null;
-	} catch {
+
+	const data = await res.json().catch(() => null);
+	if (!res.ok) {
+		console.error(`❌ Telnyx transfer failed (status ${res.status}):`, data);
 		return null;
 	}
+
+	// Telnyx returns the new call leg's call_control_id so we can track it
+	const newLegId = data?.data?.call_control_id as string | undefined;
+	if (!newLegId) {
+		console.warn('⚠️ Telnyx transfer success but no call_control_id in response:', data);
+	}
+	return newLegId ?? null;
 }
 
 // Log call events to database (Prisma)

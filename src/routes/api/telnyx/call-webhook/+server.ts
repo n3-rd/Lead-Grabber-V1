@@ -34,6 +34,13 @@ const intentToTransfer = new Map<
 	{ originalCallControlId: string; ivrFlowId: string; ivrRuleId: string; timestamp: number }
 >();
 
+const defaultBeepAudio = 'https://codeskulptor-demos.commondatastorage.googleapis.com/descent/gotitem.mp3';
+
+/**
+ * Tracks call control IDs that have transitioned to voicemail.
+ */
+const callsWithVoicemail = new Set<string>();
+
 function resolveAudioUrl(path: string | null | undefined, baseUrl: string): string | null {
 	if (playPublic) return publicTestAudio;
 	return toAbsoluteAudioUrl(path, baseUrl);
@@ -440,15 +447,15 @@ export const POST: RequestHandler = async ({ request }) => {
 				// # = leave message / record voicemail
 				if (digit === '#') {
 					try {
-						// Start a fresh recording for the voicemail
-						await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/recording_start`, {
+						// Mark call as going to voicemail
+						callsWithVoicemail.add(callControlId);
+
+						// Stop current recording
+						await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/recording_stop`, {
 							method: 'POST',
 							headers: TELNYX_HEADERS,
-							body: JSON.stringify({
-								format: 'mp3',
-								channels: 'single'
-							})
-						});
+							body: JSON.stringify({})
+						}).catch(() => null);
 						
 						// Provide prompt
 						await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/speak`, {
@@ -457,12 +464,13 @@ export const POST: RequestHandler = async ({ request }) => {
 							body: JSON.stringify({
 								payload: 'Please leave your message after the tone. When you are finished, you may hang up.',
 								voice: 'female',
-								language: 'en-US'
+								language: 'en-US',
+								client_state: Buffer.from(JSON.stringify({ isVoicemailPrompt: true, ivrFlowId, ivrRuleId })).toString('base64')
 							})
 						});
-						console.log('📞 IVR recording started for voicemail (#)');
+						console.log('📞 IVR voicemail prompt started (#)');
 					} catch (err) {
-						console.error('❌ Failed to start voicemail recording:', err);
+						console.error('❌ Failed to start voicemail prompt:', err);
 						await telnyxHangup(callControlId);
 					}
 					break;
@@ -605,7 +613,36 @@ export const POST: RequestHandler = async ({ request }) => {
 						break;
 					}
 					if (decoded.isVoicemailPrompt) {
-						console.log('🎙️ Voicemail prompt ended, now recording message');
+						console.log('🎙️ Voicemail prompt ended, now playing beep before recording');
+						const beepState = Buffer.from(
+							JSON.stringify({
+								isVoicemailBeep: true,
+								ivrFlowId: decoded.ivrFlowId,
+								ivrRuleId: decoded.ivrRuleId
+							})
+						).toString('base64');
+						await telnyxPlayback(callControlId, defaultBeepAudio, beepState);
+						break;
+					}
+					if (decoded.isVoicemailBeep) {
+						console.log('🎙️ Beep ended, starting voicemail recording');
+						const recordState = Buffer.from(
+							JSON.stringify({
+								isVoicemailRecording: true,
+								ivrFlowId: decoded.ivrFlowId,
+								ivrRuleId: decoded.ivrRuleId,
+								ivrPath: 'Voicemail'
+							})
+						).toString('base64');
+						await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/recording_start`, {
+							method: 'POST',
+							headers: TELNYX_HEADERS,
+							body: JSON.stringify({
+								format: 'mp3',
+								channels: 'single',
+								client_state: recordState
+							})
+						});
 						break;
 					}
 					if (
@@ -668,6 +705,16 @@ export const POST: RequestHandler = async ({ request }) => {
 					const { originalCallControlId, ivrFlowId: tFlowId, ivrRuleId: tRuleId } = pendingTransfer;
 					console.log('📞 Transfer not answered (', hangupCause, '), playing voicemail on original caller', originalCallControlId);
 					try {
+						// Mark call as going to voicemail
+						callsWithVoicemail.add(originalCallControlId);
+
+						// Stop current recording
+						await fetch(`https://api.telnyx.com/v2/calls/${originalCallControlId}/actions/recording_stop`, {
+							method: 'POST',
+							headers: TELNYX_HEADERS,
+							body: JSON.stringify({})
+						}).catch(() => null);
+
 						const baseUrl = PUBLIC_BASE_URL || 'https://example.com';
 						const transferFlow = await prisma.callFlow.findUnique({
 							where: { id: tFlowId },
@@ -677,16 +724,14 @@ export const POST: RequestHandler = async ({ request }) => {
 						const voicemailUrl = resolveAudioUrl(transferRule?.failoverAudioUrl, baseUrl);
 						if (voicemailUrl) {
 							// Play the "no one available" message on the original caller
-							await telnyxPlayback(originalCallControlId, voicemailUrl, Buffer.from(JSON.stringify({ isVoicemailPrompt: true })).toString('base64'));
-							// Then start recording their voicemail
-							await fetch(`https://api.telnyx.com/v2/calls/${originalCallControlId}/actions/recording_start`, {
-								method: 'POST',
-								headers: TELNYX_HEADERS,
-								body: JSON.stringify({ format: 'mp3', channels: 'single' })
-							});
-							console.log('🎙️ Voicemail recording started for original caller after transfer no-answer');
+							await telnyxPlayback(
+								originalCallControlId,
+								voicemailUrl,
+								Buffer.from(JSON.stringify({ isVoicemailPrompt: true, ivrFlowId: tFlowId, ivrRuleId: tRuleId })).toString('base64')
+							);
+							console.log('🎙️ Voicemail prompt playback started');
 						} else {
-							// No failover audio configured — just speak a default message and record
+							// No failover audio configured — just speak a default message
 							await fetch(`https://api.telnyx.com/v2/calls/${originalCallControlId}/actions/speak`, {
 								method: 'POST',
 								headers: TELNYX_HEADERS,
@@ -694,15 +739,10 @@ export const POST: RequestHandler = async ({ request }) => {
 									payload: 'Unfortunately no one is available. Please leave a message after the tone.',
 									voice: 'female',
 									language: 'en-US',
-									client_state: Buffer.from(JSON.stringify({ isVoicemailPrompt: true })).toString('base64')
+									client_state: Buffer.from(JSON.stringify({ isVoicemailPrompt: true, ivrFlowId: tFlowId, ivrRuleId: tRuleId })).toString('base64')
 								})
 							});
-							await fetch(`https://api.telnyx.com/v2/calls/${originalCallControlId}/actions/recording_start`, {
-								method: 'POST',
-								headers: TELNYX_HEADERS,
-								body: JSON.stringify({ format: 'mp3', channels: 'single' })
-							});
-							console.log('🎙️ Default voicemail TTS + recording started (no failover audio configured)');
+							console.log('🎙️ Default voicemail TTS started (no failover audio configured)');
 						}
 					} catch (err) {
 						console.error('❌ Failed to start voicemail after transfer no-answer:', err);
@@ -988,8 +1028,25 @@ export const POST: RequestHandler = async ({ request }) => {
 							let sentiment = '';
 							let actionItems: string[] = [];
 
+							let decoded: any = null;
+							if (payload?.client_state) {
+								try {
+									decoded = JSON.parse(
+										Buffer.from(payload.client_state as string, 'base64').toString('utf8')
+									);
+								} catch (e) {}
+							}
+
+							const isVoicemailRecording = !!decoded?.isVoicemailRecording;
+							const hasVoicemail = callsWithVoicemail.has(callControlId);
+							const shouldTranscribe = !hasVoicemail || isVoicemailRecording;
+
+							if (isVoicemailRecording) {
+								callsWithVoicemail.delete(callControlId);
+							}
+
 							const audioUrl = getFirstAudioUrl(recUrls);
-							if (audioUrl) {
+							if (audioUrl && shouldTranscribe) {
 								try {
 									const { transcribeAudio, analyzeCallLog } = await import('$lib/server/openai');
 									transcript = await transcribeAudio(audioUrl);
@@ -1004,12 +1061,9 @@ export const POST: RequestHandler = async ({ request }) => {
                                         // Resolve final path and priority from client state
 										let finalIvrPath = 'Direct Call';
 										let finalPriority = 'standard';
-										if (payload?.client_state) {
-											try {
-												const decoded = JSON.parse(Buffer.from(payload.client_state as string, 'base64').toString('utf8'));
-												finalIvrPath = decoded.ivrPath || finalIvrPath;
-												finalPriority = decoded.callPriority || finalPriority;
-											} catch (e) {}
+										if (decoded) {
+											finalIvrPath = decoded.ivrPath || finalIvrPath;
+											finalPriority = decoded.callPriority || finalPriority;
 										}
 
 										let companyNumberLabel = 'Unknown Number';

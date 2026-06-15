@@ -129,11 +129,11 @@ describe('IVR webhook simulation', () => {
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(eventPayload)
 				})
-			});
+			} as any);
 
 			expect(res.status).toBe(200);
 			const answerCalls = mockFetch.mock.calls.filter(
-				(c: { 0: string }) =>
+				(c: any) =>
 					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-123/actions/answer'
 			);
 			expect(answerCalls.length).toBeGreaterThanOrEqual(1);
@@ -165,7 +165,7 @@ describe('IVR webhook simulation', () => {
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(eventPayloadNoIvr)
 				})
-			});
+			} as any);
 			expect(res.status).toBe(200);
 			expect(mockAddPendingCall).toHaveBeenCalledWith(
 				expect.objectContaining({ phone: '+15551234567', callId: 'call-ctrl-no-ivr' })
@@ -233,10 +233,10 @@ describe('IVR webhook simulation', () => {
 						}
 					})
 				})
-			});
+			} as any);
 
 			const transferCalls = mockFetch.mock.calls.filter(
-				(c: { 0: string }) =>
+				(c: any) =>
 					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-456/actions/transfer'
 			);
 			expect(transferCalls.length).toBe(1);
@@ -262,21 +262,72 @@ describe('IVR webhook simulation', () => {
 						}
 					})
 				})
-			});
+			} as any);
 
-			const recordingCalls = mockFetch.mock.calls.filter(
-				(c: { 0: string }) =>
-					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-789/actions/recording_start'
+			// Should stop current recording and play voicemail prompt
+			const stopCalls = mockFetch.mock.calls.filter(
+				(c: any) =>
+					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-789/actions/recording_stop'
 			);
-			expect(recordingCalls.length).toBe(1);
+			expect(stopCalls.length).toBe(1);
 
 			const speakCalls = mockFetch.mock.calls.filter(
-				(c: { 0: string }) =>
+				(c: any) =>
 					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-789/actions/speak'
 			);
 			expect(speakCalls.length).toBe(1);
 			const body = JSON.parse(speakCalls[0][1]?.body ?? '{}');
 			expect(body.payload).toContain('Please leave your message');
+			expect(body.client_state).toBeDefined();
+
+			// Simulate voicemail prompt ended -> should play beep
+			await POST({
+				request: new Request('http://localhost/api/telnyx/call-webhook', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						data: {
+							event_type: 'call.playback.ended',
+							payload: {
+								call_control_id: 'call-ctrl-789',
+								client_state: body.client_state
+							}
+						}
+					})
+				})
+			} as any);
+
+			const beepCalls = mockFetch.mock.calls.filter(
+				(c: any) =>
+					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-789/actions/playback_start'
+			);
+			expect(beepCalls.length).toBe(1);
+			const beepBody = JSON.parse(beepCalls[0][1]?.body ?? '{}');
+			expect(beepBody.audio_url).toContain('gotitem.mp3');
+			expect(beepBody.client_state).toBeDefined();
+
+			// Simulate beep ended -> should start recording voicemail
+			await POST({
+				request: new Request('http://localhost/api/telnyx/call-webhook', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						data: {
+							event_type: 'call.playback.ended',
+							payload: {
+								call_control_id: 'call-ctrl-789',
+								client_state: beepBody.client_state
+							}
+						}
+					})
+				})
+			} as any);
+
+			const recordingCalls = mockFetch.mock.calls.filter(
+				(c: any) =>
+					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-789/actions/recording_start'
+			);
+			expect(recordingCalls.length).toBe(1);
 		});
 
 		it('re-gathers on timeout when under failover count', async () => {
@@ -301,15 +352,15 @@ describe('IVR webhook simulation', () => {
 						}
 					})
 				})
-			});
+			} as any);
 
 			// Should play failover then (on playback.ended) re-gather; or if no failover URL, gather immediately
 			const gatherCalls = mockFetch.mock.calls.filter(
-				(c: { 0: string }) =>
+				(c: any) =>
 					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-timeout/actions/gather_using_audio'
 			);
 			const playbackCalls = mockFetch.mock.calls.filter(
-				(c: { 0: string }) =>
+				(c: any) =>
 					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-timeout/actions/playback_start'
 			);
 			expect(gatherCalls.length + playbackCalls.length).toBeGreaterThanOrEqual(1);
@@ -336,7 +387,7 @@ describe('IVR webhook simulation', () => {
 						).toString('base64')
 					})
 				})
-			});
+			} as any);
 
 			expect(res.status).toBe(200);
 			// Would try to load flow f1 / rule r1 and then transfer or fail

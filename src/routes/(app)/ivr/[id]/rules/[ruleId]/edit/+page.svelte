@@ -86,7 +86,7 @@
 	let keyPrompts = $state<KeyPrompt[]>(defaultKeyPrompts());
 	let promptTransferFiles = $state<(File | null)[]>([]);
 	let failoverCount = $state(2);
-	let failoverDelayMinutes = $state(2);
+	let failoverDelayMinutes = $state(30);
 	let backDigit = $state('');
 	let dialerOpen = $state(false);
 	let dialerEditingIndex = $state(0);
@@ -105,7 +105,7 @@
 			callFlowRuleTitle = r.ruleTitle ?? '';
 			schedule = scheduleFromRule(r);
 			failoverCount = r.failoverCount ?? 2;
-			failoverDelayMinutes = r.failoverDelayMinutes ?? 2;
+			failoverDelayMinutes = r.failoverDelayMinutes ?? 30;
 			backDigit = r.backDigit ?? '';
 			keyPrompts =
 				Array.isArray(r.keyPrompts) && r.keyPrompts.length
@@ -532,7 +532,7 @@
 					</div>
 					<div class="space-y-2">
 						<label class="block font-['Poppins'] text-xl text-[#808080]"
-							>Time before failovers (min)</label
+							>Time before failovers (sec)</label
 						>
 						<input
 							type="number"

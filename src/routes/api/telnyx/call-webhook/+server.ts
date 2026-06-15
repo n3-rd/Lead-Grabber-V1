@@ -340,6 +340,8 @@ export const POST: RequestHandler = async ({ request }) => {
 						transferAudioUrl?: string;
 					}[]) ?? [];
 				const failoverCount = rule.failoverCount ?? 2;
+				const failoverDelaySecs = (rule as { failoverDelayMinutes?: number }).failoverDelayMinutes ?? 30;
+				const failoverTimeoutMillis = failoverDelaySecs * 1000;
 				const failoverUrl = resolveAudioUrl(rule.failoverAudioUrl, baseUrl);
 				const hangupUrl = resolveAudioUrl(rule.hangupAudioUrl, baseUrl);
 				const promptsUrl = resolveAudioUrl(rule.promptsAudioUrl, baseUrl);
@@ -382,7 +384,7 @@ export const POST: RequestHandler = async ({ request }) => {
 										audio_url: promptsUrl,
 										minimum_digits: 1,
 										maximum_digits: 1,
-										timeout_millis: 10000,
+										timeout_millis: failoverTimeoutMillis,
 										terminating_digit: '#',
 										client_state: nextState
 									})
@@ -443,7 +445,7 @@ export const POST: RequestHandler = async ({ request }) => {
 								audio_url: promptsUrl,
 								minimum_digits: 1,
 								maximum_digits: 1,
-								timeout_millis: 10000,
+								timeout_millis: failoverTimeoutMillis,
 								terminating_digit: '#',
 								client_state: nextState
 							})
@@ -1056,7 +1058,12 @@ async function telnyxTransfer(callControlId: string, to: string): Promise<void> 
 	await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/transfer`, {
 		method: 'POST',
 		headers: TELNYX_HEADERS,
-		body: JSON.stringify({ to })
+		body: JSON.stringify({
+			to,
+			// Provide ringback so callers hear ringing instead of silence during transfer
+			timeout_secs: 30,
+			ringback_tone: 'at'
+		})
 	});
 }
 

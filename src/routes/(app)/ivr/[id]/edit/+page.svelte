@@ -44,7 +44,7 @@
 	let promptTransferFiles = $state<(File | null)[]>([null, null, null]);
 
 	let failoverCount = $state(2);
-	let failoverDelayMinutes = $state(2);
+	let failoverDelayMinutes = $state(30);
 	let backDigit = $state('');
 	let backDigitDialerOpen = $state(false);
 	let dialerOpen = $state(false);
@@ -473,7 +473,7 @@
 							<label
 								class="block font-['Poppins'] text-xl font-normal leading-[24px] text-[#808080]"
 							>
-								Time before failovers (min)
+								Time before failovers (sec)
 							</label>
 							<input
 								type="number"

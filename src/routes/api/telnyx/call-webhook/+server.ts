@@ -919,7 +919,8 @@ export const POST: RequestHandler = async ({ request }) => {
 												comment: transcript,
 												summary: summary,
 												mode: 'call',
-												sessionId: callControlId
+												sessionId: callControlId,
+												audioUrl: audioUrl
 											})
 										}).catch(err => console.error('[ClearSky Pipeline Forwarding Error]', err));
 									}

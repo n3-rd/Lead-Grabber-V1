@@ -26,6 +26,14 @@ const pendingTransfers = new Map<
 	{ originalCallControlId: string; ivrFlowId: string; ivrRuleId: string }
 >();
 
+/**
+ * Maps "from|to" strings to transfer metadata to catch outbound legs.
+ */
+const intentToTransfer = new Map<
+	string,
+	{ originalCallControlId: string; ivrFlowId: string; ivrRuleId: string; timestamp: number }
+>();
+
 function resolveAudioUrl(path: string | null | undefined, baseUrl: string): string | null {
 	if (playPublic) return publicTestAudio;
 	return toAbsoluteAudioUrl(path, baseUrl);
@@ -139,7 +147,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Process different call events
 		switch (eventType) {
 			case 'call.initiated': {
-				console.log('Call initiated:', callControlId);
+				console.log('Call initiated:', callControlId, payload);
 				await logCallEvent(callControlId, 'initiated', payload);
 
 				// Incoming: "to" is the number that received the call. Resolve company by that number.
@@ -219,8 +227,42 @@ export const POST: RequestHandler = async ({ request }) => {
 						}
 					}
 				} else {
+					// Outbound call (could be a transfer leg)
 					console.log('📞 Outbound call initiated:', callControlId, 'from:', fromNumber, 'to:', toRaw);
+					
+					// Try to link to a pending transfer
+					const parentId = payload?.parent_call_control_id as string | undefined;
+					const intentKey = `${fromNumber}|${toRaw}`;
+					const intent = intentToTransfer.get(intentKey);
+					
+					if (parentId) {
+						// Best case: Telnyx gave us the parent ID
+						console.log('🔗 Linking outbound leg to parent via parent_call_control_id:', parentId);
+						// We still need ivrFlowId/ivrRuleId. If it's a transfer we initiated, we might have it in intent.
+						if (intent) {
+							pendingTransfers.set(callControlId, {
+								originalCallControlId: parentId,
+								ivrFlowId: intent.ivrFlowId,
+								ivrRuleId: intent.ivrRuleId
+							});
+							intentToTransfer.delete(intentKey);
+						}
+					} else if (intent && (Date.now() - intent.timestamp < 10000)) {
+						// Fallback: Link via from/to match within 10 seconds
+						console.log('🔗 Linking outbound leg via intent mapping to original:', intent.originalCallControlId);
+						pendingTransfers.set(callControlId, {
+							originalCallControlId: intent.originalCallControlId,
+							ivrFlowId: intent.ivrFlowId,
+							ivrRuleId: intent.ivrRuleId
+						});
+						intentToTransfer.delete(intentKey);
+					}
 				}
+				break;
+			}
+
+			case 'call.playback.started': {
+				// Silent acknowledgement
 				break;
 			}
 
@@ -1133,13 +1175,35 @@ async function telnyxTransfer(
 	ivrFlowId?: string,
 	ivrRuleId?: string
 ): Promise<string | null> {
+	// Find the number this call was made TO (which will be the FROM of the outbound transfer)
+	// We can try to find it in the initiated logs
+	let fromNumber: string | null = null;
+	try {
+		const callLog = await prisma.callLog.findFirst({
+			where: { callId: callControlId, status: 'initiated' }
+		});
+		fromNumber = callLog?.to ?? null;
+	} catch (e) {}
+
+	if (fromNumber && ivrFlowId && ivrRuleId) {
+		const key = `${fromNumber}|${to}`;
+		console.log('📝 Recording transfer intent:', key);
+		intentToTransfer.set(key, {
+			originalCallControlId: callControlId,
+			ivrFlowId,
+			ivrRuleId,
+			timestamp: Date.now()
+		});
+	}
+
 	console.log(`📡 Sending Telnyx transfer request for ${callControlId} to ${to}...`);
 	const res = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/transfer`, {
 		method: 'POST',
 		headers: TELNYX_HEADERS,
 		body: JSON.stringify({
 			to,
-			timeout_secs: 20
+			timeout_secs: 20,
+			ringback_tone: defaultRingbackAudio
 		})
 	});
 
@@ -1152,7 +1216,7 @@ async function telnyxTransfer(
 	// Telnyx returns the new call leg's call_control_id so we can track it
 	const newLegId = data?.data?.call_control_id as string | undefined;
 	if (!newLegId) {
-		console.warn('⚠️ Telnyx transfer success but no call_control_id in response:', data);
+		console.log('⚠️ Telnyx transfer ok but no ID in response. Waiting for call.initiated to link.');
 	}
 	return newLegId ?? null;
 }

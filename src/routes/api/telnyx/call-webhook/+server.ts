@@ -917,6 +917,7 @@ export const POST: RequestHandler = async ({ request }) => {
 												customer_phone: contactNumber || undefined,
 												rating: 0,
 												comment: transcript,
+												summary: summary,
 												mode: 'call',
 												sessionId: callControlId
 											})

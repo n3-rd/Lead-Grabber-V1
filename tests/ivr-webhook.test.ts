@@ -344,6 +344,7 @@ describe('IVR webhook simulation', () => {
 			const state = JSON.parse(Buffer.from(body.client_state, 'base64').toString('utf8'));
 			expect(state.isUnavailable).toBe(true);
 			expect(state.allUnavailableAudioUrl).toBe('/unavailable.mp3');
+			expect(state.ivrFlowId).toBe('flow-1');
 		});
 	});
 

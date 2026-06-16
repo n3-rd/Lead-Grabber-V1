@@ -302,7 +302,8 @@ export const POST: RequestHandler = async ({ request }) => {
 								const clientState = Buffer.from(
 									JSON.stringify({
 										isUnavailable: true,
-										allUnavailableAudioUrl
+										allUnavailableAudioUrl,
+										ivrFlowId: numberInfo.callFlowId
 									})
 								).toString('base64');
 								try {
@@ -381,25 +382,38 @@ export const POST: RequestHandler = async ({ request }) => {
 				if (isUnavailable && callControlId) {
 					const baseUrl = PUBLIC_BASE_URL || 'https://example.com';
 					const resolvedUrl = resolveAudioUrl(allUnavailableAudioUrl, baseUrl);
-					const hangupState = Buffer.from(
-						JSON.stringify({ afterPlaybackHangup: true })
+					
+					const goesToVoicemail = !!ivrFlowId;
+					const nextState = Buffer.from(
+						JSON.stringify(
+							goesToVoicemail
+								? { isVoicemailPrompt: true, ivrFlowId }
+								: { afterPlaybackHangup: true }
+						)
 					).toString('base64');
+
+					if (goesToVoicemail) {
+						callsWithVoicemail.add(callControlId);
+					}
+
 					try {
 						if (resolvedUrl) {
-							await telnyxPlayback(callControlId, resolvedUrl, hangupState);
-							console.log('▶️ Playing unavailable audio url:', resolvedUrl);
+							await telnyxPlayback(callControlId, resolvedUrl, nextState);
+							console.log(`▶️ Playing unavailable audio url (${goesToVoicemail ? 'going to voicemail' : 'hanging up'}):`, resolvedUrl);
 						} else {
 							await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/speak`, {
 								method: 'POST',
 								headers: TELNYX_HEADERS,
 								body: JSON.stringify({
-									payload: 'We are sorry, but no representative is available to take your call at this time. Goodbye.',
+									payload: goesToVoicemail
+										? 'We are sorry, but no representative is available to take your call at this time. Please leave your message after the tone.'
+										: 'We are sorry, but no representative is available to take your call at this time. Goodbye.',
 									voice: 'female',
 									language: 'en-US',
-									client_state: hangupState
+									client_state: nextState
 								})
 							});
-							console.log('▶️ Speaking default unavailable message');
+							console.log(`▶️ Speaking default unavailable message (${goesToVoicemail ? 'going to voicemail' : 'hanging up'})`);
 						}
 					} catch (err) {
 						console.error('❌ Failed to play unavailable audio/speak:', err);

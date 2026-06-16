@@ -44,6 +44,11 @@ const defaultBeepAudio = 'https://codeskulptor-demos.commondatastorage.googleapi
  */
 const callsWithVoicemail = new Set<string>();
 
+/**
+ * Tracks recording IDs that are started specifically for voicemails.
+ */
+const voicemailRecordingIds = new Set<string>();
+
 function resolveAudioUrl(path: string | null | undefined, baseUrl: string): string | null {
 	if (playPublic) return publicTestAudio;
 	return toAbsoluteAudioUrl(path, baseUrl);
@@ -88,7 +93,7 @@ function verifyTelnyxSignature(rawBody: string, timestamp: string, signatureB64:
 			? createPublicKey({ key: TELNYX_PUBLIC_KEY, format: 'pem' })
 			: createPublicKey({
 					key: Buffer.from(TELNYX_PUBLIC_KEY, 'base64'),
-					format: 'raw',
+					format: 'raw' as any,
 					type: 'ed25519'
 				});
 		return verify(null, Buffer.from(payload, 'utf8'), key, sig);
@@ -192,9 +197,45 @@ export const POST: RequestHandler = async ({ request }) => {
 					if (!numberInfo) {
 						addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });
 						console.log('📞 Number not assigned to a company - stored in pending calls');
+						const clientState = Buffer.from(
+							JSON.stringify({
+								isUnavailable: true,
+								allUnavailableAudioUrl: null
+							})
+						).toString('base64');
+						try {
+							await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
+								method: 'POST',
+								headers: TELNYX_HEADERS,
+								body: JSON.stringify({
+									client_state: clientState
+								})
+							});
+							console.log('✅ Unassigned number call answered for unavailability message');
+						} catch (err) {
+							console.error('❌ Answer failed for unassigned number:', err);
+						}
 					} else if (!numberInfo.callFlowId) {
 						addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });
 						console.log('📞 Number not assigned to IVR - stored in pending calls');
+						const clientState = Buffer.from(
+							JSON.stringify({
+								isUnavailable: true,
+								allUnavailableAudioUrl: null
+							})
+						).toString('base64');
+						try {
+							await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
+								method: 'POST',
+								headers: TELNYX_HEADERS,
+								body: JSON.stringify({
+									client_state: clientState
+								})
+							});
+							console.log('✅ Unconfigured IVR call answered for unavailability message');
+						} catch (err) {
+							console.error('❌ Answer failed for unconfigured IVR:', err);
+						}
 					} else {
 						const company = await prisma.company.findUnique({
 							where: { id: numberInfo.companyId },
@@ -217,10 +258,7 @@ export const POST: RequestHandler = async ({ request }) => {
 							try {
 								await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
 									method: 'POST',
-									headers: {
-										'Content-Type': 'application/json',
-										Authorization: `Bearer ${TELNYX_API_KEY}`
-									},
+									headers: TELNYX_HEADERS,
 									body: JSON.stringify({
 										record: 'record-from-answer',
 										client_state: clientState
@@ -234,6 +272,34 @@ export const POST: RequestHandler = async ({ request }) => {
 						} else {
 							addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });
 							console.log('📞 No active IVR rule for this time - stored in pending calls');
+							let allUnavailableAudioUrl: string | null = null;
+							try {
+								const flow = await prisma.callFlow.findUnique({
+									where: { id: numberInfo.callFlowId },
+									select: { allUnavailableAudioUrl: true }
+								});
+								allUnavailableAudioUrl = flow?.allUnavailableAudioUrl ?? null;
+							} catch (e) {
+								console.error('Error fetching call flow for unavailable audio:', e);
+							}
+							const clientState = Buffer.from(
+								JSON.stringify({
+									isUnavailable: true,
+									allUnavailableAudioUrl
+								})
+							).toString('base64');
+							try {
+								await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
+									method: 'POST',
+									headers: TELNYX_HEADERS,
+									body: JSON.stringify({
+										client_state: clientState
+									})
+								});
+								console.log('✅ No active rule call answered for unavailability message');
+							} catch (err) {
+								console.error('❌ Answer failed for active rule check:', err);
+							}
 						}
 					}
 				} else {
@@ -281,6 +347,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				await logCallEvent(callControlId, 'answered', payload);
 				let ivrFlowId: string | null = null;
 				let ivrRuleId: string | null = null;
+				let isUnavailable = false;
+				let allUnavailableAudioUrl: string | null = null;
 				if (payload?.client_state) {
 					try {
 						const decoded = JSON.parse(
@@ -288,7 +356,38 @@ export const POST: RequestHandler = async ({ request }) => {
 						);
 						ivrFlowId = decoded.ivrFlowId ?? null;
 						ivrRuleId = decoded.ivrRuleId ?? null;
+						isUnavailable = decoded.isUnavailable ?? false;
+						allUnavailableAudioUrl = decoded.allUnavailableAudioUrl ?? null;
 					} catch (_) {}
+				}
+				if (isUnavailable && callControlId) {
+					const baseUrl = PUBLIC_BASE_URL || 'https://example.com';
+					const resolvedUrl = resolveAudioUrl(allUnavailableAudioUrl, baseUrl);
+					const hangupState = Buffer.from(
+						JSON.stringify({ afterPlaybackHangup: true })
+					).toString('base64');
+					try {
+						if (resolvedUrl) {
+							await telnyxPlayback(callControlId, resolvedUrl, hangupState);
+							console.log('▶️ Playing unavailable audio url:', resolvedUrl);
+						} else {
+							await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/speak`, {
+								method: 'POST',
+								headers: TELNYX_HEADERS,
+								body: JSON.stringify({
+									payload: 'We are sorry, but no representative is available to take your call at this time. Goodbye.',
+									voice: 'female',
+									language: 'en-US',
+									client_state: hangupState
+								})
+							});
+							console.log('▶️ Speaking default unavailable message');
+						}
+					} catch (err) {
+						console.error('❌ Failed to play unavailable audio/speak:', err);
+						await telnyxHangup(callControlId);
+					}
+					break;
 				}
 				if (ivrFlowId && ivrRuleId && callControlId) {
 					const baseUrl = PUBLIC_BASE_URL || 'https://example.com';
@@ -637,15 +736,27 @@ export const POST: RequestHandler = async ({ request }) => {
 								ivrPath: 'Voicemail'
 							})
 						).toString('base64');
-						await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/recording_start`, {
-							method: 'POST',
-							headers: TELNYX_HEADERS,
-							body: JSON.stringify({
-								format: 'mp3',
-								channels: 'single',
-								client_state: recordState
-							})
-						});
+						try {
+							const res = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/recording_start`, {
+								method: 'POST',
+								headers: TELNYX_HEADERS,
+								body: JSON.stringify({
+									format: 'mp3',
+									channels: 'single',
+									client_state: recordState
+								})
+							});
+							const resData = await res.json().catch(() => null);
+							const recordingId = resData?.data?.recording_id;
+							if (recordingId) {
+								console.log('🎙️ Voicemail recording started, id:', recordingId);
+								voicemailRecordingIds.add(recordingId);
+							} else {
+								console.warn('⚠️ Voicemail recording started but no recording_id in response:', resData);
+							}
+						} catch (err) {
+							console.error('❌ Failed to start voicemail recording:', err);
+						}
 						break;
 					}
 					if (
@@ -942,7 +1053,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			case 'call.recording.saved': {
 				// Recording is available, save the URL(s)
 				let recUrls = payload?.recording_urls;
-				const recId = payload?.recording_id;
+				const recId = payload?.recording_id as string | undefined;
 				const recDurationSeconds = typeof payload?.duration === 'number' ? payload.duration : 0;
 				console.log('🎥 Call recording saved:', recId, recUrls);
 
@@ -1071,13 +1182,20 @@ export const POST: RequestHandler = async ({ request }) => {
 								} catch (e) {}
 							}
 
-							const isVoicemailRecording = !!decoded?.isVoicemailRecording;
+							const recordingCount = await prisma.callRecording.count({
+								where: { callId: callControlId }
+							});
 							const hasVoicemail = callsWithVoicemail.has(callControlId);
-							const shouldTranscribe = !hasVoicemail || isVoicemailRecording;
+							const isVoicemailRecording = (recId ? voicemailRecordingIds.has(recId) : false) || (hasVoicemail && recordingCount >= 2);
 
-							if (isVoicemailRecording) {
+							if (recId && voicemailRecordingIds.has(recId)) {
+								voicemailRecordingIds.delete(recId);
+							}
+							if (hasVoicemail && isVoicemailRecording) {
 								callsWithVoicemail.delete(callControlId);
 							}
+
+							const shouldTranscribe = !hasVoicemail || isVoicemailRecording;
 
 							const audioUrl = originalAudioUrl;
 							if (audioUrl && shouldTranscribe) {
@@ -1155,7 +1273,7 @@ export const POST: RequestHandler = async ({ request }) => {
 										metadata: {
 											...((existingLog.metadata as Record<string, unknown>) || {}),
 											...recordingMetadata
-										}
+										} as any
 									}
 								});
 								console.log('📝 Updated CommunicationLog with recording link', callControlId);
@@ -1173,7 +1291,7 @@ export const POST: RequestHandler = async ({ request }) => {
 										duration: recDurationSeconds > 0 ? recDurationSeconds : null,
 										content: transcript || `Call recording available (${recDurationSeconds}s)`,
 										summary: summary || null,
-										metadata: recordingMetadata
+										metadata: recordingMetadata as any
 									}
 								});
 								console.log(

@@ -509,7 +509,7 @@ describe('IVR webhook simulation', () => {
 			// Should stop current recording and play voicemail prompt
 			const stopCalls = mockFetch.mock.calls.filter(
 				(c: any) =>
-					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-789/actions/recording_stop'
+					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-789/actions/record_stop'
 			);
 			expect(stopCalls.length).toBe(1);
 
@@ -567,7 +567,7 @@ describe('IVR webhook simulation', () => {
 
 			const recordingCalls = mockFetch.mock.calls.filter(
 				(c: any) =>
-					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-789/actions/recording_start'
+					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-789/actions/record_start'
 			);
 			expect(recordingCalls.length).toBe(1);
 		});

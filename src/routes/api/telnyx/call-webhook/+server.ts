@@ -571,7 +571,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						callsWithVoicemail.add(callControlId);
 
 						// Stop current recording
-						await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/recording_stop`, {
+						await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/record_stop`, {
 							method: 'POST',
 							headers: TELNYX_HEADERS,
 							body: JSON.stringify({})
@@ -755,7 +755,7 @@ export const POST: RequestHandler = async ({ request }) => {
 							})
 						).toString('base64');
 						try {
-							const res = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/recording_start`, {
+							const res = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/record_start`, {
 								method: 'POST',
 								headers: TELNYX_HEADERS,
 								body: JSON.stringify({
@@ -841,7 +841,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						callsWithVoicemail.add(originalCallControlId);
 
 						// Stop current recording
-						await fetch(`https://api.telnyx.com/v2/calls/${originalCallControlId}/actions/recording_stop`, {
+						await fetch(`https://api.telnyx.com/v2/calls/${originalCallControlId}/actions/record_stop`, {
 							method: 'POST',
 							headers: TELNYX_HEADERS,
 							body: JSON.stringify({})

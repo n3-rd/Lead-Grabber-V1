@@ -1241,6 +1241,49 @@ export const POST: RequestHandler = async ({ request }) => {
 										urgency = analysis.urgency;
 										sentiment = analysis.sentiment;
 										actionItems = analysis.actionItems;
+
+										let scoreDelta = 5;
+										let bucketSignal = 'research';
+										const lowerTranscript = transcript.toLowerCase();
+										const emergencyKeywords = ['burst', 'flood', 'leak', 'emergency', 'pipe', 'water', 'immediate', 'urgent'];
+										const bookingKeywords = ['book', 'appointment', 'estimate', 'quote', 'schedule', 'renovate', 'renovation', 'toilet', 'shower', 'fixture'];
+
+										if (urgency === 'high' || emergencyKeywords.some(kw => lowerTranscript.includes(kw))) {
+											scoreDelta = 95;
+											bucketSignal = 'emergency';
+										} else if (intent === 'Booking' || bookingKeywords.some(kw => lowerTranscript.includes(kw))) {
+											scoreDelta = 20;
+											bucketSignal = 'active';
+										}
+
+										// POST directly to ProfileDB
+										try {
+											const profiledbUrl = process.env.PROFILEDB_URL || 'http://localhost:6277';
+											await fetch(`${profiledbUrl}/api/v1/telemetry/events`, {
+												method: 'POST',
+												headers: { 'Content-Type': 'application/json' },
+												body: JSON.stringify({
+													tenantSlug: 'clearsky-demo',
+													eventType: 'telnyx.voice.voicemail',
+													phone: contactNumber,
+													name: contact?.name || null,
+													scoreDelta: scoreDelta,
+													occurredAt: new Date().toISOString(),
+													payload: {
+														call_control_id: callControlId,
+														voicemail_text: transcript,
+														phone: contactNumber,
+														name: contact?.name || null,
+														urgency_detected: urgency === 'high',
+														contains_emergency_keywords: emergencyKeywords.some(kw => lowerTranscript.includes(kw)),
+														isConversion: bucketSignal === 'active' || bucketSignal === 'emergency'
+													}
+												})
+											});
+											console.log(`📡 Ingested call event to ProfileDB with delta +${scoreDelta} (${bucketSignal})`);
+										} catch (err) {
+											console.error('❌ Failed to post call telemetry to ProfileDB:', err);
+										}
                                         
                                         // Resolve final path and priority from client state
 										let finalIvrPath = 'Direct Call';

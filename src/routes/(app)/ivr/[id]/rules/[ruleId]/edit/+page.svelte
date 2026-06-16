@@ -532,7 +532,7 @@
 					</div>
 					<div class="space-y-2">
 						<label class="block font-['Poppins'] text-xl text-[#808080]"
-							>Time before failovers (sec)</label
+							>Time before failovers (seconds)</label
 						>
 						<input
 							type="number"

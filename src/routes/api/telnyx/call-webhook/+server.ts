@@ -1271,6 +1271,9 @@ export const POST: RequestHandler = async ({ request }) => {
 										} else if (intent === 'Booking' || bookingKeywords.some(kw => lowerTranscript.includes(kw))) {
 											scoreDelta = 20;
 											bucketSignal = 'active';
+										} else if (sentiment === 'Angry' || sentiment === 'Negative') {
+											scoreDelta = -10;
+											bucketSignal = 'friction';
 										}
 
 										// POST directly to ProfileDB

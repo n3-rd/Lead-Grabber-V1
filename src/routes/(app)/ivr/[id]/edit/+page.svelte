@@ -473,7 +473,7 @@
 							<label
 								class="block font-['Poppins'] text-xl font-normal leading-[24px] text-[#808080]"
 							>
-								Time before failovers (sec)
+								Time before failovers (seconds)
 							</label>
 							<input
 								type="number"

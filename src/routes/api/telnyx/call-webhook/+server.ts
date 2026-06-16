@@ -8,6 +8,9 @@ import { getActiveCallFlow, toAbsoluteAudioUrl } from '$lib/ivr';
 import { getCompanyAndFlowByPhoneNumber, toE164 } from '$lib/company-numbers';
 import { PUBLIC_BASE_URL } from '$env/static/public';
 import { notifyIncomingCallViaPush } from '$lib/server/push/incoming-call';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 const TELNYX_PUBLIC_KEY = process.env.TELNYX_PUBLIC_KEY;
 
@@ -938,12 +941,43 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			case 'call.recording.saved': {
 				// Recording is available, save the URL(s)
-				const recUrls = payload?.recording_urls;
+				let recUrls = payload?.recording_urls;
 				const recId = payload?.recording_id;
 				const recDurationSeconds = typeof payload?.duration === 'number' ? payload.duration : 0;
 				console.log('🎥 Call recording saved:', recId, recUrls);
 
 				if (callControlId && recUrls) {
+					// Download and save locally to avoid Telnyx link expiry
+					const originalAudioUrl = getFirstAudioUrl(recUrls);
+					if (originalAudioUrl) {
+						try {
+							const audioRes = await fetch(originalAudioUrl);
+							if (audioRes.ok) {
+								const arrayBuffer = await audioRes.arrayBuffer();
+								const buffer = Buffer.from(arrayBuffer);
+								const recordingsDir = join(process.cwd(), 'static/uploads/recordings');
+								if (!existsSync(recordingsDir)) {
+									await mkdir(recordingsDir, { recursive: true });
+								}
+								const localFilename = `${(recId as string) || callControlId}.mp3`;
+								const localFilePath = join(recordingsDir, localFilename);
+								await writeFile(localFilePath, buffer);
+								
+								const baseUrl = PUBLIC_BASE_URL || 'https://example.com';
+								const localUrl = `${baseUrl}/uploads/recordings/${localFilename}`;
+								recUrls = {
+									...((recUrls as object) || {}),
+									mp3: localUrl
+								};
+								console.log('💾 Recording saved locally:', localUrl);
+							} else {
+								console.error('❌ Failed to download audio from Telnyx:', audioRes.status);
+							}
+						} catch (err) {
+							console.error('❌ Error saving recording locally:', err);
+						}
+					}
+
 					// 1. Save reference call recording
 					await prisma.callRecording.create({
 						data: {
@@ -1045,7 +1079,7 @@ export const POST: RequestHandler = async ({ request }) => {
 								callsWithVoicemail.delete(callControlId);
 							}
 
-							const audioUrl = getFirstAudioUrl(recUrls);
+							const audioUrl = originalAudioUrl;
 							if (audioUrl && shouldTranscribe) {
 								try {
 									const { transcribeAudio, analyzeCallLog } = await import('$lib/server/openai');

@@ -2,6 +2,9 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { prisma } from '$lib/db';
 import { TELNYX_API_KEY } from '$env/static/private';
+import { join } from 'path';
+import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
 
 const TELNYX_RECORDINGS_URL = 'https://api.telnyx.com/v2/recordings';
 
@@ -32,6 +35,24 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	const recordingId = meta?.recording_id;
 	if (!recordingId || log.type !== 'voice') {
 		return json({ error: 'No recording for this log' }, { status: 404 });
+	}
+
+	// Check local filesystem first
+	const localFilename = `${recordingId}.mp3`;
+	const localFilePath = join(process.cwd(), 'static/uploads/recordings', localFilename);
+	if (existsSync(localFilePath)) {
+		try {
+			const fileBuffer = await readFile(localFilePath);
+			return new Response(fileBuffer, {
+				status: 200,
+				headers: {
+					'Content-Type': 'audio/mpeg',
+					'Cache-Control': 'private, max-age=3600'
+				}
+			});
+		} catch (err) {
+			console.error('Failed to read local recording file:', err);
+		}
 	}
 
 	if (!TELNYX_API_KEY) {

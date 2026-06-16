@@ -108,9 +108,11 @@ describe('IVR webhook simulation', () => {
 
 		it('answers with IVR client_state when "to" number is assigned to company and active flow exists', async () => {
 			// Handler uses getCompanyAndFlowByPhoneNumber → needs companyId + callFlowId to take IVR path
-			mockPrismaCompanyPhoneNumberFindUnique.mockResolvedValue({
-				companyId: 'company-1',
-				callFlowId: 'flow-1'
+			mockPrismaCompanyPhoneNumberFindUnique.mockImplementation(async ({ where }: any) => {
+				if (where.phoneNumber === '+17059986143') {
+					return { companyId: 'company-1', callFlowId: 'flow-1' };
+				}
+				return null;
 			});
 			mockPrismaCallFlowFindMany.mockResolvedValue([
 				{
@@ -174,6 +176,41 @@ describe('IVR webhook simulation', () => {
 			expect(state.ivrRuleId).toBe('rule-1');
 		});
 
+		it('bypasses auto-answer when "from" caller number is a company number', async () => {
+			mockPrismaCompanyPhoneNumberFindUnique.mockImplementation(async ({ where }: any) => {
+				if (where.phoneNumber === '+17059986143' || where.phoneNumber === '+15551234567') {
+					return { companyId: 'company-1', callFlowId: null };
+				}
+				return null;
+			});
+			const eventPayloadCompanyFrom = {
+				data: {
+					event_type: 'call.initiated',
+					payload: {
+						call_control_id: 'call-ctrl-company-from',
+						from: '+15551234567',
+						to: '+17059986143',
+						direction: 'incoming',
+						caller_id_name: 'Company Caller'
+					}
+				}
+			};
+			const { POST } = await import('../src/routes/api/telnyx/call-webhook/+server');
+			const res = await POST({
+				request: new Request('http://localhost/api/telnyx/call-webhook', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(eventPayloadCompanyFrom)
+				})
+			} as any);
+			expect(res.status).toBe(200);
+			const answerCalls = mockFetch.mock.calls.filter(
+				(c: any) =>
+					c[0] === 'https://api.telnyx.com/v2/calls/call-ctrl-company-from/actions/answer'
+			);
+			expect(answerCalls.length).toBe(0);
+		});
+
 		it('adds to pending calls when "to" number is not assigned to any company', async () => {
 			mockPrismaCompanyPhoneNumberFindUnique.mockResolvedValue(null);
 			const eventPayloadNoIvr = {
@@ -212,9 +249,11 @@ describe('IVR webhook simulation', () => {
 		});
 
 		it('adds to pending calls when "to" number is assigned to company but has no callFlowId', async () => {
-			mockPrismaCompanyPhoneNumberFindUnique.mockResolvedValue({
-				companyId: 'company-1',
-				callFlowId: null
+			mockPrismaCompanyPhoneNumberFindUnique.mockImplementation(async ({ where }: any) => {
+				if (where.phoneNumber === '+17059986143') {
+					return { companyId: 'company-1', callFlowId: null };
+				}
+				return null;
 			});
 			const eventPayloadNoFlow = {
 				data: {
@@ -251,9 +290,11 @@ describe('IVR webhook simulation', () => {
 		});
 
 		it('adds to pending calls and answers when "to" number has no active rules', async () => {
-			mockPrismaCompanyPhoneNumberFindUnique.mockResolvedValue({
-				companyId: 'company-1',
-				callFlowId: 'flow-1'
+			mockPrismaCompanyPhoneNumberFindUnique.mockImplementation(async ({ where }: any) => {
+				if (where.phoneNumber === '+17059986143') {
+					return { companyId: 'company-1', callFlowId: 'flow-1' };
+				}
+				return null;
 			});
 			mockPrismaCallFlowFindMany.mockResolvedValue([
 				{
@@ -575,9 +616,11 @@ describe('IVR webhook simulation', () => {
 				from: '+15551234567',
 				metadata: { direction: 'incoming' }
 			});
-			mockPrismaCompanyPhoneNumberFindUnique.mockResolvedValue({
-				companyId: 'company-1',
-				callFlowId: 'flow-1'
+			mockPrismaCompanyPhoneNumberFindUnique.mockImplementation(async ({ where }: any) => {
+				if (where.phoneNumber === '+17059986143') {
+					return { companyId: 'company-1', callFlowId: 'flow-1' };
+				}
+				return null;
 			});
 			mockPrismaContactFindFirst.mockResolvedValue({ id: 'contact-1' });
 

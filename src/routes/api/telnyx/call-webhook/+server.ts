@@ -194,47 +194,63 @@ export const POST: RequestHandler = async ({ request }) => {
 						}).catch((err) => console.error('[push] incoming call notify:', err));
 					}
 
+					const fromNumberE164 = toE164(fromNumber);
+					const fromIsCompany = fromNumberE164
+						? await getCompanyAndFlowByPhoneNumber(prisma, fromNumberE164)
+						: null;
+
+					console.log('fromIsCompany check:', {
+						fromNumber,
+						fromNumberE164,
+						fromIsCompany: !!fromIsCompany
+					});
+
+
 					if (!numberInfo) {
 						addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });
 						console.log('📞 Number not assigned to a company - stored in pending calls');
-						const clientState = Buffer.from(
-							JSON.stringify({
-								isUnavailable: true,
-								allUnavailableAudioUrl: null
-							})
-						).toString('base64');
-						try {
-							await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
-								method: 'POST',
-								headers: TELNYX_HEADERS,
-								body: JSON.stringify({
-									client_state: clientState
+						if (!fromIsCompany) {
+							const clientState = Buffer.from(
+								JSON.stringify({
+									isUnavailable: true,
+									allUnavailableAudioUrl: null
 								})
-							});
-							console.log('✅ Unassigned number call answered for unavailability message');
-						} catch (err) {
-							console.error('❌ Answer failed for unassigned number:', err);
+							).toString('base64');
+							try {
+								await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
+									method: 'POST',
+									headers: TELNYX_HEADERS,
+									body: JSON.stringify({
+										client_state: clientState
+									})
+								});
+								console.log('✅ Unassigned number call answered for unavailability message');
+							} catch (err) {
+								console.error('❌ Answer failed for unassigned number:', err);
+							}
 						}
 					} else if (!numberInfo.callFlowId) {
 						addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });
 						console.log('📞 Number not assigned to IVR - stored in pending calls');
-						const clientState = Buffer.from(
-							JSON.stringify({
-								isUnavailable: true,
-								allUnavailableAudioUrl: null
-							})
-						).toString('base64');
-						try {
-							await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
-								method: 'POST',
-								headers: TELNYX_HEADERS,
-								body: JSON.stringify({
-									client_state: clientState
+						if (!fromIsCompany) {
+							const clientState = Buffer.from(
+								JSON.stringify({
+									isUnavailable: true,
+									allUnavailableAudioUrl: null
 								})
-							});
-							console.log('✅ Unconfigured IVR call answered for unavailability message');
-						} catch (err) {
-							console.error('❌ Answer failed for unconfigured IVR:', err);
+							).toString('base64');
+							try {
+								await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
+									method: 'POST',
+									headers: TELNYX_HEADERS,
+									body: JSON.stringify({
+										client_state: clientState
+									})
+								});
+								console.log('✅ Unconfigured IVR call answered for unavailability message');
+							} catch (err) {
+								console.error('❌ Answer failed for unconfigured IVR:', err);
+							}
 						}
 					} else {
 						const company = await prisma.company.findUnique({
@@ -272,33 +288,35 @@ export const POST: RequestHandler = async ({ request }) => {
 						} else {
 							addPendingCall({ name: callerName, phone: fromNumber, callId: callControlId });
 							console.log('📞 No active IVR rule for this time - stored in pending calls');
-							let allUnavailableAudioUrl: string | null = null;
-							try {
-								const flow = await prisma.callFlow.findUnique({
-									where: { id: numberInfo.callFlowId },
-									select: { allUnavailableAudioUrl: true }
-								});
-								allUnavailableAudioUrl = flow?.allUnavailableAudioUrl ?? null;
-							} catch (e) {
-								console.error('Error fetching call flow for unavailable audio:', e);
-							}
-							const clientState = Buffer.from(
-								JSON.stringify({
-									isUnavailable: true,
-									allUnavailableAudioUrl
-								})
-							).toString('base64');
-							try {
-								await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
-									method: 'POST',
-									headers: TELNYX_HEADERS,
-									body: JSON.stringify({
-										client_state: clientState
+							if (!fromIsCompany) {
+								let allUnavailableAudioUrl: string | null = null;
+								try {
+									const flow = await prisma.callFlow.findUnique({
+										where: { id: numberInfo.callFlowId },
+										select: { allUnavailableAudioUrl: true }
+									});
+									allUnavailableAudioUrl = flow?.allUnavailableAudioUrl ?? null;
+								} catch (e) {
+									console.error('Error fetching call flow for unavailable audio:', e);
+								}
+								const clientState = Buffer.from(
+									JSON.stringify({
+										isUnavailable: true,
+										allUnavailableAudioUrl
 									})
-								});
-								console.log('✅ No active rule call answered for unavailability message');
-							} catch (err) {
-								console.error('❌ Answer failed for active rule check:', err);
+								).toString('base64');
+								try {
+									await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
+										method: 'POST',
+										headers: TELNYX_HEADERS,
+										body: JSON.stringify({
+											client_state: clientState
+										})
+									});
+									console.log('✅ No active rule call answered for unavailability message');
+								} catch (err) {
+									console.error('❌ Answer failed for active rule check:', err);
+								}
 							}
 						}
 					}

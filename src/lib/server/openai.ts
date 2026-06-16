@@ -45,7 +45,8 @@ export async function transcribeAudio(audioUrl: string): Promise<string> {
 }
 
 /**
- * Analyze call transcript using OpenAI GPT-4o-mini to generate summary, intent, urgency, and action items.
+ * Analyze call transcript using OpenAI GPT-4o-mini to generate summary, intent, urgency,
+ * action items, caller name, and buying signals.
  */
 export async function analyzeCallLog(transcript: string): Promise<{
 	summary: string;
@@ -53,16 +54,28 @@ export async function analyzeCallLog(transcript: string): Promise<{
 	urgency: 'low' | 'medium' | 'high';
 	actionItems: string[];
 	sentiment: string;
+	callerName: string | null;
+	buyingSignals: string[];
 }> {
 	try {
 		const prompt = `
-    Analyze the following phone call transcript.
+    Analyze the following phone call transcript / voicemail message.
     Provide the output in valid JSON format with the following keys:
     - "summary": A concise summary of the call (2-3 sentences).
-    - "intent": The main purpose or intent of the call (e.g., "Request information", "Complaint", "Booking").
+    - "intent": The main purpose or intent of the call (e.g., "Request information", "Complaint", "Booking", "Emergency").
     - "urgency": One of "low", "medium", "high" based on the customer's tone and request.
     - "actionItems": A list of action items or next steps.
-    - "sentiment": A brief description of the customer's sentiment (e.g., "Angry", "Happy", "Neutral").
+    - "sentiment": One of "Positive", "Negative", "Neutral", "Angry", "Anxious" based on the overall tone.
+    - "callerName": Extract the caller's full name if they introduce themselves (e.g., "Hi, this is John Smith" → "John Smith"). If no name is mentioned, return null.
+    - "buyingSignals": An array of detected buying intent signals. Look for phrases like:
+      - Wanting to book an appointment → "appointment_request"
+      - Wanting to speak to a representative → "rep_request"
+      - Asking for a quote or estimate → "quote_request"
+      - Mentioning a specific project or renovation → "active_project"
+      - Mentioning urgency or emergency → "emergency"
+      - Asking about pricing or availability → "pricing_inquiry"
+      - Mentioning a competitor or comparison → "comparison_shopping"
+      Return an empty array if no buying signals are detected.
 
     Transcript:
     "${transcript}"
@@ -81,7 +94,7 @@ export async function analyzeCallLog(transcript: string): Promise<{
 					{
 						role: 'system',
 						content:
-							'You are a helpful assistant that analyzes customer service calls. Return only valid JSON.'
+							'You are an expert customer service analyst. You analyze phone calls and voicemails to extract the caller identity, sentiment, buying intent, and urgency. Return only valid JSON. For callerName, extract the exact name if the caller introduces themselves; otherwise return null.'
 					},
 					{ role: 'user', content: prompt }
 				],
@@ -111,7 +124,9 @@ export async function analyzeCallLog(transcript: string): Promise<{
 			intent: result.intent ?? '',
 			urgency: result.urgency?.toLowerCase() || 'medium',
 			actionItems: result.actionItems || [],
-			sentiment: result.sentiment || 'Neutral'
+			sentiment: result.sentiment || 'Neutral',
+			callerName: result.callerName || null,
+			buyingSignals: result.buyingSignals || []
 		};
 	} catch (error) {
 		console.error('Error in analyzeCallLog:', error);
@@ -120,7 +135,9 @@ export async function analyzeCallLog(transcript: string): Promise<{
 			intent: '',
 			urgency: 'medium',
 			actionItems: [],
-			sentiment: 'Unknown'
+			sentiment: 'Unknown',
+			callerName: null,
+			buyingSignals: []
 		};
 	}
 }

@@ -1241,6 +1241,23 @@ export const POST: RequestHandler = async ({ request }) => {
 										urgency = analysis.urgency;
 										sentiment = analysis.sentiment;
 										actionItems = analysis.actionItems;
+										const callerName = analysis.callerName;
+										const buyingSignals = analysis.buyingSignals;
+
+										// --- Identity resolution from transcript ---
+										// If the AI extracted a name and the contact has no name, update the contact record
+										if (callerName && contact && !contact.name) {
+											try {
+												await prisma.contact.update({
+													where: { id: contact.id },
+													data: { name: callerName }
+												});
+												contact = { ...contact, name: callerName };
+												console.log(`👤 Contact name resolved from transcript: "${callerName}" (${contact.id})`);
+											} catch (nameErr) {
+												console.error('⚠️ Failed to update contact name:', nameErr);
+											}
+										}
 
 										let scoreDelta = 5;
 										let bucketSignal = 'research';
@@ -1266,21 +1283,25 @@ export const POST: RequestHandler = async ({ request }) => {
 													tenantSlug: 'clearsky-demo',
 													eventType: 'telnyx.voice.voicemail',
 													phone: contactNumber,
-													name: contact?.name || null,
+													name: contact?.name || callerName || null,
 													scoreDelta: scoreDelta,
 													occurredAt: new Date().toISOString(),
 													payload: {
 														call_control_id: callControlId,
 														voicemail_text: transcript,
 														phone: contactNumber,
-														name: contact?.name || null,
+														name: contact?.name || callerName || null,
+														caller_name_source: callerName ? 'transcript_ai' : 'none',
 														urgency_detected: urgency === 'high',
 														contains_emergency_keywords: emergencyKeywords.some(kw => lowerTranscript.includes(kw)),
-														isConversion: bucketSignal === 'active' || bucketSignal === 'emergency'
+														isConversion: bucketSignal === 'active' || bucketSignal === 'emergency',
+														buying_signals: buyingSignals,
+														sentiment: sentiment,
+														intent: intent
 													}
 												})
 											});
-											console.log(`📡 Ingested call event to ProfileDB with delta +${scoreDelta} (${bucketSignal})`);
+											console.log(`📡 Ingested call event to ProfileDB with delta +${scoreDelta} (${bucketSignal})${callerName ? `, caller: ${callerName}` : ''}`);
 										} catch (err) {
 											console.error('❌ Failed to post call telemetry to ProfileDB:', err);
 										}
@@ -1311,14 +1332,16 @@ export const POST: RequestHandler = async ({ request }) => {
 											method: 'POST',
 											headers: { 'Content-Type': 'application/json' },
 											body: JSON.stringify({
-												author_name: contactNumber || 'Unknown Caller',
+												author_name: contact?.name || callerName || contactNumber || 'Unknown Caller',
 												customer_phone: contactNumber || undefined,
 												rating: 0,
 												comment: transcript,
 												summary: summary,
 												mode: 'call',
 												sessionId: callControlId,
-												audioUrl: audioUrl
+												audioUrl: audioUrl,
+												buying_signals: buyingSignals,
+												sentiment: sentiment
 											})
 										}).catch(err => console.error('[ClearSky Pipeline Forwarding Error]', err));
 									}

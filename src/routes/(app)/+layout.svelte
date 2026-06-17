@@ -84,6 +84,10 @@
 			showDesktopNotification(data.notification.sourceName || 'New Notification', {
 				body: data.notification.messagePreview
 			});
+
+			if (typeof window !== 'undefined') {
+				window.dispatchEvent(new CustomEvent('sse-new-notification', { detail: data }));
+			}
 		});
 
 		eventSource.addEventListener('new_sms', (e) => {
@@ -95,6 +99,10 @@
 					onClick: () => goto('/inbox')
 				}
 			});
+
+			if (typeof window !== 'undefined') {
+				window.dispatchEvent(new CustomEvent('sse-new-sms', { detail: data }));
+			}
 		});
 
 		eventSource.addEventListener('incoming_call', (e) => {

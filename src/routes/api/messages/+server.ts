@@ -159,9 +159,35 @@ async function syncEmergencyMessages(companyId: string) {
 		const resEvents = await fetch(`${PROFILEDB_URL}/api/v1/tenants/clearsky-demo/events?limit=30`);
 		if (!resEvents.ok) return;
 		const jsonEvents = await resEvents.json();
-		if (!jsonEvents || !Array.isArray(jsonEvents.data)) return;
+		const events = (jsonEvents && Array.isArray(jsonEvents.data)) ? jsonEvents.data : [];
+		
+		const activeProfileIds = new Set(events.map((ev: any) => ev.customerProfileId).filter(Boolean));
 
-		const profileIds = [...new Set(jsonEvents.data.map((ev: any) => ev.customerProfileId).filter(Boolean))];
+		// Find all local emergency threads to delete the ones that are no longer present in CDP/ProfileDB
+		const localEmergencyMessages = await prisma.message.findMany({
+			where: {
+				companyId,
+				threadId: {
+					startsWith: 'emergency-'
+				}
+			},
+			select: {
+				id: true,
+				threadId: true
+			}
+		});
+
+		for (const msg of localEmergencyMessages) {
+			const profileId = msg.threadId.replace('emergency-', '');
+			if (!activeProfileIds.has(profileId)) {
+				console.log(`🗑️ Deleting local emergency thread ${msg.threadId} as it is not present in CDP`);
+				await prisma.message.delete({
+					where: { id: msg.id }
+				});
+			}
+		}
+
+		const profileIds = [...activeProfileIds];
 
 		for (const profileId of profileIds) {
 			const resHistory = await fetch(`${PROFILEDB_URL}/api/v1/tenants/clearsky-demo/profiles/${profileId}/history`);
@@ -204,6 +230,19 @@ async function syncEmergencyMessages(companyId: string) {
 				};
 			}).sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
+			let draftResponse = null;
+			for (const ev of history) {
+				const executionOutputRaw = ev.payload?.decision?.action_queue?.[0]?.executions?.[0]?.generated_output;
+				if (executionOutputRaw) {
+					try {
+						const parsed = typeof executionOutputRaw === 'string' ? JSON.parse(executionOutputRaw) : executionOutputRaw;
+						if (parsed?.draft_reply) {
+							draftResponse = parsed.draft_reply;
+						}
+					} catch (e) {}
+				}
+			}
+
 			const threadId = `emergency-${profileId}`;
 
 			const existing = await prisma.message.findUnique({
@@ -222,7 +261,8 @@ async function syncEmergencyMessages(companyId: string) {
 						customerName,
 						customerPhone,
 						urgency,
-						intent: profile.intentBucket
+						intent: profile.intentBucket,
+						draftResponse
 					}
 				});
 			} else {
@@ -235,6 +275,7 @@ async function syncEmergencyMessages(companyId: string) {
 						status: 'new',
 						urgency,
 						intent: profile.intentBucket,
+						draftResponse,
 						messages: mappedMessages
 					}
 				});

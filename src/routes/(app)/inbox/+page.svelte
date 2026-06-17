@@ -57,6 +57,22 @@
 	let isLoadingMessages = $state(true);
 	let isLoadingChat = $state(false);
 
+	let draftValue = $state(`${user?.name || 'our team'} has gotten your message and he will be calling you in two minutes.`);
+	let isSendingSms = $state(false);
+
+	const hasUnansweredSms = $derived(
+		selectedMessage &&
+		chatMessages.length > 0 &&
+		!chatMessages[chatMessages.length - 1].isYou
+	);
+
+	$effect(() => {
+		if (selectedMessage) {
+			const userName = user?.name || 'our team';
+			draftValue = `${userName} has gotten your message and he will be calling you in two minutes.`;
+		}
+	});
+
 	// Add this state variable with the other state declarations
 	let companyMembers = $state<{ id: string; name: string }[]>([]);
 
@@ -79,12 +95,15 @@
 			}
 		};
 
-		filteredMessages = messages.filter(filterFn);
+		filteredMessages = messages
+			.filter(filterFn)
+			.sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime());
 	});
 
 	// Add pagination state
 	let page = $state(1);
 	const PER_PAGE = 20;
+	let pollingInterval: ReturnType<typeof setInterval> | null = null;
 
 	onMount(async () => {
 		try {
@@ -93,10 +112,48 @@
 		} catch (err) {
 			console.error('Error in onMount:', err);
 		}
+
+		if (typeof window !== 'undefined') {
+			window.addEventListener('sse-new-sms', handleRealtimeUpdate);
+			window.addEventListener('sse-new-notification', handleRealtimeUpdate);
+		}
+
+		// Setup polling every 5 seconds as a fallback
+		pollingInterval = setInterval(async () => {
+			await loadMessages(true);
+			if (selectedMessage) {
+				await loadChatMessages(selectedMessage.thread_id);
+			}
+		}, 5000);
+
+		return () => {
+			if (typeof window !== 'undefined') {
+				window.removeEventListener('sse-new-sms', handleRealtimeUpdate);
+				window.removeEventListener('sse-new-notification', handleRealtimeUpdate);
+			}
+			if (pollingInterval) {
+				clearInterval(pollingInterval);
+			}
+		};
 	});
 
+	async function handleRealtimeUpdate(e: Event) {
+		const customEvent = e as CustomEvent;
+		const detail = customEvent.detail;
+		console.log('📡 Realtime update received in Inbox page:', detail);
+		
+		// Force refresh the messages list
+		await loadMessages(true);
+
+		// If the updated thread is currently selected, reload the chat messages
+		const updatedThreadId = detail?.notification?.threadId || detail?.threadId || detail?.notification?.sourceIdentifier;
+		if (selectedMessage && updatedThreadId && (selectedMessage.thread_id === updatedThreadId || updatedThreadId.includes(selectedMessage.thread_id) || selectedMessage.thread_id.includes(updatedThreadId))) {
+			await loadChatMessages(selectedMessage.thread_id);
+		}
+	}
+
 	// Add loadMessages function
-	async function loadMessages() {
+	async function loadMessages(forceRefresh = false) {
 		if (initialLoad) {
 			isLoadingMessages = true;
 		}
@@ -115,8 +172,8 @@
 			const resJson = await response.json();
 			const items = resJson.data || [];
 
-			// For initial load, replace all messages. For pagination, append new ones (avoiding duplicates)
-			if (initialLoad) {
+			// For initial load or forceRefresh, replace all messages. For pagination, append new ones (avoiding duplicates)
+			if (initialLoad || forceRefresh) {
 				messages = items.map(formatMessage);
 			} else {
 				// Only append messages that don't already exist
@@ -125,6 +182,15 @@
 					.filter((item: any) => !existingIds.has(item.id))
 					.map(formatMessage);
 				messages = [...messages, ...newMessages];
+			}
+
+			// Clean up selected message if it was deleted
+			if (selectedMessage) {
+				const stillExists = messages.some((m) => m.thread_id === selectedMessage.thread_id);
+				if (!stillExists) {
+					selectedMessage = null;
+					chatMessages = [];
+				}
 			}
 
 			// Update chat messages only if needed
@@ -227,6 +293,7 @@
 			color,
 			urgency: msg.urgency,
 			intent: msg.intent,
+			draftResponse: msg.draftResponse,
 			// Additional properties for UI display
 			name,
 			message: messageText,
@@ -234,7 +301,7 @@
 		};
 	}
 
-	// Update the sort function to use proper types
+	// Update the sort function to use proper types (oldest first for chat timeline)
 	function sortByTimestamp(a: { timestamp: string }, b: { timestamp: string }): number {
 		return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
 	}
@@ -263,13 +330,14 @@
 		const message = input.value.trim();
 
 		if (!message || !selectedMessage) return;
+		const targetThreadId = selectedMessage.thread_id;
 
 		// Clear input immediately for better UX
 		input.value = '';
 
 		try {
 			const threadResponse = await fetch(
-				`/api/messages?threadId=${encodeURIComponent(selectedMessage.thread_id)}`
+				`/api/messages?threadId=${encodeURIComponent(targetThreadId)}`
 			);
 			if (!threadResponse.ok) throw new Error('Failed to fetch thread');
 			const existingThread = await threadResponse.json();
@@ -292,7 +360,7 @@
 						body: JSON.stringify({
 							message,
 							phoneNumber: existingThread.customerPhone,
-							threadId: existingThread.threadId
+							threadId: targetThreadId
 						})
 					});
 
@@ -341,13 +409,88 @@
 				msg.thread_id === updatedThread.threadId ? formatMessage(updatedThread) : msg
 			);
 
-			// Update chat messages
-			await loadChatMessages(selectedMessage.thread_id);
+			// Update chat messages only if still selected
+			if (selectedMessage && selectedMessage.thread_id === targetThreadId) {
+				await loadChatMessages(targetThreadId);
+			}
 
 			toast.success('Message sent successfully');
 		} catch (err) {
 			console.error('Error sending message:', err);
 			toast.error('Failed to send message');
+		}
+	}
+
+	async function sendDraftSms() {
+		if (!selectedMessage) return;
+		const targetThreadId = selectedMessage.thread_id;
+		isSendingSms = true;
+		try {
+			const phone = selectedMessage.customer_phone;
+			if (!phone) {
+				toast.error('No phone number found for customer');
+				return;
+			}
+			console.log('Sending draft SMS to:', phone);
+			const telnyxResponse = await fetch('/api/telnyx', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					message: draftValue,
+					phoneNumber: phone,
+					threadId: targetThreadId
+				})
+			});
+
+			const telnyxResult = await telnyxResponse.json();
+			if (!telnyxResult.success) {
+				toast.error('Failed to send SMS: ' + telnyxResult.error);
+				return;
+			}
+
+			// Update the database locally
+			const response = await fetch(
+				`/api/messages?threadId=${encodeURIComponent(targetThreadId)}`
+			);
+			const resJson = await response.json();
+			const existingThread = resJson.data;
+			const existingMessages = typeof existingThread.messages === 'string'
+				? JSON.parse(existingThread.messages)
+				: existingThread.messages || [];
+
+			const updatedMessages = [
+				...existingMessages,
+				{
+					content: draftValue,
+					timestamp: new Date().toISOString(),
+					is_agent_reply: true,
+					agent_id: user.id,
+					agent_name: user.name
+				}
+			];
+
+			await fetch('/api/messages', {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					id: existingThread.id,
+					messages: updatedMessages,
+					status: 'replied'
+				})
+			});
+
+			toast.success('Draft SMS sent successfully!');
+			await loadMessages(true);
+			
+			// Only load chat messages if the thread is still selected
+			if (selectedMessage && selectedMessage.thread_id === targetThreadId) {
+				await loadChatMessages(targetThreadId);
+			}
+		} catch (err) {
+			console.error('Error sending draft SMS:', err);
+			toast.error('Failed to send draft SMS');
+		} finally {
+			isSendingSms = false;
 		}
 	}
 
@@ -733,6 +876,27 @@
 					<button class="border-b-2 border-primary pb-2 text-primary">Message</button>
 					<button class="pb-2">Note</button>
 				</div>
+
+				{#if hasUnansweredSms && selectedMessage && selectedMessage.thread_id.startsWith('emergency-')}
+					<div class="mb-4 rounded-lg border border-sky-200 bg-sky-50/50 p-3 flex flex-col gap-2">
+						<div class="text-[10px] text-sky-600 font-mono uppercase font-bold tracking-wider">Draft Response (Handshake)</div>
+						<textarea
+							bind:value={draftValue}
+							class="w-full h-14 bg-white border border-sky-200 rounded p-1.5 text-slate-800 text-xs resize-none outline-none focus:border-sky-400 transition-colors"
+						></textarea>
+						<div class="flex justify-end">
+							<Button
+								type="button"
+								class="bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white border-0 px-3 py-1.5 rounded text-[10px] font-bold cursor-pointer transition-colors"
+								onclick={sendDraftSms}
+								disabled={isSendingSms}
+							>
+								{isSendingSms ? 'Sending...' : 'Send Reply SMS'}
+							</Button>
+						</div>
+					</div>
+				{/if}
+
 				<div class="w-full">
 					<input
 						type="text"

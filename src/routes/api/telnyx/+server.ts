@@ -14,15 +14,54 @@ import { prisma } from '$lib/db';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	const { message, phoneNumber, threadId } = await request.json();
+	const companyId = locals.user?.company?.id;
+	let fromNumber: string = TELNYX_PHONE_NUMBER;
 
 	try {
-		const companyId = locals.user?.company?.id;
-		let fromNumber: string;
 		if (companyId) {
-			const companyNumber = await getFirstCompanyNumber(prisma, companyId);
-			fromNumber = companyNumber?.phoneNumber ?? TELNYX_PHONE_NUMBER;
-		} else {
-			fromNumber = TELNYX_PHONE_NUMBER;
+			// Find all numbers for the company safely
+			const companyNumbers = await prisma.companyPhoneNumber.findMany({
+				where: { companyId },
+				select: { phoneNumber: true }
+			});
+			const validNumbers = companyNumbers.map(n => normalizePhoneNumber(n.phoneNumber)).filter(Boolean);
+			
+			// Find the last communication log with this customer to see which number was used
+			const formattedPhoneNumber = normalizePhoneNumber(phoneNumber);
+			const lastLog = await prisma.communicationLog.findFirst({
+				where: {
+					companyId,
+					OR: [
+						{ source: formattedPhoneNumber },
+						{ destination: formattedPhoneNumber }
+					]
+				},
+				orderBy: { created: 'desc' }
+			});
+
+			let matchedNumber: string | null = null;
+			if (lastLog) {
+				const srcNorm = normalizePhoneNumber(lastLog.source || '');
+				const destNorm = normalizePhoneNumber(lastLog.destination || '');
+				if (validNumbers.includes(destNorm)) {
+					matchedNumber = destNorm;
+				} else if (validNumbers.includes(srcNorm)) {
+					matchedNumber = srcNorm;
+				}
+			}
+
+			if (matchedNumber) {
+				fromNumber = matchedNumber;
+				console.log(`[Outbound Route] Found matching company number from last communication: ${fromNumber}`);
+			} else {
+				const telnyxNorm = normalizePhoneNumber(TELNYX_PHONE_NUMBER);
+				if (validNumbers.includes(telnyxNorm)) {
+					fromNumber = TELNYX_PHONE_NUMBER;
+				} else if (validNumbers.length > 0) {
+					const allowedNum = validNumbers.find(n => n !== '+12016277128');
+					fromNumber = allowedNum || validNumbers[0];
+				}
+			}
 		}
 
 		// Normalize phone number
@@ -126,18 +165,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		console.error('Telnyx API error:', error);
 
 		// Log failed attempt if we have enough info
-		try {
-			await logCommunication({
-				type: 'sms',
-				direction: 'outbound',
-				status: 'failed',
-				source: TELNYX_PHONE_NUMBER,
-				destination: normalizePhoneNumber(phoneNumber),
-				content: message,
-				metadata: { error: error instanceof Error ? error.message : String(error) }
-			});
-		} catch (e) {
-			console.error('Failed to log error', e);
+		if (companyId) {
+			try {
+				await logCommunication({
+					type: 'sms',
+					direction: 'outbound',
+					status: 'failed',
+					source: fromNumber,
+					destination: normalizePhoneNumber(phoneNumber),
+					company_id: companyId,
+					content: message,
+					metadata: { error: error instanceof Error ? error.message : String(error) }
+				});
+			} catch (e) {
+				console.error('Failed to log error', e);
+			}
 		}
 
 		return json(

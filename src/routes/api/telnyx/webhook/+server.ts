@@ -20,13 +20,26 @@ export const POST: RequestHandler = async ({ request }) => {
 		let smsText = '';
 		let smsSender = 'Anonymous';
 		let smsId = `sms_${Date.now()}`;
+		let isOutbound = false;
+		let eventType = 'unknown';
 		try {
 			const parsed = JSON.parse(rawBody);
+			eventType = parsed.data?.event_type || 'unknown';
 			const msgPayload = parsed.data?.payload || parsed;
+			const direction = msgPayload.direction;
+			if (eventType === 'message.sent' || eventType === 'message.finalized' || direction === 'outbound') {
+				isOutbound = true;
+			}
 			smsText = msgPayload.text || '';
 			smsSender = msgPayload.from?.phone_number || msgPayload.from || 'Anonymous';
 			smsId = msgPayload.id || smsId;
 		} catch (e) {}
+
+		// Skip completely if this is an outbound event to prevent loops and double logging
+		if (isOutbound) {
+			console.log(`--- [WEBHOOK] Ignoring outbound event: ${eventType} ---`);
+			return json({ success: true, message: 'Ignored outbound event' });
+		}
 
 		// FORWARD TO CLEARSKY ENGINE:
 		// Send SMS webhook to the AI Signals pipeline

@@ -1,7 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { createPublicKey, verify } from 'crypto';
-import { TELNYX_API_KEY } from '$env/static/private';
+import { TELNYX_API_KEY, TELNYX_MESSAGING_PROFILE_ID } from '$env/static/private';
+import { PipelineSimulator } from '$lib/server/pipeline-simulator';
 import { addPendingCall } from '$lib/utils/callStore';
 import { prisma } from '$lib/db';
 import { getActiveCallFlow, toAbsoluteAudioUrl } from '$lib/ivr';
@@ -1276,40 +1277,7 @@ export const POST: RequestHandler = async ({ request }) => {
 											bucketSignal = 'friction';
 										}
 
-										// POST directly to ProfileDB
-										try {
-											const profiledbUrl = process.env.PROFILEDB_URL || 'http://localhost:6277';
-											await fetch(`${profiledbUrl}/api/v1/telemetry/events`, {
-												method: 'POST',
-												headers: { 'Content-Type': 'application/json' },
-												body: JSON.stringify({
-													tenantSlug: 'clearsky-demo',
-													eventType: 'telnyx.voice.voicemail',
-													phone: contactNumber,
-													name: contact?.name || callerName || null,
-													scoreDelta: scoreDelta,
-													occurredAt: new Date().toISOString(),
-													payload: {
-														call_control_id: callControlId,
-														voicemail_text: transcript,
-														phone: contactNumber,
-														name: contact?.name || callerName || null,
-														caller_name_source: callerName ? 'transcript_ai' : 'none',
-														urgency_detected: urgency === 'high',
-														contains_emergency_keywords: emergencyKeywords.some(kw => lowerTranscript.includes(kw)),
-														isConversion: bucketSignal === 'active' || bucketSignal === 'emergency',
-														buying_signals: buyingSignals,
-														sentiment: sentiment,
-														intent: intent
-													}
-												})
-											});
-											console.log(`📡 Ingested call event to ProfileDB with delta +${scoreDelta} (${bucketSignal})${callerName ? `, caller: ${callerName}` : ''}`);
-										} catch (err) {
-											console.error('❌ Failed to post call telemetry to ProfileDB:', err);
-										}
-                                        
-                                        // Resolve final path and priority from client state
+										// Resolve final path and priority from client state
 										let finalIvrPath = 'Direct Call';
 										let finalPriority = 'standard';
 										if (decoded) {
@@ -1328,25 +1296,139 @@ export const POST: RequestHandler = async ({ request }) => {
 											}
 										}
 
-										// FORWARD TO CLEARSKY ENGINE:
-										// Now that we have the full transcript, send it to the AI Signals pipeline
-										const clearskyUrl = process.env.CLEARSKY_API_URL || 'https://testsite.clearskysoftware.net';
-										fetch(`${clearskyUrl}/next-api/signals/test`, {
-											method: 'POST',
-											headers: { 'Content-Type': 'application/json' },
-											body: JSON.stringify({
-												author_name: contact?.name || callerName || contactNumber || 'Unknown Caller',
-												customer_phone: contactNumber || undefined,
-												rating: 0,
-												comment: transcript,
-												summary: summary,
-												mode: 'call',
-												sessionId: callControlId,
-												audioUrl: audioUrl,
-												buying_signals: buyingSignals,
-												sentiment: sentiment
-											})
-										}).catch(err => console.error('[ClearSky Pipeline Forwarding Error]', err));
+										// RUN SVELTEKIT INTERNAL AI SIGNALS PIPELINE:
+										PipelineSimulator.run({
+											author_name: contact?.name || callerName || contactNumber || 'Unknown Caller',
+											customer_phone: contactNumber || undefined,
+											rating: 0,
+											comment: transcript,
+											mode: 'call',
+											sessionId: callControlId
+										}).then(async (pipelineResult) => {
+											if (!pipelineResult.success) {
+												console.error('❌ Voice Pipeline run failed:', pipelineResult.error);
+												return;
+											}
+
+											let scoreDelta = 5;
+											let bucketSignal = 'research';
+											const lowerTranscript = transcript.toLowerCase();
+											const emergencyKeywords = ['burst', 'flood', 'leak', 'emergency', 'pipe', 'water', 'immediate', 'urgent'];
+											const bookingKeywords = ['book', 'appointment', 'estimate', 'quote', 'schedule', 'renovate', 'renovation', 'toilet', 'shower', 'fixture'];
+
+											if (urgency === 'high' || emergencyKeywords.some(kw => lowerTranscript.includes(kw))) {
+												scoreDelta = 95;
+												bucketSignal = 'emergency';
+											} else if (intent === 'Booking' || bookingKeywords.some(kw => lowerTranscript.includes(kw))) {
+												scoreDelta = 20;
+												bucketSignal = 'active';
+											} else if (sentiment === 'Angry' || sentiment === 'Negative') {
+												scoreDelta = -10;
+												bucketSignal = 'friction';
+											}
+
+											// Persist the full pipeline package into ProfileDB
+											const profiledbUrl = process.env.PROFILEDB_URL || 'http://localhost:6277';
+											const res = await fetch(`${profiledbUrl}/api/v1/telemetry/events`, {
+												method: 'POST',
+												headers: {
+													'Content-Type': 'application/json',
+													'Authorization': 'Bearer clearsky_pixel_api_key'
+												},
+												body: JSON.stringify({
+													tenantSlug: 'clearsky-demo',
+													fingerprintId: callControlId,
+													eventType: 'telnyx.voice.voicemail',
+													phone: contactNumber || null,
+													name: contact?.name || callerName || null,
+													scoreDelta: scoreDelta,
+													payload: {
+														provider: 'telnyx_voice',
+														event_type: 'voicemail_received',
+														textContent: transcript,
+														rating: 0,
+														author_name: contact?.name || callerName || contactNumber || 'Unknown Caller',
+														customer_phone: contactNumber || null,
+														audio_url: audioUrl || null,
+														pipeline_logs: pipelineResult.logs,
+														signals: pipelineResult.signals,
+														enrichments: pipelineResult.enrichments,
+														decision: pipelineResult.decision,
+														execution: pipelineResult.execution,
+														outcome: pipelineResult.outcome,
+														feedback: pipelineResult.feedback,
+														ai_protocol: pipelineResult.ai_protocol
+													}
+												})
+											});
+
+											if (res.ok) {
+												console.log('📡 Pipeline executed and Voice event logged to ProfileDB successfully');
+											} else {
+												console.error('❌ Failed to log Voice event to ProfileDB:', res.statusText);
+											}
+
+											// Check if the pipeline decided to dispatch a safety SMS (emergency route)
+											const action = pipelineResult.decision?.action_queue?.[0];
+											if (action && action.action_id === 'ACT-A2P-002') {
+												console.log('🚨 Emergency action detected! Attempting to send safety SMS...');
+												
+												// Get safety SMS text
+												let safetySmsText = '';
+												try {
+													const execRecord = pipelineResult.execution?.execution_output_package?.execution_records?.[0];
+													if (execRecord?.generated_output) {
+														const parsedOutput = JSON.parse(execRecord.generated_output);
+														safetySmsText = parsedOutput.draft_reply || parsedOutput.sms_text;
+													}
+												} catch (e) {
+													console.error('Failed to parse safety SMS text from execution output:', e);
+												}
+
+												if (!safetySmsText) {
+													safetySmsText = `Hi ${contact?.name || 'Marie'}, we received your urgent message about the burst pipe/leak and are calling you right back to help!`;
+												}
+
+												if (companyNumber && contactNumber) {
+													const formattedFrom = toE164(companyNumber);
+													const formattedTo = toE164(contactNumber);
+													
+													console.log(`📤 Sending safety SMS from ${formattedFrom} to ${formattedTo}: "${safetySmsText}"`);
+													try {
+														const smsRes = await fetch('https://api.telnyx.com/v2/messages', {
+															method: 'POST',
+															headers: {
+																'Content-Type': 'application/json',
+																Authorization: `Bearer ${TELNYX_API_KEY}`
+															},
+															body: JSON.stringify({
+																from: formattedFrom,
+																to: formattedTo,
+																text: safetySmsText,
+																messaging_profile_id: TELNYX_MESSAGING_PROFILE_ID,
+																webhook_url: `${PUBLIC_BASE_URL.replace(/\/$/, '')}/api/telnyx/webhook`,
+																webhook_failover_url: `${PUBLIC_BASE_URL.replace(/\/$/, '')}/api/telnyx/webhook-backup`,
+																use_profile_webhooks: false,
+																type: 'SMS'
+															})
+														});
+														
+														const responseText = await smsRes.text();
+														console.log('Telnyx Safety SMS send response:', responseText);
+														
+														if (!smsRes.ok) {
+															console.error('❌ Failed to send safety SMS via Telnyx:', responseText);
+														} else {
+															console.log('✅ Safety SMS successfully dispatched via Telnyx');
+														}
+													} catch (smsErr) {
+														console.error('❌ Error sending safety SMS via Telnyx:', smsErr);
+													}
+												} else {
+													console.warn('⚠️ Missing companyNumber or contactNumber, cannot send safety SMS');
+												}
+											}
+										}).catch(err => console.error('[Voice Pipeline Error]', err));
 									}
 								} catch (err) {
 									console.error('❌ OpenAI processing failed:', err);

@@ -153,10 +153,104 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 };
 
+async function syncEmergencyMessages(companyId: string) {
+	const PROFILEDB_URL = process.env.PROFILEDB_URL || 'http://localhost:6277';
+	try {
+		const resEvents = await fetch(`${PROFILEDB_URL}/api/v1/tenants/clearsky-demo/events?limit=30`);
+		if (!resEvents.ok) return;
+		const jsonEvents = await resEvents.json();
+		if (!jsonEvents || !Array.isArray(jsonEvents.data)) return;
+
+		const profileIds = [...new Set(jsonEvents.data.map((ev: any) => ev.customerProfileId).filter(Boolean))];
+
+		for (const profileId of profileIds) {
+			const resHistory = await fetch(`${PROFILEDB_URL}/api/v1/tenants/clearsky-demo/profiles/${profileId}/history`);
+			if (!resHistory.ok) continue;
+			const history = await resHistory.json();
+			if (!Array.isArray(history) || history.length === 0) continue;
+
+			const resProfile = await fetch(`${PROFILEDB_URL}/api/v1/tenants/clearsky-demo/profiles/${profileId}`);
+			if (!resProfile.ok) continue;
+			const profile = await resProfile.json();
+
+			const customerPhone = (profile.clearPhone && profile.clearPhone !== '—') 
+				? profile.clearPhone 
+				: (profile.phone && profile.phone.length < 20 ? profile.phone : `profile-${profileId}`);
+			const customerName = profile.name || 'Emergency Customer';
+
+			const mappedMessages = history.map((ev: any) => {
+				const isSmsSent = ev.eventType === 'sms_sent' || ev.eventType === 'message.sent';
+				const isOutbound = isSmsSent || ev.eventType === 'call_initiated' || ev.eventType === 'job_completed';
+				
+				let senderName = 'Customer';
+				if (isSmsSent) senderName = 'System / Auto-Reply';
+				else if (ev.eventType === 'call_initiated') senderName = 'System / Dispatch';
+				else if (ev.eventType === 'job_completed') senderName = 'System / Billing';
+
+				let content = 'Emergency situation detected.';
+				if (ev.eventType.includes('voicemail') || ev.eventType.includes('call_received') || ev.eventType.includes('voice')) {
+					content = ev.payload?.voicemail_text || ev.payload?.textContent || ev.payload?.detail || 'Emergency voicemail received';
+				} else if (ev.eventType === 'sms_received' || ev.eventType === 'message.received') {
+					content = ev.payload?.body || ev.payload?.textContent || ev.payload?.detail || 'Inbound SMS received';
+				} else {
+					content = ev.payload?.detail || ev.payload?.body || ev.eventType;
+				}
+
+				return {
+					content,
+					timestamp: ev.occurredAt || new Date().toISOString(),
+					is_agent_reply: isOutbound,
+					agent_name: isOutbound ? senderName : undefined
+				};
+			}).sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+			const threadId = `emergency-${profileId}`;
+
+			const existing = await prisma.message.findUnique({
+				where: { threadId }
+			});
+
+			const hasEmergency = history.some((ev: any) => ev.intentBucket === 'emergency');
+			const urgency = hasEmergency ? 'red' : 'blue';
+
+			if (existing) {
+				await prisma.message.update({
+					where: { id: existing.id },
+					data: {
+						messages: mappedMessages,
+						updated: new Date(),
+						customerName,
+						customerPhone,
+						urgency,
+						intent: profile.intentBucket
+					}
+				});
+			} else {
+				await prisma.message.create({
+					data: {
+						threadId,
+						companyId,
+						customerName,
+						customerPhone,
+						status: 'new',
+						urgency,
+						intent: profile.intentBucket,
+						messages: mappedMessages
+					}
+				});
+			}
+		}
+	} catch (err) {
+		console.warn('[syncEmergencyMessages] failed:', err);
+	}
+}
+
 export const GET: RequestHandler = async ({ url, locals }) => {
 	if (!locals.user || !locals.user.company) {
 		return json({ success: false, error: 'Unauthorized' }, { status: 401 });
 	}
+
+	await syncEmergencyMessages(locals.user.company.id);
 
 	const page = parseInt(url.searchParams.get('page') || '1');
 	const perPage = parseInt(url.searchParams.get('perPage') || '20');

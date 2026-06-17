@@ -21,7 +21,7 @@
 	let currentCaller = $state({ name: '', phone: '', callId: '' });
 	let eventSource: EventSource | null = null;
 
-	const isCommunicationLog = $derived($page.url.pathname === '/communication-log');
+	const isCommunicationLog = $derived($page.url.pathname === '/communication-log' || $page.url.pathname === '/inbox');
 
 	onMount(async () => {
 		// Initialize authStore with server-side data
@@ -77,7 +77,7 @@
 				description: data.notification.sourceName,
 				action: {
 					label: 'View',
-					onClick: () => goto('/communication-log')
+					onClick: () => goto('/inbox')
 				}
 			});
 
@@ -92,7 +92,7 @@
 				description: data.notification.messagePreview,
 				action: {
 					label: 'Reply',
-					onClick: () => goto('/communication-log')
+					onClick: () => goto('/inbox')
 				}
 			});
 		});

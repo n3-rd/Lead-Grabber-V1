@@ -46,98 +46,87 @@ export const load: PageServerLoad = async ({ locals, depends, fetch, url }) => {
 			role: m.role
 		}));
 
-		// A2P: fetch from our API (uses A2P_COMMLOG_API_URL if set, else A2P_DATABASE_URL)
-		if (isA2pCommLogEnabled()) {
-			const res = await fetch(`/api/a2p/communication-log?limit=${limit}&offset=${offset}`);
-			if (!res.ok) {
-				console.error('A2P communication-log API failed:', res.status);
-				return {
-					logs: [],
-					members: membersForPicker,
-					useA2pCommLog: true,
-					totalCount: null,
-					limit,
-					page
-				};
-			}
-			const data = await res.json();
+		// Fetch raw telemetry events from ProfileDB
+		const profileDbUrl = process.env.PROFILEDB_URL || 'http://localhost:6277';
+		const profileDbRes = await fetch(`${profileDbUrl}/api/v1/tenants/clearsky-demo/events?limit=${limit}&page=${page}`);
+		if (!profileDbRes.ok) {
+			console.error('ProfileDB events fetch failed:', profileDbRes.status);
 			return {
-				logs: Array.isArray(data.logs) ? data.logs : [],
+				logs: [],
 				members: membersForPicker,
 				useA2pCommLog: true,
-				totalCount: data.totalCount ?? null,
+				totalCount: 0,
 				limit,
 				page
 			};
 		}
+		const data = await profileDbRes.json();
+		const events = Array.isArray(data.data) ? data.data : [];
 
-		const [totalCount, logs] = await Promise.all([
-			prisma.communicationLog.count({
-				where: { companyId: locals.user.company.id }
-			}),
-			prisma.communicationLog.findMany({
-				where: {
-					companyId: locals.user.company.id
+		const logs = events.map((ev: any) => {
+			const payload = ev.payload || {};
+			const type = ev.eventType.includes('sms') ? 'sms' : (ev.eventType.includes('voicemail') || ev.eventType.includes('call') ? 'voice' : 'web');
+			const direction = ev.eventType.includes('received') || ev.eventType.includes('incoming') || ev.eventType === 'sms_received' || ev.eventType === 'telnyx.voice.voicemail' ? 'inbound' : 'outbound';
+			
+			// Extract clean display name/source
+			let source = '—';
+			if (payload.phone || payload.customer_phone) {
+				source = payload.phone || payload.customer_phone;
+			} else if (ev.customerProfile?.name) {
+				source = ev.customerProfile.name;
+			} else if (ev.customerProfile?.phone && ev.customerProfile.phone.length < 20) {
+				source = ev.customerProfile.phone;
+			} else {
+				source = 'Lead (' + ev.customerProfileId.slice(0, 6) + ')';
+			}
+
+			let summary = payload.detail || payload.body || payload.text || payload.textContent || payload.voicemail_text || ev.eventType;
+			if (ev.eventType === 'telnyx.voice.voicemail') {
+				summary = `Voicemail: "${payload.voicemail_text || 'Emergency call'}"`;
+			} else if (ev.eventType === 'sms_sent') {
+				summary = `SMS Sent: "${payload.body || payload.text || summary}"`;
+			} else if (ev.eventType === 'sms_received') {
+				summary = `SMS Received: "${payload.body || payload.text || summary}"`;
+			} else if (ev.eventType === 'call_initiated') {
+				summary = `Outbound Call: "${payload.detail || summary}"`;
+			} else if (ev.eventType === 'job_completed') {
+				summary = `Job Completed: Invoiced $${Number(payload.revenue || 250.00).toFixed(2)}`;
+			}
+
+			return {
+				id: ev.id,
+				type,
+				direction,
+				status: ev.intentBucket === 'emergency' ? 'red' : (ev.intentBucket === 'active' ? 'blue' : 'green'),
+				source,
+				destination: payload.to || payload.from || 'clearsky-demo',
+				summary: summary,
+				content: payload.textContent || payload.voicemail_text || payload.body || payload.text || '',
+				metadata: {
+					urgency_gpt: ev.intentBucket === 'emergency' ? 5 : 1,
+					category_gpt: ev.intentBucket || 'General',
+					subcat_gpt: ev.eventType
 				},
-				take: limit,
-				skip: offset,
-				orderBy: {
-					created: 'desc'
-				},
-				include: {
-					user: {
-						select: {
-							id: true,
-							name: true,
-							email: true
-						}
+				created: ev.occurredAt,
+				updated: ev.occurredAt,
+				expand: {
+					user_id: { name: 'System' },
+					customer_id: {
+						id: ev.customerProfileId,
+						name: ev.customerProfile?.name || 'Customer',
+						phone: payload.phone || payload.customer_phone || undefined,
+						email: payload.email || payload.customer_email || undefined
 					},
-					customer: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							phone: true
-						}
-					},
-					assignedMembers: {
-						include: {
-							user: {
-								select: {
-									id: true,
-									name: true,
-									email: true
-								}
-							}
-						}
-					}
+					assigned_members: []
 				}
-			})
-		]);
+			};
+		});
 
 		return {
-			logs: logs.map((log) => ({
-				id: log.id,
-				type: log.type,
-				direction: log.direction,
-				status: log.status,
-				source: log.source,
-				destination: log.destination,
-				summary: log.summary,
-				content: log.content,
-				duration: log.duration,
-				metadata: log.metadata,
-				created: log.created,
-				updated: log.updated,
-				expand: {
-					user_id: log.user,
-					customer_id: log.customer,
-					assigned_members: log.assignedMembers.map((am) => am.user)
-				}
-			})),
+			logs,
 			members: membersForPicker,
-			useA2pCommLog: false,
-			totalCount,
+			useA2pCommLog: true,
+			totalCount: data.pagination?.total || 0,
 			limit,
 			page
 		};

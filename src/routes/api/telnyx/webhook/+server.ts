@@ -7,6 +7,7 @@ import { logCommunication } from '$lib/utils/communication-log';
 import { createOrUpdateContact } from '$lib/utils/contacts';
 import { getCompanyIdByPhoneNumber } from '$lib/company-numbers';
 import { isA2pEnabled, forwardSmsWebhook } from '$lib/server/a2p-client';
+import { PipelineSimulator } from '$lib/server/pipeline-simulator';
 
 async function handleWebhook(request: Request) {
 	return await POST({ request } as Parameters<typeof POST>[0]);
@@ -41,21 +42,60 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ success: true, message: 'Ignored outbound event' });
 		}
 
-		// FORWARD TO CLEARSKY ENGINE:
-		// Send SMS webhook to the AI Signals pipeline
-		const clearskyUrl = process.env.CLEARSKY_API_URL || 'https://testsite.clearskysoftware.net';
-		fetch(`${clearskyUrl}/next-api/signals/test`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				author_name: smsSender,
-				customer_phone: smsSender !== 'Anonymous' ? smsSender : undefined,
-				rating: 0,
-				comment: smsText,
-				mode: 'sms',
-				sessionId: smsId
-			})
-		}).catch(err => console.error('[ClearSky Pipeline Forwarding Error]', err));
+		// RUN SVELTEKIT INTERNAL AI SIGNALS PIPELINE:
+		PipelineSimulator.run({
+			author_name: smsSender,
+			customer_phone: smsSender !== 'Anonymous' ? smsSender : undefined,
+			rating: 0,
+			comment: smsText,
+			mode: 'sms',
+			sessionId: smsId
+		}).then(async (pipelineResult) => {
+			if (!pipelineResult.success) {
+				console.error('❌ SMS Pipeline run failed:', pipelineResult.error);
+				return;
+			}
+
+			// Persist the full pipeline package into ProfileDB
+			const profiledbUrl = process.env.PROFILEDB_URL || 'http://localhost:6277';
+			const res = await fetch(`${profiledbUrl}/api/v1/telemetry/events`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': 'Bearer clearsky_pixel_api_key'
+				},
+				body: JSON.stringify({
+					tenantSlug: 'clearsky-demo',
+					fingerprintId: smsId,
+					eventType: 'sms_received',
+					pageUrl: null,
+					scoreDelta: 10,
+					phone: smsSender !== 'Anonymous' ? smsSender : null,
+					name: smsSender !== 'Anonymous' ? smsSender : null,
+					payload: {
+						provider: 'telnyx_sms',
+						event_type: 'sms_received',
+						textContent: smsText,
+						rating: 0,
+						author_name: smsSender,
+						customer_phone: smsSender !== 'Anonymous' ? smsSender : null,
+						pipeline_logs: pipelineResult.logs,
+						signals: pipelineResult.signals,
+						enrichments: pipelineResult.enrichments,
+						decision: pipelineResult.decision,
+						execution: pipelineResult.execution,
+						outcome: pipelineResult.outcome,
+						feedback: pipelineResult.feedback,
+						ai_protocol: pipelineResult.ai_protocol
+					}
+				})
+			});
+			if (res.ok) {
+				console.log('📡 Pipeline executed and SMS event logged to ProfileDB successfully');
+			} else {
+				console.error('❌ Failed to log SMS event to ProfileDB:', res.statusText);
+			}
+		}).catch(err => console.error('[SMS Pipeline Error]', err));
 
 		// Forward to A2P backend when configured (replaces local SMS/messages/comm-log handling)
 		if (isA2pEnabled()) {

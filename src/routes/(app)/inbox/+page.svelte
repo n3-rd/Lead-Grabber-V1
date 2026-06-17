@@ -112,15 +112,16 @@
 
 			const response = await fetch(`/api/messages?page=${page}&perPage=${PER_PAGE}`);
 			if (!response.ok) throw new Error('Failed to fetch messages');
-			const data = await response.json();
+			const resJson = await response.json();
+			const items = resJson.data || [];
 
 			// For initial load, replace all messages. For pagination, append new ones (avoiding duplicates)
 			if (initialLoad) {
-				messages = data.items.map(formatMessage);
+				messages = items.map(formatMessage);
 			} else {
 				// Only append messages that don't already exist
 				const existingIds = new Set(messages.map((m) => m.id));
-				const newMessages = data.items
+				const newMessages = items
 					.filter((item: any) => !existingIds.has(item.id))
 					.map(formatMessage);
 				messages = [...messages, ...newMessages];
@@ -144,9 +145,10 @@
 		try {
 			const response = await fetch(`/api/messages?threadId=${encodeURIComponent(threadId)}`);
 			if (!response.ok) throw new Error('Failed to fetch thread');
-			const thread = await response.json();
+			const resJson = await response.json();
+			const thread = resJson.data;
 
-			if (!thread.messages || thread.messages.length === 0) {
+			if (!thread || !thread.messages || thread.messages.length === 0) {
 				console.error('No messages found in thread');
 				chatMessages = [];
 				return;
@@ -224,6 +226,7 @@
 			initials,
 			color,
 			urgency: msg.urgency,
+			intent: msg.intent,
 			// Additional properties for UI display
 			name,
 			message: messageText,
@@ -359,8 +362,9 @@
 			const response = await fetch('/api/company-members');
 			if (!response.ok) throw new Error('Failed to fetch company members');
 			const data = await response.json();
+			const members = data.data || [];
 
-			companyMembers = data.items.map((member: any) => ({
+			companyMembers = members.map((member: any) => ({
 				id: member.user,
 				name: member.expand?.user?.name || member.expand?.user?.email || 'Unknown'
 			}));
@@ -573,32 +577,30 @@
 								<div class="flex-grow">
 									<div class="flex items-center gap-2">
 										<h4 class="text-lg font-medium">{(msg as any).name}</h4>
-										{#if msg.urgency === 'red'}
-											<span
-												class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800"
-												>Urgent</span
-											>
-										{:else if msg.urgency === 'blue'}
-											<span
-												class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800"
-												>Medium</span
-											>
-										{:else if msg.urgency === 'yellow'}
-											<span
-												class="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800"
-												>Medium</span
-											>
-										{:else if msg.urgency === 'green'}
-											<span
-												class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800"
-												>Low</span
-											>
-										{:else if msg.urgency}
-											<!-- Fallback for other values just in case -->
-											<span
-												class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800"
-												>{msg.urgency}</span
-											>
+										{#if msg.intent}
+											{#if msg.intent === 'emergency'}
+												<span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 uppercase tracking-wider">Emergency</span>
+											{:else if msg.intent === 'active'}
+												<span class="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800 uppercase tracking-wider">Active Project</span>
+											{:else if msg.intent === 'comparison'}
+												<span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 uppercase tracking-wider">Comparison</span>
+											{:else if msg.intent === 'research'}
+												<span class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 uppercase tracking-wider">Research</span>
+											{:else}
+												<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 uppercase tracking-wider">{msg.intent}</span>
+											{/if}
+										{:else}
+											{#if msg.urgency === 'red'}
+												<span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Urgent</span>
+											{:else if msg.urgency === 'blue'}
+												<span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">Medium</span>
+											{:else if msg.urgency === 'yellow'}
+												<span class="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">Medium</span>
+											{:else if msg.urgency === 'green'}
+												<span class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Low</span>
+											{:else if msg.urgency}
+												<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">{msg.urgency}</span>
+											{/if}
 										{/if}
 									</div>
 									<span class="font-medium">{(msg as any).time}</span>

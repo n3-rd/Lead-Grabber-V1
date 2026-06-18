@@ -105,7 +105,9 @@ export const load: PageServerLoad = async ({ locals, depends, fetch, url }) => {
 				metadata: {
 					urgency_gpt: ev.intentBucket === 'emergency' ? 5 : 1,
 					category_gpt: ev.intentBucket || 'General',
-					subcat_gpt: ev.eventType
+					subcat_gpt: ev.eventType,
+					score: ev.engagementScore || ev.score || 0,
+					scoreDelta: ev.scoreDelta || ev.delta || 0
 				},
 				created: ev.occurredAt,
 				updated: ev.occurredAt,
@@ -118,7 +120,8 @@ export const load: PageServerLoad = async ({ locals, depends, fetch, url }) => {
 						email: payload.email || payload.customer_email || undefined
 					},
 					assigned_members: []
-				}
+				},
+				raw: ev
 			};
 		});
 

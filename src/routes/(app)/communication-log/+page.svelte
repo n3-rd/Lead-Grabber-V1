@@ -5,6 +5,7 @@
 	import CommunicationSummaryDialog from '$lib/components/communication-summary-dialog.svelte';
 	import NotificationsDialog from '$lib/components/notifications/notifications-dialog.svelte';
 	import AssignAgentDialog from '$lib/components/assign-agent-dialog.svelte';
+	import PipelineModal from '$lib/components/PipelineModal.svelte';
 	import { toast } from 'svelte-sonner';
 	import { invalidateAll, goto } from '$app/navigation';
 
@@ -28,6 +29,8 @@
 	let selectedComm = $state<(typeof communications)[0] | null>(null);
 	let notificationsDialogOpen = $state(false);
 	let assignDialogOpen = $state(false);
+	let pipelineDialogOpen = $state(false);
+	let selectedPipelineEvent = $state<any>(null);
 	let selectedEndpoint = $state<string | null>(null);
 	let selectedCommId = $state<string | null>(null);
 	let preSelectedAgents = $state<string[]>([]);
@@ -176,6 +179,11 @@
 		preSelectedAgents = comm.assignedMemberNames || [];
 		assignDialogOpen = true;
 	}
+
+	function handlePipelineClick(comm: any) {
+		selectedPipelineEvent = comm.raw;
+		pipelineDialogOpen = true;
+	}
 </script>
 
 <div class="flex w-full min-w-0 flex-col">
@@ -247,6 +255,7 @@
 			onSummaryClick={handleSummaryClick}
 			onActionClick={handleActionClick}
 			onAssignClick={handleAssignClick}
+			onPipelineClick={handlePipelineClick}
 			showAssignButton={!data.useA2pCommLog}
 			showSearch={false}
 		/>
@@ -393,3 +402,5 @@
 		}
 	}}
 />
+
+<PipelineModal bind:open={pipelineDialogOpen} event={selectedPipelineEvent} />

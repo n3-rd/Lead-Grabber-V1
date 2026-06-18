@@ -37,6 +37,7 @@
 		onSummaryClick?: (comm: Communication) => void;
 		onActionClick?: (action: string, comm: Communication) => void;
 		onAssignClick?: (comm: Communication) => void;
+		onPipelineClick?: (comm: Communication) => void;
 		showFilters?: boolean;
 		showSearch?: boolean;
 		showAssignButton?: boolean;
@@ -60,6 +61,7 @@
 		onSummaryClick,
 		onActionClick,
 		onAssignClick,
+		onPipelineClick,
 		showFilters = true,
 		showSearch = true,
 		showAssignButton = false
@@ -201,6 +203,11 @@
 						Purpose
 					</th>
 					<th
+						class="w-20 whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+					>
+						Score
+					</th>
+					<th
 						class="min-w-[180px] whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
 					>
 						Summary
@@ -209,6 +216,11 @@
 						class="w-28 whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
 					>
 						Comm ID
+					</th>
+					<th
+						class="w-24 whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+					>
+						Pipeline
 					</th>
 					<th
 						class="w-14 px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-600"
@@ -220,7 +232,7 @@
 			<tbody>
 				{#if filteredCommunications.length === 0}
 					<tr>
-						<td colspan="9" class="px-3 py-8 text-center text-sm text-gray-500">
+						<td colspan="11" class="px-3 py-8 text-center text-sm text-gray-500">
 							No communications found
 						</td>
 					</tr>
@@ -282,6 +294,16 @@
 									—
 								{/if}
 							</td>
+							<td class="whitespace-nowrap px-3 py-2.5 text-sm">
+								{#if comm.raw?.metadata?.score !== undefined}
+									<span class="font-semibold text-slate-800">{comm.raw.metadata.score}</span>
+									{#if comm.raw.metadata.scoreDelta}
+										<span class="ml-1 text-xs font-semibold text-emerald-600">+{comm.raw.metadata.scoreDelta}</span>
+									{/if}
+								{:else}
+									<span class="text-gray-400">—</span>
+								{/if}
+							</td>
 							<td class="max-w-[240px] px-3 py-2.5 text-sm">
 								{#if comm.summary}
 									<button
@@ -301,6 +323,15 @@
 								title={comm.commId ?? ''}
 							>
 								{comm.commId ? comm.commId.slice(0, 8) + '…' : '—'}
+							</td>
+							<td class="whitespace-nowrap px-3 py-2.5">
+								<button
+									type="button"
+									class="inline-flex items-center gap-1 rounded bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
+									onclick={() => onPipelineClick?.(comm)}
+								>
+									⚡ Pipeline
+								</button>
 							</td>
 							<td class="px-3 py-2.5 text-right align-top">
 								<div class="relative inline-block">

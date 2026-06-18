@@ -153,7 +153,16 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 };
 
+let lastSyncTime = 0;
+const SYNC_COOLDOWN = 10000; // 10 seconds
+
 async function syncEmergencyMessages(companyId: string) {
+	const now = Date.now();
+	if (now - lastSyncTime < SYNC_COOLDOWN) {
+		return;
+	}
+	lastSyncTime = now;
+
 	const PROFILEDB_URL = process.env.PROFILEDB_URL || 'http://localhost:6277';
 	try {
 		const resEvents = await fetch(`${PROFILEDB_URL}/api/v1/tenants/clearsky-demo/events?limit=30`);
@@ -173,13 +182,26 @@ async function syncEmergencyMessages(companyId: string) {
 			},
 			select: {
 				id: true,
-				threadId: true
+				threadId: true,
+				messages: true
 			}
 		});
 
 		for (const msg of localEmergencyMessages) {
 			const profileId = msg.threadId.replace('emergency-', '');
 			if (!activeProfileIds.has(profileId)) {
+				// Prevent deleting if the thread has messages sent by an agent
+				const messagesArray = Array.isArray(msg.messages)
+					? msg.messages
+					: typeof msg.messages === 'string'
+						? JSON.parse(msg.messages)
+						: [];
+				const hasAgentReply = messagesArray.some((m: any) => m.is_agent_reply);
+				if (hasAgentReply) {
+					console.log(`ℹ️ Keeping local emergency thread ${msg.threadId} because it has agent replies.`);
+					continue;
+				}
+
 				console.log(`🗑️ Deleting local emergency thread ${msg.threadId} as it is not present in CDP`);
 				await prisma.message.delete({
 					where: { id: msg.id }
@@ -291,11 +313,16 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		return json({ success: false, error: 'Unauthorized' }, { status: 401 });
 	}
 
-	await syncEmergencyMessages(locals.user.company.id);
-
 	const page = parseInt(url.searchParams.get('page') || '1');
 	const perPage = parseInt(url.searchParams.get('perPage') || '20');
 	const threadId = url.searchParams.get('threadId');
+
+	// Only sync if querying list, and do it in the background (non-blocking)
+	if (!threadId) {
+		syncEmergencyMessages(locals.user.company.id).catch((err) => {
+			console.warn('[syncEmergencyMessages] background sync failed:', err);
+		});
+	}
 
 	try {
 		if (threadId) {

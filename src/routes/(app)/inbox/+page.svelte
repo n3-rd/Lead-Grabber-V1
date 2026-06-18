@@ -167,7 +167,12 @@
 				return;
 			}
 
-			const response = await fetch(`/api/messages?page=${page}&perPage=${PER_PAGE}`);
+			if (forceRefresh) {
+				page = 1;
+			}
+
+			const targetPage = forceRefresh ? 1 : page;
+			const response = await fetch(`/api/messages?page=${targetPage}&perPage=${PER_PAGE}`);
 			if (!response.ok) throw new Error('Failed to fetch messages');
 			const resJson = await response.json();
 			const items = resJson.data || [];
@@ -695,7 +700,7 @@
 
 	<div class="flex min-h-0 flex-1 gap-5">
 		<div class="flex w-1/2 flex-col rounded-xl bg-white">
-			<div class="flex-1 overflow-y-auto">
+			<div class="flex-1 overflow-y-auto" onscroll={handleScroll}>
 				<div class="flex flex-col divide-y px-5">
 					{#if initialLoad && isLoadingMessages}
 						{#each Array(5) as _}
@@ -791,7 +796,7 @@
 		</div>
 
 		<div class="flex w-1/2 flex-col rounded-xl bg-white">
-			<div class="flex-1 overflow-y-auto" bind:this={messagesContainer} onscroll={handleScroll}>
+			<div class="flex-1 overflow-y-auto" bind:this={messagesContainer}>
 				{#if selectedMessage && showMessages}
 					{#if isLoadingChat}
 						<div class="flex flex-col gap-4 p-4">

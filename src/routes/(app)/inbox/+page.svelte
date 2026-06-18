@@ -340,7 +340,12 @@
 				`/api/messages?threadId=${encodeURIComponent(targetThreadId)}`
 			);
 			if (!threadResponse.ok) throw new Error('Failed to fetch thread');
-			const existingThread = await threadResponse.json();
+			const resJson = await threadResponse.json();
+			const existingThread = resJson.data;
+
+			if (!existingThread) {
+				throw new Error('Thread not found');
+			}
 
 			// Parse existing messages
 			const existingMessages =
@@ -454,6 +459,9 @@
 			);
 			const resJson = await response.json();
 			const existingThread = resJson.data;
+			if (!existingThread) {
+				throw new Error('Thread not found');
+			}
 			const existingMessages = typeof existingThread.messages === 'string'
 				? JSON.parse(existingThread.messages)
 				: existingThread.messages || [];

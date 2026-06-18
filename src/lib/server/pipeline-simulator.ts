@@ -824,7 +824,7 @@ export class PipelineSimulator {
         `[Step 8] AI Extraction: Identifying sentiment, topics, and service mentions...`,
       );
       let extraction: any = null;
-      const apiKey = process.env.OPENAI_API_KEY;
+      const apiKey = process.env.OPENAI_API_KEY || process.env.OPEN_AI_KEY;
 
       if (apiKey && payload.comment.length > 0) {
         try {

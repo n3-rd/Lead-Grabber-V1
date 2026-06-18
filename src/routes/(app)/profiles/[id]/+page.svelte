@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import {
 		Search,
 		Mic,
@@ -75,6 +76,13 @@
 	// Update when data changes
 	$effect(() => {
 		communications = data.communications || [];
+	});
+
+	onMount(() => {
+		const interval = setInterval(() => {
+			invalidateAll();
+		}, 4000);
+		return () => clearInterval(interval);
 	});
 
 	const commSummaries: CommSummary[] = [

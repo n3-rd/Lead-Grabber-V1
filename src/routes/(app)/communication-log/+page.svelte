@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { Search, Mic, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-svelte';
 	import CommunicationTable from '$lib/components/CommunicationTable.svelte';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index';
@@ -8,6 +9,13 @@
 	import PipelineModal from '$lib/components/PipelineModal.svelte';
 	import { toast } from 'svelte-sonner';
 	import { invalidateAll, goto } from '$app/navigation';
+
+	onMount(() => {
+		const interval = setInterval(() => {
+			invalidateAll();
+		}, 4000);
+		return () => clearInterval(interval);
+	});
 
 	const PAGE_SIZES = [10, 20, 50, 100] as const;
 

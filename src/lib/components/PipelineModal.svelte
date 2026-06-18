@@ -172,13 +172,20 @@
 	});
 
 	// AI Structured Protocol Data
+	// AI Structured Protocol Data
 	const aiProtocol = $derived.by(() => {
-		if (payload.ai_protocol) return payload.ai_protocol;
+		let proto = payload.ai_protocol;
+		if (proto) {
+			if (typeof proto === 'string') {
+				try {
+					proto = JSON.parse(proto);
+				} catch (e) {}
+			}
+			if (proto && (proto.fields_to_extract || proto.raw_response)) {
+				return proto;
+			}
+		}
 
-		const isVoicemail = event?.eventType?.includes('voicemail') || event?.eventType?.includes('voice') || event?.eventType === 'telnyx.voice.voicemail';
-		const bucket = (event?.intentBucket || event?.bucket || '').toLowerCase();
-		const isEmergency = bucket === 'emergency';
-		const isRename = bucket === 'active' || bucket === 'active project' || bucket === 'comparison';
 		const detail = payload.detail || payload.body || payload.text || payload.textContent || payload.voicemail_text || event?.summary || '';
 		
 		// Extract keywords from detail
@@ -191,15 +198,23 @@
 			}
 		});
 
+		const isVoicemail = event?.eventType?.includes('voicemail') || event?.eventType?.includes('voice') || event?.eventType === 'telnyx.voice.voicemail';
+		const bucket = (event?.intentBucket || event?.bucket || '').toLowerCase();
+		
+		const hasEmergencyKeywords = foundKeywords.includes('Leak') || foundKeywords.includes('Burst') || foundKeywords.includes('Water') || foundKeywords.includes('Emergency') || foundKeywords.includes('Urgent');
+		const isEmergency = bucket === 'emergency' || hasEmergencyKeywords;
+		const isRename = bucket === 'active' || bucket === 'active project' || bucket === 'comparison' || foundKeywords.includes('Quote') || foundKeywords.includes('Estimate');
+		const isCallback = isVoicemail || detail.toLowerCase().includes('call back') || detail.toLowerCase().includes('callback') || detail.toLowerCase().includes('call me') || detail.toLowerCase().includes('phone');
+
 		const rawResponse = {
-			contains_problem: isEmergency || false,
+			contains_problem: isEmergency || detail.toLowerCase().includes('leak') || detail.toLowerCase().includes('problem') || false,
 			contains_quote_request: isRename || false,
-			contains_callback_request: isVoicemail || false,
+			contains_callback_request: isCallback || false,
 			contains_emergency_keywords: isEmergency || false,
-			requested_contact_method: isVoicemail ? 'phone' : 'none',
-			requested_action: isEmergency ? 'emergency_dispatch' : isRename ? 'prepare_quote' : 'info_request',
+			requested_contact_method: isCallback ? 'phone' : 'none',
+			requested_action: isEmergency ? 'emergency_dispatch' : (isRename ? 'prepare_quote' : 'info_request'),
 			detected_keywords: foundKeywords.length > 0 ? foundKeywords : (isEmergency ? ['Leak', 'Burst', 'Pipe', 'Water'] : []),
-			service_requested: isEmergency ? 'Plumbing' : isRename ? 'Renovation' : 'General',
+			service_requested: isEmergency ? 'Plumbing' : (isRename ? 'Renovation' : 'General'),
 			sentiment: isEmergency ? 'concerned' : 'neutral',
 			praise_topics: [],
 			complaint_topics: [],

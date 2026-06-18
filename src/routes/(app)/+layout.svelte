@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { onMount, onDestroy } from 'svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index';
 	import { Button } from '$lib/components/ui/button/index';
@@ -12,7 +12,7 @@
 	import { toast } from 'svelte-sonner';
 	import { authStore } from '$lib/stores/auth';
 
-	let { data } = $props();
+	let { children, data } = $props();
 	
 	// Real-time & Reactive User State
 	let currentUser = $state(data.user);
@@ -21,7 +21,7 @@
 	let currentCaller = $state({ name: '', phone: '', callId: '' });
 	let eventSource: EventSource | null = null;
 
-	const isCommunicationLog = $derived($page.url.pathname === '/communication-log' || $page.url.pathname === '/inbox');
+	const isCommunicationLog = $derived(page.url.pathname === '/communication-log' || page.url.pathname === '/inbox');
 
 	onMount(async () => {
 		// Initialize authStore with server-side data
@@ -173,7 +173,7 @@
 <Sidebar.Provider class="!h-full !min-h-0 !flex-1">
 	{#await AppSidebar then Sidebar}
 		{#if Sidebar}
-			<svelte:component this={Sidebar} user={currentUser} />
+			<Sidebar user={currentUser} />
 		{/if}
 	{/await}
 
@@ -221,7 +221,7 @@
 				</div>
 			{/if}
 			<div class="min-h-0 flex-1 overflow-y-auto">
-				<slot />
+				{@render children?.()}
 			</div>
 		</div>
 	</Sidebar.Inset>

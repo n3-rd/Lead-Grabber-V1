@@ -110,7 +110,7 @@
 		}
 	];
 
-	let expandedRep: string | null = null;
+	let expandedRep: string | null = $state(null);
 
 	function handleAdd() {
 		goto('/representatives/add');

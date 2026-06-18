@@ -6,7 +6,7 @@
 	import { getSvgIcon } from '$lib/utils/getSvgIcon';
 	import { onMount } from 'svelte';
 
-	let {
+	let { children,
 		buttonText,
 		selectedIcon = 'MessageSquare',
 		onSave
@@ -60,7 +60,7 @@
 
 <Dialog.Root bind:open={isOpen}>
 	<Dialog.Trigger>
-		<slot />
+		{@render children?.()}
 	</Dialog.Trigger>
 	<Dialog.Content class="w-[600px]">
 		<Dialog.Header>

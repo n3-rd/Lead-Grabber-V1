@@ -6,7 +6,7 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import DialerDialog from '$lib/components/DialerDialog.svelte';
 	import SectionHelp from '$lib/components/SectionHelp.svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 
 	type KeyPrompt = { key: string; name: string; extension: string; transferAudioUrl?: string };
 	type RuleData = {
@@ -22,7 +22,7 @@
 	};
 	type PageData = { flow?: { title?: string }; rule?: RuleData; flowId?: string; ruleId?: string };
 	let { data: propsData }: { data: PageData } = $props();
-	const pageData = $derived(($page as unknown as { data?: PageData })?.data);
+	const pageData = $derived((page as unknown as { data?: PageData })?.data);
 	// Prefer page store so we get this route's load (flow, rule); props can lag on client nav
 	const data = $derived(
 		(pageData?.rule != null ? pageData : propsData) ?? pageData ?? propsData ?? {}

@@ -26,7 +26,7 @@
 			<textarea
 				placeholder="Summarize the Conversation"
 				class="min-h-[120px] w-full rounded-lg border border-gray-200 bg-white p-4 text-gray-500 placeholder:text-gray-400"
-			/>
+			></textarea>
 		</div>
 
 		<div class="mt-6 flex justify-center gap-4">

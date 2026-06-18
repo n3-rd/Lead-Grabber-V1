@@ -17,7 +17,7 @@
 	} from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { invalidateAll } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import CommunicationTable from '$lib/components/CommunicationTable.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -96,7 +96,7 @@
 		'Leadbox'
 	];
 
-	const profileId = $derived($page.params.id);
+	const profileId = $derived(page.params.id);
 	const selectedProfile = $derived(
 		data.profile
 			? {

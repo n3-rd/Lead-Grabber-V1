@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	let from = '+18005551234';
-	let text = "Hello, I'm a test customer";
-	let to = '+17059800835';
-	let response = null;
-	let loading = false;
+	let from = $state('+18005551234');
+	let text = $state("Hello, I'm a test customer");
+	let to = $state('+17059800835');
+	let response = $state(null);
+	let loading = $state(false);
 
 	async function sendTestMessage() {
 		loading = true;
@@ -59,7 +59,7 @@
 
 		<div class="flex items-center justify-between">
 			<button
-				on:click={sendTestMessage}
+				onclick={sendTestMessage}
 				disabled={loading}
 				class="focus:shadow-outline rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700 focus:outline-none"
 				type="button"

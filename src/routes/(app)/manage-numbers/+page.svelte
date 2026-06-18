@@ -17,7 +17,7 @@
 		AlertTriangle
 	} from 'lucide-svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { toast } from 'svelte-sonner';
 	import * as Dialog from '$lib/components/ui/dialog/index';
 	import { Button } from '$lib/components/ui/button/index';
@@ -369,7 +369,7 @@
 </script>
 
 <div class="min-h-screen bg-[#ECEEF3] p-4">
-	{#if $page.url.searchParams.get('buy_number_first') === '1'}
+	{#if page.url.searchParams.get('buy_number_first') === '1'}
 		<div
 			class="mb-4 rounded-[3px] border border-amber-500 bg-amber-50 px-4 py-3 font-['Poppins'] text-[15px] leading-[22px] text-amber-900"
 		>

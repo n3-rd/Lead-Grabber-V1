@@ -3,8 +3,12 @@
 	import { X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 
-	export let open = false;
-	export let caller = { name: '', phone: '' };
+	interface Props {
+		open?: boolean;
+		caller?: any;
+	}
+
+	let { open = $bindable(false), caller = { name: '', phone: '' } }: Props = $props();
 	const dispatch = createEventDispatcher();
 
 	function answer() {
@@ -27,7 +31,7 @@
 	<Dialog.Content
 		class="flex w-full max-w-sm flex-col items-center gap-4 rounded-xl bg-white p-6 shadow-lg"
 	>
-		<button class="absolute right-3 top-3 text-gray-400 hover:text-gray-600" on:click={decline}>
+		<button class="absolute right-3 top-3 text-gray-400 hover:text-gray-600" onclick={decline}>
 			<X class="h-5 w-5" />
 		</button>
 
@@ -50,13 +54,13 @@
 			<!-- Top row: Answer and Hold -->
 			<button
 				class="rounded-lg bg-[#f6b253] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#f6b253]/80"
-				on:click={answer}
+				onclick={answer}
 			>
 				Answer
 			</button>
 			<button
 				class="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/80"
-				on:click={hold}
+				onclick={hold}
 			>
 				Hold
 			</button>
@@ -64,13 +68,13 @@
 			<!-- Bottom row: Dismiss and Transfer -->
 			<button
 				class="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/80"
-				on:click={decline}
+				onclick={decline}
 			>
 				Dismiss
 			</button>
 			<button
 				class="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/80"
-				on:click={transfer}
+				onclick={transfer}
 			>
 				Transfer
 			</button>

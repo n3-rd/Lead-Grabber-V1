@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { createBubbler, stopPropagation } from 'svelte/legacy';
+
+	const bubble = createBubbler();
 	// Static data for demonstration
 	const filters = [
 		{ label: 'All', key: 'all' },
@@ -9,8 +12,8 @@
 		{ label: 'Facebook', key: 'facebook' },
 		{ label: 'Linkedin', key: 'linkedin' }
 	];
-	let selectedFilter = 'all';
-	let search = '';
+	let selectedFilter = $state('all');
+	let search = $state('');
 
 	const rows = [
 		{
@@ -151,7 +154,7 @@
 	}
 
 	// Filtered and searched rows
-	$: filteredRows = rows.filter(
+	let filteredRows = $derived(rows.filter(
 		(row) =>
 			(selectedFilter === 'all' || row.type === selectedFilter) &&
 			(row.date.toLowerCase().includes(search.toLowerCase()) ||
@@ -160,9 +163,9 @@
 				row.endpoint.toLowerCase().includes(search.toLowerCase()) ||
 				row.company.toLowerCase().includes(search.toLowerCase()) ||
 				row.disposition.toLowerCase().includes(search.toLowerCase()))
-	);
+	));
 
-	let selectedLog: (typeof rows)[0] | null = null;
+	let selectedLog: (typeof rows)[0] | null = $state(null);
 
 	// Example summary data for demonstration
 	const summaryData = {
@@ -208,7 +211,7 @@ if you have any question just five me a shout`,
 					{selectedFilter === filter.key
 					? 'bg-primary text-white'
 					: 'bg-[#e7eaf6] text-primary hover:bg-[#d6d9e6]'}"
-				on:click={() => (selectedFilter = filter.key)}
+				onclick={() => (selectedFilter = filter.key)}
 			>
 				{filter.label}
 			</button>
@@ -245,13 +248,14 @@ if you have any question just five me a shout`,
 			{#each filteredRows as row}
 				<tr
 					class="cursor-pointer border-b border-[#e7eaf6] bg-white transition last:border-b-0 hover:bg-[#f0f2f8]"
-					on:click={() => openSummary(row)}
+					onclick={() => openSummary(row)}
 				>
 					<td class="px-2 py-3">{row.date}</td>
 					<td class="px-2 py-3">
 						<div class="flex items-center gap-2">
 							{#if icon(row.type)}
-								<svelte:component this={icon(row.type)} class="h-5 w-5 " />
+								{@const SvelteComponent = icon(row.type)}
+								<SvelteComponent class="h-5 w-5 " />
 							{/if}
 							<span class="capitalize">{row.direction}</span>
 						</div>
@@ -271,16 +275,16 @@ if you have any question just five me a shout`,
 	<!-- Overlay -->
 	<div
 		class="fixed inset-0 z-40 flex items-center justify-center bg-black/30"
-		on:click={closeSummary}
+		onclick={closeSummary}
 	>
 		<!-- Popup Card -->
 		<div
 			class="relative z-50 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
-			on:click|stopPropagation
+			onclick={stopPropagation(bubble('click'))}
 		>
 			<button
 				class="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-				on:click={closeSummary}
+				onclick={closeSummary}
 				aria-label="Close"
 			>
 				&times;

@@ -7,24 +7,24 @@
 	let currentWidgetProfileId: string | null = null;
 	let currentWidgetPhone = '';
 	
-	let widgetName = 'Emergency Customer';
-	let widgetPhone = '—';
-	let widgetAvatar = 'E';
-	let widgetTranscript = 'Emergency situation detected.';
-	let widgetTimelineEvents: any[] = [];
+	let widgetName = $state('Emergency Customer');
+	let widgetPhone = $state('—');
+	let widgetAvatar = $state('E');
+	let widgetTranscript = $state('Emergency situation detected.');
+	let widgetTimelineEvents: any[] = $state([]);
 
-	let showWidget = false;
+	let showWidget = $state(false);
 	
-	let hasUnansweredSms = false;
-	let hasCallInitiated = false;
-	let isFlowCompleted = false;
-	let completedJobRevenue = '250.00';
+	let hasUnansweredSms = $state(false);
+	let hasCallInitiated = $state(false);
+	let isFlowCompleted = $state(false);
+	let completedJobRevenue = $state('250.00');
 
-	let draftValue = 'Rory has gotten your message and he will be calling you in two minutes.';
-	let draftInputEl: HTMLTextAreaElement | null = null;
-	let isSendingSms = false;
-	let isRecordingCall = false;
-	let isCompletingJob = false;
+	let draftValue = $state('Rory has gotten your message and he will be calling you in two minutes.');
+	let draftInputEl: HTMLTextAreaElement | null = $state(null);
+	let isSendingSms = $state(false);
+	let isRecordingCall = $state(false);
+	let isCompletingJob = $state(false);
 
 	let pollerInterval: any;
 
@@ -311,7 +311,7 @@
 				<span class="font-bold text-red-500 text-xs tracking-wider uppercase">Active Emergency Lead</span>
 			</div>
 			<button 
-				on:click={closeEmergencyWidget} 
+				onclick={closeEmergencyWidget} 
 				class="bg-transparent border-0 text-slate-400 hover:text-slate-100 text-lg cursor-pointer flex items-center justify-center w-5 h-5 outline-none"
 			>
 				&times;
@@ -362,7 +362,7 @@
 					></textarea>
 					<div class="flex justify-end">
 						<button 
-							on:click={sendWidgetDraft} 
+							onclick={sendWidgetDraft} 
 							disabled={isSendingSms}
 							class="bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white border-0 px-3 py-1.5 rounded-md text-[10px] font-bold cursor-pointer transition-colors"
 						>
@@ -377,7 +377,7 @@
 				<div class="flex gap-2 border-t border-[#334155] pt-3">
 					{#if !hasCallInitiated}
 						<button 
-							on:click={widgetFakeCall} 
+							onclick={widgetFakeCall} 
 							disabled={isRecordingCall}
 							class="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white border-0 py-2 px-3 rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-md"
 						>
@@ -385,7 +385,7 @@
 						</button>
 					{:else}
 						<button 
-							on:click={widgetCompleteJob} 
+							onclick={widgetCompleteJob} 
 							disabled={isCompletingJob}
 							class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white border-0 py-2 px-3 rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-md"
 						>

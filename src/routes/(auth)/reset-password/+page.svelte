@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { Button } from '$lib/components/ui/button';
 	import Spinner from '$lib/components/ui/spinner.svelte';
 	import { toast } from 'svelte-sonner';
@@ -9,8 +9,8 @@
 	let newPassword = $state('');
 	let confirmPassword = $state('');
 
-	const token = $page.url.searchParams.get('token');
-	const id = $page.url.searchParams.get('id');
+	const token = page.url.searchParams.get('token');
+	const id = page.url.searchParams.get('id');
 
 	async function handleSubmit() {
 		if (!token || !id) {

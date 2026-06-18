@@ -12,12 +12,16 @@
 	} from 'lucide-svelte';
 	import type { FormElement } from '$lib/stores/formElements';
 
-	export let element: FormElement;
-	export let onDelete: (id: string) => void;
-	export let onUpdate: (id: string, updates: Partial<FormElement>) => void;
+	interface Props {
+		element: FormElement;
+		onDelete: (id: string) => void;
+		onUpdate: (id: string, updates: Partial<FormElement>) => void;
+	}
+
+	let { element, onDelete, onUpdate }: Props = $props();
 
 	let dragging = false;
-	let newOption = '';
+	let newOption = $state('');
 
 	function addOption() {
 		if (newOption.trim()) {
@@ -41,11 +45,13 @@
 		multiselect: List,
 		dropdown: ChevronDown
 	};
+
+	const SvelteComponent = $derived(iconMap[element.type]);
 </script>
 
 <div class="flex flex-col gap-4 rounded-lg border bg-white p-4" data-element-id={element.id}>
 	<div class="flex items-center gap-4">
-		<svelte:component this={iconMap[element.type]} class="h-5 w-5 text-gray-500" />
+		<SvelteComponent class="h-5 w-5 text-gray-500" />
 		<div class="flex-1">
 			<input
 				type="text"

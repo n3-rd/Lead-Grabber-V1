@@ -290,7 +290,7 @@
 										<div class="flex w-full items-center justify-between">
 											<div class="flex items-center gap-2">
 												{#if typeDef}
-													<svelte:component this={typeDef.icon} class="h-4 w-4" />
+													<typeDef.icon class="h-4 w-4" />
 													{typeDef.label}
 												{/if}
 											</div>

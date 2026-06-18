@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 
 	interface Rule {
@@ -17,7 +17,7 @@
 	// Single source of truth: page.data from load (avoids prop/effect timing issues)
 	type PageData = { flows?: Flow[] };
 	let callFlows = $derived.by(() => {
-		const p = $page as unknown as { data?: PageData };
+		const p = page as unknown as { data?: PageData };
 		return (p?.data?.flows ?? []) as Flow[];
 	});
 	let deletingId = $state<string | null>(null);

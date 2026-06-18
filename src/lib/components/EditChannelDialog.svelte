@@ -7,7 +7,7 @@
 	import { getSvgIcon } from '$lib/utils/getSvgIcon';
 	import { onMount } from 'svelte';
 
-	let { channel, onSave } = $props<{
+	let { children, channel, onSave } = $props<{
 		channel: {
 			name: string;
 			icon: any;
@@ -68,7 +68,7 @@
 
 <Dialog.Root bind:open={isOpen}>
 	<Dialog.Trigger>
-		<slot />
+		{@render children?.()}
 	</Dialog.Trigger>
 	<Dialog.Content class="mx-auto max-w-lg rounded-lg bg-white p-6 shadow-lg">
 		<Dialog.Header>

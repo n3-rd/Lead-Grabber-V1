@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Pencil, Trash2 } from 'lucide-svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 
 	// Mock data - in real app, fetch based on page.params.id
 	const representative = {

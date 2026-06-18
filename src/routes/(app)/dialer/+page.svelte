@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Phone, Clock, Voicemail, Search, Mic, Delete, Plus } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { normalizePhoneNumber } from '$lib/utils/phone';
 	import { filterContacts } from '$lib/utils/contacts-filter';
@@ -21,7 +21,7 @@
 
 	// Read phone number from URL params
 	$effect(() => {
-		const phoneParam = $page.url.searchParams.get('phone');
+		const phoneParam = page.url.searchParams.get('phone');
 		if (phoneParam) {
 			dialInput = phoneParam;
 			phoneNumber = phoneParam;

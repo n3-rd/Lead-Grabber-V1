@@ -5,7 +5,7 @@
 
 	let teamShortcuts = [{ id: 1, trigger: '23', message: 'Test 1234123123123213' }];
 
-	let personalShortcuts = [];
+	let personalShortcuts = $state([]);
 
 	function addPersonalShortcut() {
 		personalShortcuts = [...personalShortcuts, { id: Date.now(), trigger: '', message: '' }];

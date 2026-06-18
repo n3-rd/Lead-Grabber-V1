@@ -25,7 +25,7 @@
 		UserCheck,
 		MapPin
 	} from 'lucide-svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { Button } from '$lib/components/ui/button/index';
 	import { slide } from 'svelte/transition';
 	const { user } = $props();
@@ -141,11 +141,11 @@
 					}}
 				>
 					<Sidebar.MenuButton
-						class="font-medium text-white hover:bg-primary-300 hover:text-white {$page.url
+						class="font-medium text-white hover:bg-primary-300 hover:text-white {page.url
 							.pathname === mainItem.href
 							? 'bg-primary-300 text-white'
 							: ''}"
-						isActive={$page.url.pathname === mainItem.href}
+						isActive={page.url.pathname === mainItem.href}
 					>
 						{#snippet tooltipContent()}
 							{mainItem.title}
@@ -174,11 +174,11 @@
 						<Sidebar.MenuItem>
 							<a href={subItem.href} class="w-full">
 								<Sidebar.MenuButton
-									class="pl-14 font-medium text-white hover:bg-primary-300 hover:text-white {$page
+									class="pl-14 font-medium text-white hover:bg-primary-300 hover:text-white {page
 										.url.pathname === subItem.href
 										? 'bg-primary-300 text-white'
 										: ''}"
-									isActive={$page.url.pathname === subItem.href}
+									isActive={page.url.pathname === subItem.href}
 								>
 									<span>{subItem.title}</span>
 								</Sidebar.MenuButton>

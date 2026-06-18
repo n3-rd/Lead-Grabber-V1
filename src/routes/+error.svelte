@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 
-	const statusCode = $derived($page.status ?? 404);
-	const errorMessage = $derived($page.error?.message ?? 'Something went wrong');
+	const statusCode = $derived(page.status ?? 404);
+	const errorMessage = $derived(page.error?.message ?? 'Something went wrong');
 
 	const is404 = $derived(statusCode === 404);
 	const title = $derived(is404 ? 'Page not found' : 'Something went wrong');

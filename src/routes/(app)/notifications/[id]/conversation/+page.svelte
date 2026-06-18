@@ -31,7 +31,7 @@
 		ChevronDown
 	} from 'lucide-svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 
 	interface Notification {
@@ -196,7 +196,7 @@
 	let editorRef: HTMLDivElement | null = $state(null);
 	let threadContainerRef: HTMLDivElement | null = $state(null);
 
-	const notificationId = $derived($page.params.id);
+	const notificationId = $derived(page.params.id);
 	const selectedNotification = $derived(notifications.find((n) => n.id === notificationId) || null);
 
 	$effect(() => {

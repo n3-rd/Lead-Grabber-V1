@@ -2,7 +2,7 @@ import { prisma } from '$lib/db';
 import { redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, fetch }) => {
 	const user = locals.user;
 
 	if (!user) {
@@ -14,75 +14,152 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	}
 
 	const companyId = user.company.id;
+	const PROFILEDB_URL = process.env.PROFILEDB_URL || 'http://localhost:6277';
 
 	try {
-		const profile = await prisma.contact.findFirst({
-			where: { id: params.id, companyId }
-		});
-
-		if (!profile) {
-			throw error(404, 'Profile not found');
+		// 1. Fetch profile from ProfileDB
+		let profileRes = await fetch(`${PROFILEDB_URL}/api/v1/tenants/clearsky-demo/profiles/${params.id}`);
+		let cdpProfile: any = null;
+		if (profileRes.ok) {
+			cdpProfile = await profileRes.json();
 		}
 
-		const profilePhoneDigits = profile.phone ? profile.phone.replace(/\D/g, '') : '';
-
-		// Fetch communications by customerId first
-		let communications = await prisma.communicationLog.findMany({
-			where: {
-				customerId: params.id,
-				companyId
-			},
-			orderBy: { created: 'desc' },
-			take: 200,
-			include: { customer: true }
-		});
-
-		// If no communications by customerId and we have a phone, fetch all and filter by phone
-		if (communications.length === 0 && profilePhoneDigits) {
-			const allComms = await prisma.communicationLog.findMany({
-				where: { companyId },
-				orderBy: { created: 'desc' },
-				take: 500,
-				include: { customer: true }
-			});
-
-			const profileLast10 = profilePhoneDigits.slice(-10);
-			const profileLast7 = profilePhoneDigits.slice(-7);
-
-			communications = allComms.filter((log) => {
-				const source = log.source ?? '';
-				const dest = log.destination ?? '';
-				if (!source && !dest) return false;
-
-				const sourceDigits = source.replace(/\D/g, '');
-				const destDigits = dest.replace(/\D/g, '');
-				if (!sourceDigits && !destDigits) return false;
-
-				const sourceLast10 = sourceDigits.slice(-10);
-				const destLast10 = destDigits.slice(-10);
-				const sourceLast7 = sourceDigits.slice(-7);
-				const destLast7 = destDigits.slice(-7);
-
-				const exactMatch = sourceDigits === profilePhoneDigits || destDigits === profilePhoneDigits;
-				const last10Match =
-					(sourceLast10 && sourceLast10 === profileLast10) ||
-					(destLast10 && destLast10 === profileLast10);
-				const last7Match =
-					profileLast7.length >= 7 &&
-					((sourceLast7 && sourceLast7 === profileLast7) ||
-						(destLast7 && destLast7 === profileLast7));
-
-				return exactMatch || last10Match || last7Match;
-			});
+		// 2. Fetch history from ProfileDB
+		let historyRes = await fetch(`${PROFILEDB_URL}/api/v1/tenants/clearsky-demo/profiles/${params.id}/history`);
+		let historyEvents: any[] = [];
+		if (historyRes.ok) {
+			historyEvents = await historyRes.json();
 		}
 
-		const metadata = (val: unknown): Record<string, unknown> | null =>
-			val && typeof val === 'object' && !Array.isArray(val)
-				? (val as Record<string, unknown>)
-				: null;
+		// Fallback to prisma contact if not found in CDP
+		if (!cdpProfile) {
+			const dbProfile = await prisma.contact.findFirst({
+				where: { id: params.id, companyId }
+			});
+			if (!dbProfile) {
+				throw error(404, 'Profile not found');
+			}
+			// Map dbProfile to look like CDP Profile
+			cdpProfile = {
+				id: dbProfile.id,
+				name: dbProfile.name || 'Unknown Caller',
+				phone: dbProfile.phone || '',
+				email: dbProfile.email || '',
+				clearPhone: dbProfile.phone || '—',
+				clearEmail: dbProfile.email || '—',
+				tier: 'T3',
+				scoreLive: 0,
+				intentBucket: 'unclassified',
+				isAnonymous: !dbProfile.email && !dbProfile.phone,
+				lastSeen: dbProfile.updated || new Date()
+			};
+		}
 
-		const comms = communications.map((log) => {
-			const dateObj = new Date(log.created);
+		// 3. Compute Identity Resolution History
+		const identityHistory: any[] = [];
+		let currentName: string | null = null;
+		let currentEmail: string | null = null;
+		let currentPhone: string | null = null;
+
+		let clearPhone = cdpProfile.clearPhone || '—';
+		let clearEmail = cdpProfile.clearEmail || '—';
+
+		historyEvents.forEach((ev: any) => {
+			const payload = ev.payload || {};
+			const emailVal = payload.email || null;
+			const nameVal = payload.name || null;
+			const phoneVal = payload.phone || null;
+
+			if (phoneVal && phoneVal !== '—') {
+				clearPhone = phoneVal;
+			} else if (payload.textContent && clearPhone === '—') {
+				const match = payload.textContent.match(/Voice Call from:\s*(\+?[\d\s\-()]+)/);
+				if (match) clearPhone = match[1].trim();
+			}
+			if (emailVal && emailVal !== '—') {
+				clearEmail = emailVal;
+			}
+
+			if (nameVal && nameVal !== currentName) {
+				identityHistory.push({
+					timestamp: ev.occurredAt,
+					field: 'Name',
+					oldValue: currentName,
+					newValue: nameVal
+				});
+				currentName = nameVal;
+			}
+			if (emailVal && emailVal !== currentEmail) {
+				identityHistory.push({
+					timestamp: ev.occurredAt,
+					field: 'Email',
+					oldValue: currentEmail,
+					newValue: emailVal
+				});
+				currentEmail = emailVal;
+			}
+			if (phoneVal && phoneVal !== currentPhone) {
+				identityHistory.push({
+					timestamp: ev.occurredAt,
+					field: 'Phone',
+					oldValue: currentPhone,
+					newValue: phoneVal
+				});
+				currentPhone = phoneVal;
+			}
+		});
+
+		// 4. Compute behavioral facts
+		let viewedService = false;
+		let viewedPricing = false;
+		let formSubmitted = false;
+
+		historyEvents.forEach((ev: any) => {
+			if (ev.pageUrl && (ev.pageUrl.includes('pricing') || ev.eventType.includes('price'))) {
+				viewedPricing = true;
+			}
+			if (
+				ev.pageUrl &&
+				(ev.pageUrl.includes('service') ||
+					ev.eventType.includes('svc') ||
+					ev.pageUrl.includes('bathroom') ||
+					ev.pageUrl.includes('roof') ||
+					ev.pageUrl.includes('hot-water') ||
+					ev.pageUrl.includes('drain'))
+			) {
+				viewedService = true;
+			}
+			if (ev.eventType.includes('submit') || ev.eventType.includes('booked')) {
+				formSubmitted = true;
+			}
+		});
+
+		let intentLevel = 'Low';
+		if (cdpProfile.scoreLive >= 80) intentLevel = 'Very High';
+		else if (cdpProfile.scoreLive >= 50 || (viewedService && viewedPricing)) intentLevel = 'High';
+		else if (viewedService) intentLevel = 'Medium';
+
+		let interpretation = 'Monitor page views and visitor interaction logs to build a behavioral profile.';
+		let recAction = 'Monitor Behavior';
+
+		const isAnonymous = !clearEmail && !clearPhone;
+		if (intentLevel === 'High' && !formSubmitted) {
+			interpretation =
+				"Visitor viewed service pages and pricing, showing strong buying intent but hasn't booked yet. Recommend showing a limited-time promo banner or exit intent discount.";
+			recAction = 'Show 20% Promo Banner';
+		} else if (formSubmitted) {
+			interpretation = 'Visitor successfully submitted a lead capture form. Follow-up workflow initiated.';
+			recAction = 'Queue follow-up draft';
+		} else if (intentLevel === 'Very High' && !isAnonymous) {
+			interpretation =
+				'High score + identified contact details. Trigger automated SMS outreach / email follow-up sequence immediately.';
+			recAction = 'Notify owner / Dispatch SMS';
+		}
+
+		// 5. Parse historyEvents as Communications for the table
+		const comms = historyEvents.map((ev: any) => {
+			const payload = ev.payload || {};
+			const dateObj = new Date(ev.occurredAt);
 			const date = dateObj.toLocaleDateString('en-US', {
 				month: 'short',
 				day: '2-digit',
@@ -94,37 +171,75 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				hour12: true
 			});
 
+			const type = ev.eventType.includes('sms')
+				? 'sms'
+				: ev.eventType.includes('voicemail') || ev.eventType.includes('call')
+					? 'voice'
+					: 'web';
+			const direction =
+				ev.eventType.includes('received') ||
+				ev.eventType.includes('incoming') ||
+				ev.eventType === 'sms_received' ||
+				ev.eventType === 'telnyx.voice.voicemail'
+					? 'In'
+					: 'Out';
+
 			let status: 'red' | 'green' | 'blue' = 'blue';
-			if (log.status === 'success' || log.status === 'completed') {
-				status = log.direction === 'inbound' ? 'green' : 'blue';
-			} else if (log.status === 'failed' || log.status === 'missed') {
+			if (ev.intentBucket === 'emergency') {
 				status = 'red';
+			} else if (ev.intentBucket === 'active') {
+				status = 'green';
 			}
 
-			const meta = metadata(log.metadata);
-			const purpose = meta?.urgency ?? meta?.purpose ?? null;
+			let summary = payload.detail || payload.body || payload.text || payload.textContent || payload.voicemail_text || ev.eventType;
+			if (ev.eventType === 'telnyx.voice.voicemail') {
+				summary = `Voicemail: "${payload.voicemail_text || 'Emergency call'}"`;
+			} else if (ev.eventType === 'sms_sent') {
+				summary = `SMS Sent: "${payload.body || payload.text || summary}"`;
+			} else if (ev.eventType === 'sms_received') {
+				summary = `SMS Received: "${payload.body || payload.text || summary}"`;
+			} else if (ev.eventType === 'call_initiated') {
+				summary = `Outbound Call: "${payload.detail || summary}"`;
+			} else if (ev.eventType === 'job_completed') {
+				summary = `Job Completed: Invoiced $${Number(payload.revenue || 250.0).toFixed(2)}`;
+			}
 
 			return {
-				id: log.id,
+				id: ev.id,
 				date,
 				time,
-				type: log.type as 'email' | 'sms' | 'voice' | 'web' | 'facebook' | 'chatbot' | 'leadform',
-				direction: (log.direction === 'inbound' ? 'In' : 'Out') as 'In' | 'Out',
-				source: log.source ?? 'Unknown',
-				endpoint: log.destination ?? log.customer?.name ?? 'Unknown',
-				purpose: purpose != null ? String(purpose) : null,
-				summary: log.summary ?? (log.content ? log.content.substring(0, 50) : null),
-				commId: log.id,
-				status
+				type,
+				direction,
+				source: clearPhone !== '—' ? clearPhone : (clearEmail !== '—' ? clearEmail : 'Anonymous'),
+				endpoint: payload.to || payload.from || 'clearsky-demo',
+				purpose: ev.intentBucket || 'unclassified',
+				summary: summary,
+				commId: ev.id,
+				status,
+				raw: ev
 			};
 		});
 
 		return {
 			profile: {
-				...profile,
-				past_names: Array.isArray(profile.pastNames) ? profile.pastNames : []
+				...cdpProfile,
+				clearPhone,
+				clearEmail,
+				past_names: identityHistory.filter(h => h.field === 'Name').map(h => h.newValue)
 			},
-			communications: comms
+			communications: comms,
+			historyEvents,
+			identityHistory,
+			behavioralFacts: {
+				viewedService,
+				viewedPricing,
+				formSubmitted
+			},
+			behavioralAnalysis: {
+				intentLevel,
+				interpretation,
+				recAction
+			}
 		};
 	} catch (e) {
 		if (e && typeof e === 'object' && 'status' in e && (e as { status: number }).status === 404) {

@@ -3,7 +3,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getContactsByCompany } from '$lib/utils/contacts';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, fetch }) => {
 	const user = locals.user;
 
 	if (!user) {
@@ -13,7 +13,19 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(303, '/create-company');
 	}
 
-	const profiles = await getContactsByCompany(user.company.id);
+	const PROFILEDB_URL = process.env.PROFILEDB_URL || 'http://localhost:6277';
+	let profiles: any[] = [];
+	try {
+		const res = await fetch(`${PROFILEDB_URL}/api/v1/tenants/clearsky-demo/profiles?limit=100`);
+		if (res.ok) {
+			const json = await res.json();
+			if (json && Array.isArray(json.data)) {
+				profiles = json.data;
+			}
+		}
+	} catch (err) {
+		console.error('Failed to load profiles from ProfileDB:', err);
+	}
 
 	return { profiles };
 };

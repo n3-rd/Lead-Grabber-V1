@@ -24,6 +24,7 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import PipelineModal from '$lib/components/PipelineModal.svelte';
 	import { toast } from 'svelte-sonner';
 
 	interface Connection {
@@ -109,7 +110,12 @@
 					cell: data.profile.cell || data.profile.phone || '',
 					smsPermission: data.profile.smsPermission ?? false,
 					past_names: data.profile.past_names || [],
-					connections: [] // Connections can be added later if needed
+					connections: [], // Connections can be added later if needed
+					clearPhone: data.profile.clearPhone || '—',
+					clearEmail: data.profile.clearEmail || '—',
+					scoreLive: data.profile.scoreLive || 0,
+					tier: data.profile.tier || 'T3',
+					isAnonymous: data.profile.isAnonymous ?? false
 				}
 			: null
 	);
@@ -118,6 +124,8 @@
 	let selectedSummary = $state<Communication | null>(null);
 	let showEditDialog = $state(false);
 	let editForm = $state({ name: '', email: '', phone: '' });
+	let pipelineDialogOpen = $state(false);
+	let selectedPipelineEvent = $state<any>(null);
 
 	function openEdit() {
 		if (data.profile) {
@@ -164,222 +172,247 @@
 		console.log('Action:', action, 'for comm:', comm);
 		// Handle actions like call, sms, email
 	}
+
+	function handlePipelineClick(comm: any) {
+		selectedPipelineEvent = comm.raw;
+		pipelineDialogOpen = true;
+	}
+
+	async function simulateOutboundCall(profileId: string, clearPhone: string) {
+		if (!clearPhone || clearPhone === '—') {
+			toast.error('Cannot call profile without a phone number.');
+			return;
+		}
+		try {
+			const res = await fetch('http://localhost:6277/api/v1/telemetry/events', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					tenantSlug: 'clearsky-demo',
+					eventType: 'call_initiated',
+					phone: clearPhone,
+					provider: 'telnyx_voice',
+					payload: {
+						detail: 'Outbound dispatch call: "We\'re on our way and it\'s $100/hr"',
+						duration: 120,
+						call_rate: '$100/hr',
+						from: '+15513915091'
+					}
+				})
+			});
+			if (res.ok) {
+				toast.success('Call recorded successfully!');
+				await invalidateAll();
+			} else {
+				toast.error('Failed to record call.');
+			}
+		} catch (err) {
+			console.error(err);
+			toast.error('Error recording call.');
+		}
+	}
+
+	async function simulateJobCompleted(profileId: string, clearPhone: string) {
+		if (!clearPhone || clearPhone === '—') {
+			toast.error('Cannot complete job for profile without a phone number.');
+			return;
+		}
+		try {
+			const res = await fetch('http://localhost:6277/api/v1/telemetry/events', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					tenantSlug: 'clearsky-demo',
+					eventType: 'job_completed',
+					phone: clearPhone,
+					provider: 'telnyx_voice',
+					payload: {
+						detail: 'Job Completed - Invoiced $250.00',
+						revenue: 250.00,
+						from: '+15513915091'
+					}
+				})
+			});
+			if (res.ok) {
+				toast.success('Job marked completed! Review SMS request dispatched to ' + clearPhone);
+				await invalidateAll();
+			} else {
+				toast.error('Failed to complete job.');
+			}
+		} catch (err) {
+			console.error(err);
+			toast.error('Error completing job.');
+		}
+	}
 </script>
 
 {#if selectedProfile}
 	<!-- Profile Detail View -->
 	<div class="flex min-h-full w-full">
 		<!-- Left Sidebar -->
-		<div class="w-[325px] min-w-[325px] border-r border-[#7E7E7E] bg-[#EDF2FA] p-6">
+		<div class="w-[380px] min-w-[380px] border-r border-[#bebebe] bg-[#F7F9FC] p-6 overflow-y-auto max-h-[calc(100vh-52px)]">
 			<!-- Profile Name -->
-			<h1 class="mb-2 font-sans text-3xl font-semibold leading-[1.29] text-[#555555]">
-				{selectedProfile.name}
-			</h1>
-
-			<!-- Address -->
-			{#if selectedProfile.address}
-				<div class="mb-4 flex items-start gap-2">
-					<MapPin class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#0F172A]" />
-					<span class="font-sans text-base font-normal leading-[1.29] text-[rgba(86,86,86,0.8)]">
-						{selectedProfile.address}
-					</span>
+			<div class="flex items-center gap-3 mb-4">
+				<div class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg text-white bg-indigo-600">
+					{selectedProfile.isAnonymous ? '?' : selectedProfile.name.charAt(0).toUpperCase()}
 				</div>
-			{/if}
+				<div class="min-w-0 flex-1">
+					<h1 class="font-sans text-xl font-bold leading-tight text-[#2d3748] truncate">
+						{selectedProfile.isAnonymous ? (selectedProfile.clearPhone !== '—' ? 'Caller (' + selectedProfile.clearPhone + ')' : 'Anonymous Lead') : selectedProfile.name}
+					</h1>
+					<p class="text-[10px] text-[#718096] font-mono truncate">{selectedProfile.id}</p>
+				</div>
+			</div>
 
 			<!-- Contact Info -->
-			<div class="mb-4 space-y-2">
-				<div class="flex items-center">
-					<span class="w-[82px] font-sans text-base font-medium leading-[1.29] text-[#565656]"
-						>Landline:</span
-					>
-					<span class="font-sans text-base font-normal leading-[1.29] text-[rgba(86,86,86,0.8)]"
-						>{selectedProfile.landline}</span
-					>
+			<div class="mb-5 space-y-2 bg-white rounded-lg p-3 border border-[#e2e8f0]">
+				<div class="flex items-center text-sm">
+					<span class="w-[82px] font-sans font-medium text-[#4a5568]">Phone:</span>
+					<span class="font-mono text-[#2d3748]">{selectedProfile.clearPhone}</span>
 				</div>
-				<div class="flex items-center">
-					<span class="w-[82px] font-sans text-base font-medium leading-[1.29] text-[#565656]"
-						>Cell #:</span
-					>
-					<span class="font-sans text-base font-normal leading-[1.29] text-[rgba(86,86,86,0.8)]"
-						>{selectedProfile.cell}</span
-					>
+				<div class="flex items-center text-sm">
+					<span class="w-[82px] font-sans font-medium text-[#4a5568]">Email:</span>
+					<span class="font-mono text-[#2d3748] truncate">{selectedProfile.clearEmail}</span>
 				</div>
-				<div class="flex items-center">
-					<span class="w-[82px] font-sans text-base font-medium leading-[1.29] text-[#565656]"
-						>Email:</span
-					>
-					<span class="font-sans text-base font-normal leading-[1.29] text-[rgba(86,86,86,0.8)]"
-						>{selectedProfile.email}</span
-					>
-				</div>
-				{#if selectedProfile.past_names && Array.isArray(selectedProfile.past_names) && selectedProfile.past_names.length > 0}
-					<div class="flex items-start">
-						<span class="w-[82px] font-sans text-base font-medium leading-[1.29] text-[#565656]"
-							>Past names:</span
-						>
-						<span class="font-sans text-base font-normal leading-[1.29] text-[rgba(86,86,86,0.8)]">
-							{selectedProfile.past_names.join(', ')}
-						</span>
+				{#if selectedProfile.past_names && selectedProfile.past_names.length > 0}
+					<div class="flex items-start text-sm pt-1 border-t border-[#edf2f7]">
+						<span class="w-[82px] font-sans font-medium text-[#4a5568]">Past names:</span>
+						<span class="font-sans text-[#718096]">{selectedProfile.past_names.join(', ')}</span>
 					</div>
 				{/if}
 			</div>
 
-			<!-- SMS Permission -->
-			<div class="mb-6 flex items-center gap-2">
-				<div
-					class="flex h-5 w-5 items-center justify-center rounded border border-[#7B2E17] {selectedProfile.smsPermission
-						? 'bg-[#7B2E17]'
-						: 'bg-white'}"
-				>
-					{#if selectedProfile.smsPermission}
-						<svg class="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
-							<path
-								d="M2 6L5 9L10 3"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-						</svg>
+			<!-- Engagement Cards Grid -->
+			<div class="grid grid-cols-2 gap-3 mb-5">
+				<div class="bg-white p-3 rounded-lg border border-[#e2e8f0] text-center shadow-sm">
+					<span class="text-[9px] text-[#718096] uppercase font-bold tracking-wider">Live Score</span>
+					<div class="text-2xl font-bold text-indigo-600 mt-1">
+						{selectedProfile.scoreLive} <span class="text-xs text-[#a0aec0] font-normal">/100</span>
+					</div>
+				</div>
+				<div class="bg-white p-3 rounded-lg border border-[#e2e8f0] text-center shadow-sm">
+					<span class="text-[9px] text-[#718096] uppercase font-bold tracking-wider">Intent Level</span>
+					<div class="text-lg font-bold text-teal-600 mt-1">
+						{data.behavioralAnalysis?.intentLevel || 'Low'}
+					</div>
+				</div>
+			</div>
+
+			<!-- Behavioral Analysis Block -->
+			<div class="bg-white rounded-lg p-4 border border-[#e2e8f0] mb-5 shadow-sm">
+				<h3 class="text-xs font-bold text-[#4a5568] uppercase tracking-wider mb-2">Behavioral Analysis</h3>
+				<p class="text-xs text-[#718096] leading-relaxed">
+					{data.behavioralAnalysis?.interpretation || 'Monitor behavior events.'}
+				</p>
+			</div>
+
+			<!-- Best Recommended Action -->
+			<div class="bg-emerald-50 rounded-lg p-4 border border-emerald-200 mb-5 shadow-sm">
+				<h3 class="text-[9px] font-bold text-emerald-800 uppercase tracking-wider mb-1">Best Recommended Action</h3>
+				<div class="text-sm font-bold text-emerald-700">
+					{data.behavioralAnalysis?.recAction || 'Monitor Behavior'}
+				</div>
+			</div>
+
+			<!-- Identity resolution history -->
+			<div class="bg-white rounded-lg border border-[#e2e8f0] overflow-hidden mb-5 shadow-sm">
+				<div class="bg-[#edf2f7] px-3 py-2 border-b border-[#e2e8f0]">
+					<h3 class="text-xs font-bold text-[#4a5568] uppercase tracking-wider">Identity History</h3>
+				</div>
+				<div class="p-3 max-h-[180px] overflow-y-auto space-y-3">
+					{#if data.identityHistory && data.identityHistory.length > 0}
+						{#each data.identityHistory.slice().reverse() as h}
+							<div class="text-[11px] pb-2 border-b border-[#f7fafc] last:border-0 last:pb-0">
+								<div class="flex justify-between items-center mb-1">
+									<span class="font-bold text-[#4a5568]">{h.field} Update</span>
+									<span class="text-[9px] text-[#a0aec0]">{new Date(h.timestamp).toLocaleDateString()}</span>
+								</div>
+								<div class="flex flex-wrap items-center text-[#718096]">
+									{#if h.oldValue}
+										<span class="line-through text-red-400 mr-1.5">{h.oldValue}</span>
+										<span class="mr-1.5">&rarr;</span>
+									{:else}
+										<span class="text-emerald-500 font-semibold mr-1.5">[Set Initial]</span>
+									{/if}
+									<span class="font-bold text-[#2d3748]">{h.newValue}</span>
+								</div>
+							</div>
+						{/each}
 					{:else}
-						<X class="h-3 w-3 text-[#7B2E17]" />
+						<p class="text-xs italic text-[#a0aec0] text-center py-2">No resolution history.</p>
 					{/if}
 				</div>
-				<span class="font-sans text-base font-normal leading-[1.29] text-[rgba(86,86,86,0.8)]"
-					>Permission to send SMS</span
-				>
 			</div>
 
-			<!-- Divider -->
-			<div class="mb-4 h-px w-full bg-[#565656]"></div>
-
-			<!-- Connections -->
-			<button
-				class="mb-4 flex w-full items-center justify-between"
-				onclick={() => (connectionsExpanded = !connectionsExpanded)}
-			>
-				<span class="font-sans text-lg font-medium leading-[1.29] text-[#565656]">Connections</span>
-				<ChevronDown
-					class="h-3 w-4 text-[#565656] transition-transform {connectionsExpanded
-						? 'rotate-180'
-						: ''}"
-				/>
-			</button>
-
-			{#if connectionsExpanded && selectedProfile.connections.length > 0}
-				{#each selectedProfile.connections as connection}
-					<div class="mb-4">
-						<h3 class="mb-2 font-sans text-xl font-semibold leading-[1.29] text-[#555555]">
-							{connection.name}
-						</h3>
-						<div class="mb-2 flex items-start gap-2">
-							<MapPin class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#0F172A]" />
-							<span class="font-sans text-base font-normal leading-[1.29] text-[rgba(86,86,86,0.8)]"
-								>{connection.address}</span
-							>
-						</div>
-						<div class="space-y-1">
-							<div class="flex items-center">
-								<span class="w-[82px] font-sans text-base font-medium leading-[1.29] text-[#565656]"
-									>Landline:</span
-								>
-								<span
-									class="font-sans text-base font-normal leading-[1.29] text-[rgba(86,86,86,0.8)]"
-									>{connection.landline}</span
-								>
-							</div>
-							<div class="flex items-center">
-								<span class="w-[82px] font-sans text-base font-medium leading-[1.29] text-[#565656]"
-									>Cell #:</span
-								>
-								<span
-									class="font-sans text-base font-normal leading-[1.29] text-[rgba(86,86,86,0.8)]"
-									>{connection.cell}</span
-								>
-							</div>
-							<div class="flex items-center">
-								<span class="w-[82px] font-sans text-base font-medium leading-[1.29] text-[#565656]"
-									>Email:</span
-								>
-								<span
-									class="font-sans text-base font-normal leading-[1.29] text-[rgba(86,86,86,0.8)]"
-									>{connection.email}</span
-								>
-							</div>
-						</div>
-						<div class="mt-2 flex items-center gap-2">
-							<div
-								class="flex h-5 w-5 items-center justify-center rounded border border-[#7B2E17] {connection.smsPermission
-									? 'bg-[#7B2E17]'
-									: 'bg-white'}"
-							>
-								{#if connection.smsPermission}
-									<svg class="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
-										<path
-											d="M2 6L5 9L10 3"
-											stroke="currentColor"
-											stroke-width="2"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-										/>
-									</svg>
-								{:else}
-									<X class="h-3 w-3 text-[#7B2E17]" />
-								{/if}
-							</div>
-							<span class="font-sans text-base font-normal leading-[1.29] text-[rgba(86,86,86,0.8)]"
-								>Permission to send SMS</span
-							>
-						</div>
+			<!-- Visitor Facts -->
+			<div class="bg-white rounded-lg border border-[#e2e8f0] overflow-hidden mb-5 shadow-sm">
+				<div class="bg-[#edf2f7] px-3 py-2 border-b border-[#e2e8f0]">
+					<h3 class="text-xs font-bold text-[#4a5568] uppercase tracking-wider">Visitor Facts</h3>
+				</div>
+				<div class="divide-y divide-[#edf2f7] text-xs">
+					<div class="px-3 py-2.5 flex justify-between">
+						<span class="text-[#718096]">Viewed Service Pages</span>
+						<span class="font-bold text-[#2d3748]">{data.behavioralFacts?.viewedService ? 'Yes' : 'No'}</span>
 					</div>
-				{/each}
-			{/if}
-
-			<!-- Edit | Add | Delete -->
-			<div class="mb-4 flex items-center justify-end gap-3 text-right">
-				<button
-					type="button"
-					class="cursor-pointer font-sans text-lg font-normal leading-[1.29] text-[#565656] underline hover:text-[#333]"
-					onclick={openEdit}>Edit</button
-				>
-				<span class="font-sans text-lg font-normal leading-[1.29] text-[#565656]">|</span>
-				<span
-					class="cursor-pointer font-sans text-lg font-normal leading-[1.29] text-[#565656] underline hover:text-[#333]"
-					>Add</span
-				>
-				<span class="font-sans text-lg font-normal leading-[1.29] text-[#565656]">|</span>
-				<button
-					type="button"
-					class="flex cursor-pointer items-center gap-1 font-sans text-lg font-normal leading-[1.29] text-red-600 underline hover:text-red-700"
-					onclick={handleDelete}
-				>
-					<Trash2 class="h-4 w-4" /> Delete
-				</button>
+					<div class="px-3 py-2.5 flex justify-between">
+						<span class="text-[#718096]">Viewed Pricing Page</span>
+						<span class="font-bold text-[#2d3748]">{data.behavioralFacts?.viewedPricing ? 'Yes' : 'No'}</span>
+					</div>
+					<div class="px-3 py-2.5 flex justify-between">
+						<span class="text-[#718096]">Form Submitted</span>
+						<span class="font-bold text-[#2d3748]">{data.behavioralFacts?.formSubmitted ? 'Yes' : 'No'}</span>
+					</div>
+				</div>
 			</div>
 
-			<!-- Divider -->
-			<div class="mb-4 h-px w-full bg-[#565656]"></div>
-
-			<!-- Playbook Results -->
-			<h3 class="mb-3 font-sans text-base font-semibold leading-[21px] text-[#555555]">
-				Playbook Results
-			</h3>
-			<div class="mb-4 space-y-1">
-				<p class="font-sans text-base font-normal leading-[21px] text-[#747577]">Results</p>
-				<p class="font-sans text-base font-normal leading-[21px] text-[#747577]">Top[ of Funnel</p>
-				<p class="font-sans text-base font-normal leading-[21px] text-[#747577]">
-					Mid-funnel (sales outcomes)
-				</p>
-				<p class="font-sans text-base font-normal leading-[21px] text-[#747577]">
-					Bottom-of-funnel (business outcomes
-				</p>
+			<!-- Interactive Demo Actions -->
+			<div class="bg-white rounded-lg p-4 border border-[#e2e8f0] mb-5 shadow-sm">
+				<h3 class="text-xs font-bold text-[#4a5568] uppercase tracking-wider mb-3">Interactive Demo Actions</h3>
+				<div class="flex gap-2">
+					<button 
+						onclick={() => simulateOutboundCall(selectedProfile.id, selectedProfile.clearPhone)}
+						class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs py-2 px-3 rounded shadow-sm transition"
+					>
+						Fake Call
+					</button>
+					<button 
+						onclick={() => simulateJobCompleted(selectedProfile.id, selectedProfile.clearPhone)}
+						class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs py-2 px-3 rounded shadow-sm transition"
+					>
+						Complete Job
+					</button>
+				</div>
 			</div>
 
-			<!-- Playbook Engine Placeholder -->
-			<div class="flex h-[230px] w-full items-center justify-center rounded bg-[#949494]">
-				<span class="font-sans text-base font-normal leading-[21px] text-white"
-					>Playbook Engine</span
-				>
+			<!-- Score Timeline Ledger -->
+			<div class="bg-white rounded-lg border border-[#e2e8f0] overflow-hidden shadow-sm">
+				<div class="bg-[#edf2f7] px-3 py-2 border-b border-[#e2e8f0]">
+					<h3 class="text-xs font-bold text-[#4a5568] uppercase tracking-wider">Score Timeline Ledger</h3>
+				</div>
+				<div class="p-3 max-h-[260px] overflow-y-auto space-y-3">
+					{#if data.historyEvents && data.historyEvents.length > 0}
+						{#each data.historyEvents.slice().reverse() as pe}
+							<div class="flex gap-2.5 items-start pb-2.5 border-b border-[#f7fafc] last:border-0 last:pb-0">
+								<div class="w-6 h-6 rounded-full bg-[#edf2f7] flex items-center justify-center text-[10px] flex-shrink-0">
+									{pe.eventType === 'voicemail_received' ? '🎙️' : (pe.eventType.includes('form') || pe.eventType.includes('submit') ? '📝' : '🖱️')}
+								</div>
+								<div class="flex-1 min-w-0">
+									<div class="font-medium text-[#2d3748] text-[11px] leading-tight">
+										{pe.payload?.detail || pe.payload?.textContent || pe.payload?.comment || pe.eventType}
+									</div>
+									<div class="text-[9px] text-[#a0aec0] mt-0.5">
+										{new Date(pe.occurredAt).toLocaleString()} &bull; {pe.pageUrl || '/'}
+									</div>
+								</div>
+								<div class="font-mono text-xs font-bold flex-shrink-0 {pe.scoreDelta > 0 ? 'text-emerald-600' : pe.scoreDelta < 0 ? 'text-red-500' : 'text-gray-400'}">
+									{pe.scoreDelta > 0 ? '+' : ''}{pe.scoreDelta}
+								</div>
+							</div>
+						{/each}
+					{:else}
+						<p class="text-xs italic text-[#a0aec0] text-center py-2">No events ledger.</p>
+					{/if}
+				</div>
 			</div>
 		</div>
 
@@ -406,10 +439,12 @@
 								COMM ID
 							</h4>
 							<div class="space-y-3">
-								{#each commSummaries as summary}
+								{#each communications.slice(0, 5) as comm}
 									<p class="font-sans text-sm font-normal leading-[1.29] text-[#555555]">
-										{summary.commId}
+										{comm.id.slice(0, 15)}...
 									</p>
+								{:else}
+									<p class="font-sans text-sm text-gray-400">No communications found</p>
 								{/each}
 							</div>
 						</div>
@@ -418,12 +453,16 @@
 								SUMMARY
 							</h4>
 							<div class="space-y-3">
-								{#each commSummaries as summary}
-									<p
-										class="cursor-pointer font-sans text-sm font-normal leading-[1.29] text-[#0023D7] underline hover:text-[#001ba3]"
+								{#each communications.slice(0, 5) as comm}
+									<button
+										type="button"
+										onclick={() => handleSummaryClick(comm)}
+										class="block text-left cursor-pointer font-sans text-sm font-normal leading-[1.29] text-[#0023D7] underline hover:text-[#001ba3]"
 									>
-										{summary.summaryLink}
-									</p>
+										Open Summary for {comm.id.slice(0, 8)}... ({comm.type})
+									</button>
+								{:else}
+									<p class="font-sans text-sm text-gray-400">—</p>
 								{/each}
 							</div>
 						</div>
@@ -483,6 +522,7 @@
 					{filters}
 					onSummaryClick={handleSummaryClick}
 					onActionClick={handleActionClick}
+					onPipelineClick={handlePipelineClick}
 				/>
 			</div>
 		</div>
@@ -773,13 +813,16 @@
 						<p
 							class="font-sans text-sm font-normal leading-[131%] tracking-normal text-[rgba(86,86,86,0.78)]"
 						>
-							Summary content for {selectedSummary.type} communication.
+							{selectedSummary.summary || 'No summary available.'}
 						</p>
 					</div>
 				</div>
 			{/if}
 		</div>
 	{/if}
+
+	<!-- Pipeline Modal -->
+	<PipelineModal bind:open={pipelineDialogOpen} eventData={selectedPipelineEvent} />
 {:else}
 	<EmptyState
 		title="Profile not found"

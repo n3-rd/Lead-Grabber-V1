@@ -88,7 +88,7 @@ importers:
         specifier: ^9.1.0
         version: 9.1.0(eslint@9.16.0(jiti@1.21.6))
       eslint-plugin-svelte:
-        specifier: ^2.36.0
+        specifier: ^2.45.1
         version: 2.46.1(eslint@9.16.0(jiti@1.21.6))(svelte@5.56.3(@typescript-eslint/types@8.16.0))
       globals:
         specifier: ^15.0.0
@@ -133,13 +133,13 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.15)
       typescript:
-        specifier: ^5.0.0
+        specifier: ^5.5.0
         version: 5.7.2
       typescript-eslint:
         specifier: ^8.0.0
         version: 8.16.0(eslint@9.16.0(jiti@1.21.6))(typescript@5.7.2)
       vite:
-        specifier: ^5.0.3
+        specifier: ^5.4.4
         version: 5.4.11(@types/node@22.15.17)
       vitest:
         specifier: ^2.1.0
@@ -3276,6 +3276,10 @@ snapshots:
     dependencies:
       acorn: 8.14.0
 
+  acorn-jsx@5.3.2(acorn@8.17.0):
+    dependencies:
+      acorn: 8.17.0
+
   acorn@8.14.0: {}
 
   acorn@8.17.0: {}
@@ -3661,8 +3665,8 @@ snapshots:
 
   espree@9.6.1:
     dependencies:
-      acorn: 8.14.0
-      acorn-jsx: 5.3.2(acorn@8.14.0)
+      acorn: 8.17.0
+      acorn-jsx: 5.3.2(acorn@8.17.0)
       eslint-visitor-keys: 3.4.3
 
   esquery@1.6.0:
